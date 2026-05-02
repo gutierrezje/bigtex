@@ -42,7 +42,7 @@ export function App() {
   }, []);
 
   async function refreshMetrics(): Promise<void> {
-    setMetrics(await window.texRanger.app.metrics());
+    setMetrics(await window.bigTex.app.metrics());
   }
 
   async function loadProject(snapshot: ProjectSnapshot | null): Promise<void> {
@@ -53,7 +53,7 @@ export function App() {
     clearAgent();
 
     if (snapshot.mainFile) {
-      const file = await window.texRanger.files.read({
+      const file = await window.bigTex.files.read({
         rootPath: snapshot.rootPath,
         path: snapshot.mainFile,
       });
@@ -63,16 +63,16 @@ export function App() {
   }
 
   async function openProjectFromDialog(): Promise<void> {
-    await loadProject(await window.texRanger.project.openDialog());
+    await loadProject(await window.bigTex.project.openDialog());
   }
 
   async function loadSample(): Promise<void> {
-    await loadProject(await window.texRanger.project.openSample());
+    await loadProject(await window.bigTex.project.openSample());
   }
 
   async function openProjectFile(file: ProjectFile): Promise<void> {
     if (!project || !selectable(file)) return;
-    const openedFile = await window.texRanger.files.read({
+    const openedFile = await window.bigTex.files.read({
       rootPath: project.rootPath,
       path: file.path,
     });
@@ -85,7 +85,7 @@ export function App() {
   ): Promise<void> {
     if (!project || !openFile) return;
     setOpenFile(
-      await window.texRanger.files.write({
+      await window.bigTex.files.write({
         rootPath: project.rootPath,
         path: openFile.path,
         content,
@@ -104,14 +104,14 @@ export function App() {
         await saveOpenFile(activeDraftRef.current.content);
       }
 
-      const result = await window.texRanger.latex.compile({
+      const result = await window.bigTex.latex.compile({
         rootPath: project.rootPath,
         mainFile,
         compiler,
       });
       setCompileResult(result);
       if (result.pdfPath) {
-        setPdf(await window.texRanger.latex.readPdf(result.pdfPath));
+        setPdf(await window.bigTex.latex.readPdf(result.pdfPath));
       }
       setToast(result.success ? "Compiled PDF." : "Compiler reported diagnostics.");
     } finally {
@@ -123,7 +123,7 @@ export function App() {
   async function runAgent(prompt: string): Promise<void> {
     if (!project) return;
     clearAgent();
-    await window.texRanger.agent.run({
+    await window.bigTex.agent.run({
       rootPath: project.rootPath,
       prompt,
       selectedFiles: openFile ? [openFile.path] : [],
@@ -133,14 +133,14 @@ export function App() {
 
   async function applyPatch(patch: string): Promise<void> {
     if (!project) return;
-    const result = await window.texRanger.patch.apply({ rootPath: project.rootPath, patch });
+    const result = await window.bigTex.patch.apply({ rootPath: project.rootPath, patch });
     setToast(result.message);
 
-    const refreshed = await window.texRanger.project.load(project.rootPath);
+    const refreshed = await window.bigTex.project.load(project.rootPath);
     setProject(refreshed);
     if (openFile) {
       setOpenFile(
-        await window.texRanger.files.read({ rootPath: project.rootPath, path: openFile.path }),
+        await window.bigTex.files.read({ rootPath: project.rootPath, path: openFile.path }),
       );
     }
   }
@@ -167,13 +167,13 @@ export function App() {
         <div className="min-h-0 flex-1 overflow-hidden px-3 pb-3">
           <Group
             className="h-full min-h-0 min-w-0"
-            id="tex-ranger-main-panels"
+            id="bigtex-main-panels"
             orientation="horizontal"
           >
             <Panel defaultSize="42%" minSize="28%" className="min-h-0 min-w-0">
               <Group
                 className="h-full min-h-0 min-w-0"
-                id="tex-ranger-editor-panels"
+                id="bigtex-editor-panels"
                 orientation="vertical"
               >
                 <Panel defaultSize="78%" minSize="40%" className="min-h-0 min-w-0">
@@ -212,7 +212,7 @@ export function App() {
                 diagnostics={compileResult?.diagnostics ?? []}
                 transcript={agentTranscript}
                 onRun={runAgent}
-                onCancel={(runId) => window.texRanger.agent.cancel({ runId })}
+                onCancel={(runId) => window.bigTex.agent.cancel({ runId })}
                 onApplyPatch={applyPatch}
               />
             </Panel>

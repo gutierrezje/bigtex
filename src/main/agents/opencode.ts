@@ -59,7 +59,7 @@ function agentSystemPrompt(input: AgentRunInput): string {
     .join("\n");
 
   return [
-    "You are editing a local LaTeX project from inside Tex Ranger.",
+    "You are editing a local LaTeX project from inside BigTex.",
     "Prefer precise, small patches. Do not rewrite unrelated files.",
     "When changing files, respond with one or more fenced diff blocks using unified diff format.",
     "Do not apply changes yourself unless the user explicitly asks through the host app.",
@@ -412,8 +412,8 @@ export async function runOpencode(
           terminal: false,
         },
         clientInfo: {
-          name: "tex-ranger",
-          title: "Tex Ranger",
+          name: "bigtex",
+          title: "BigTex",
           version: "0.1.0",
         },
       });

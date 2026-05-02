@@ -1,4 +1,4 @@
-# Tex Ranger
+# BigTex
 
 Agent-first Electron LaTeX editor prototype focused on local performance.
 

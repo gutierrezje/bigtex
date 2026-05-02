@@ -4,5 +4,5 @@ import { useAppStore } from "../store";
 export function useAgentEvents(): void {
   const appendAgentEvent = useAppStore((state) => state.appendAgentEvent);
 
-  useEffect(() => window.texRanger.agent.onEvent(appendAgentEvent), [appendAgentEvent]);
+  useEffect(() => window.bigTex.agent.onEvent(appendAgentEvent), [appendAgentEvent]);
 }

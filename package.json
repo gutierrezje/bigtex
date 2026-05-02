@@ -1,5 +1,5 @@
 {
-  "name": "tex-ranger",
+  "name": "bigtex",
   "version": "0.1.0",
   "private": true,
   "description": "Agent-first Electron LaTeX editor prototype.",

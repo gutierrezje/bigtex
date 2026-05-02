@@ -46,7 +46,7 @@ export interface AgentCancelRequest {
   runId: string;
 }
 
-export interface TexRangerApi {
+export interface BigTexApi {
   app: {
     metrics(): Promise<PerformanceMark[]>;
   };
@@ -76,6 +76,6 @@ export interface TexRangerApi {
 
 declare global {
   interface Window {
-    texRanger: TexRangerApi;
+    bigTex: BigTexApi;
   }
 }

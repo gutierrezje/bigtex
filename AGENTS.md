@@ -9,12 +9,12 @@
 
 ## Project Snapshot
 
-Tex Ranger is a very early MVP for an agentic LaTeX desktop editor.
+BigTex is a very early MVP for an agentic LaTeX desktop editor.
 
 The app is Electron-based:
 
 - The Electron main process owns filesystem access, LaTeX compilation, PDF reads, agent subprocesses, and patch application.
-- The preload script exposes a narrow typed IPC bridge on `window.texRanger`.
+- The preload script exposes a narrow typed IPC bridge on `window.bigTex`.
 - The React/Vite renderer owns the project tree, Monaco editor, PDF.js preview, diagnostics panel, command bar, and agent UI.
 
 This repository is a very early WIP. Refactors that improve performance, correctness, and long-term maintainability are welcome when they are grounded in the current architecture.
@@ -39,7 +39,7 @@ If a tradeoff is required, choose correctness and robustness over short-term con
 ## Package Roles
 
 - `src/main`: Electron main process. Owns window creation, IPC registration, filesystem services, LaTeX compile runner, opencode runner, patch application, and performance marks.
-- `src/preload`: Secure Electron preload bridge. Exposes the typed `window.texRanger` API and nothing else.
+- `src/preload`: Secure Electron preload bridge. Exposes the typed `window.bigTex` API and nothing else.
 - `src/renderer`: React UI. Owns editor/preview/agent UX, client state, autosave behavior, and rendering.
 - `src/shared`: Shared TypeScript contracts for domain types and IPC channel/API shapes. Keep this schema/type-focused.
 - `samples/minimal`: Small LaTeX project used for smoke testing compiler and PDF preview behavior.
@@ -54,7 +54,7 @@ If a tradeoff is required, choose correctness and robustness over short-term con
 
 ## Agent Runtime
 
-Tex Ranger is currently opencode ACP-first.
+BigTex is currently opencode ACP-first.
 
 - The default command is `opencode acp`.
 - Do not use `opencode run` as a fallback.

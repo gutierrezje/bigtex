@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { AgentEvent } from "../shared/domain";
-import { IPC_CHANNELS, type TexRangerApi } from "../shared/ipc";
+import { type BigTexApi, IPC_CHANNELS } from "../shared/ipc";
 
-const api: TexRangerApi = {
+const api: BigTexApi = {
   app: {
     metrics: () => ipcRenderer.invoke(IPC_CHANNELS.appMetrics),
   },
@@ -36,4 +36,4 @@ const api: TexRangerApi = {
   },
 };
 
-contextBridge.exposeInMainWorld("texRanger", api);
+contextBridge.exposeInMainWorld("bigTex", api);

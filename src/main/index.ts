@@ -30,7 +30,7 @@ function createWindow(): void {
     height: 920,
     minWidth: 900,
     minHeight: 600,
-    title: "Tex Ranger",
+    title: "BigTex",
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 16, y: 16 },
     show: false,
