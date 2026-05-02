@@ -1,0 +1,213 @@
+@import "tailwindcss";
+
+/* ── Geist Sans ── */
+@font-face {
+  font-family: "Geist Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/Geist-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/Geist-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/Geist-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/Geist-Bold.woff2") format("woff2");
+}
+
+/* ── Geist Mono ── */
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/GeistMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/GeistMono-Medium.woff2") format("woff2");
+}
+
+/* ── Tailwind v4 Design Tokens ── */
+@theme {
+  --font-sans: "Geist Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-surface: #09090b;
+  --color-surface-raised: #18181b;
+  --color-surface-inset: #0c0c0e;
+  --color-border: #27272a;
+  --color-border-subtle: #1e1e21;
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+  --color-accent: #2dd4bf;
+  --color-accent-muted: rgba(45, 212, 191, 0.12);
+  --color-danger: #f87171;
+  --color-danger-muted: rgba(248, 113, 113, 0.12);
+  --color-success: #34d399;
+}
+
+/* ── Base Resets ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── Scrollbar Styling ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* ── Monaco Editor Overrides ── */
+.monaco-editor,
+.monaco-editor .overflow-guard {
+  border-radius: 0 0 8px 8px;
+}
+
+/* ── Agent Markdown Overrides ── */
+.agent-output-markdown {
+  min-width: 0;
+}
+
+.agent-output-markdown pre[class] {
+  overflow-x: auto;
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* ── Resizable Panels ── */
+.resize-handle-horizontal,
+.resize-handle-vertical {
+  position: relative;
+  flex: 0 0 8px;
+  transition: background 120ms ease;
+}
+
+.resize-handle-horizontal::after,
+.resize-handle-vertical::after {
+  position: absolute;
+  display: block;
+  content: "";
+  border-radius: 999px;
+  background: var(--color-border);
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.resize-handle-horizontal::after {
+  top: 10px;
+  bottom: 10px;
+  left: 3px;
+  width: 2px;
+}
+
+.resize-handle-vertical::after {
+  right: 10px;
+  bottom: 3px;
+  left: 10px;
+  height: 2px;
+}
+
+.resize-handle-horizontal[data-resize-handle-active]::after,
+.resize-handle-vertical[data-resize-handle-active]::after,
+.resize-handle-horizontal:hover::after,
+.resize-handle-vertical:hover::after {
+  background: var(--color-accent);
+}
+
+.resize-handle-horizontal[data-resize-handle-active]::after,
+.resize-handle-horizontal:hover::after {
+  transform: scaleX(1.6);
+}
+
+.resize-handle-vertical[data-resize-handle-active]::after,
+.resize-handle-vertical:hover::after {
+  transform: scaleY(1.6);
+}
+
+.agent-output-markdown code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.agent-output-markdown p {
+  margin: 0 0 8px;
+  line-height: 1.55;
+}
+
+.agent-output-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── PDF Canvas ── */
+.pdf-canvas {
+  max-width: 100%;
+  border-radius: 4px;
+  background: white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}

@@ -1,0 +1,51 @@
+{
+  "name": "tex-ranger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent-first Electron LaTeX editor prototype.",
+  "type": "module",
+  "packageManager": "pnpm@10.15.1",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "tsc --noEmit && electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write ."
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
+  },
+  "dependencies": {
+    "@monaco-editor/react": "latest",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron-updater": "latest",
+    "geist": "^1.7.0",
+    "monaco-editor": "latest",
+    "pdfjs-dist": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-markdown": "latest",
+    "react-resizable-panels": "^4.11.0",
+    "react-shiki": "latest",
+    "remark-gfm": "latest",
+    "zod": "latest",
+    "zustand": "latest"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "latest",
+    "@tailwindcss/vite": "^4.2.4",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "electron": "latest",
+    "electron-vite": "latest",
+    "tailwindcss": "^4.2.4",
+    "typescript": "latest",
+    "vite": "^7.3.2"
+  }
+}
