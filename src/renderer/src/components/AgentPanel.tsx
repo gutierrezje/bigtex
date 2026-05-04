@@ -1,44 +1,145 @@
-import { useState } from "react";
+import {
+  ActionBarPrimitive,
+  ComposerPrimitive,
+  MessagePartPrimitive,
+  MessagePrimitive,
+  ThreadPrimitive,
+  useAuiState,
+} from "@assistant-ui/react";
 import type { CompileDiagnostic } from "../../../shared/domain";
-import type { AgentTranscript } from "../store";
-import { AgentMarkdown } from "./AgentMarkdown";
+import type { AgentChatState } from "../store";
+import { BigTexAssistantRuntime } from "./agent/BigTexAssistantRuntime";
 
 interface AgentPanelProps {
   rootPath: string | null;
   activeFile: string | null;
   diagnostics: CompileDiagnostic[];
-  transcript: AgentTranscript | null;
+  chat: AgentChatState;
   onRun(prompt: string): Promise<void>;
   onCancel(runId: string): Promise<void>;
   onApplyPatch(patch: string): Promise<void>;
+}
+
+/** Stable part component; inline lambdas in `components` would remount on every stream chunk. */
+function AgentMessageTextPart() {
+  return (
+    <MessagePartPrimitive.Text
+      component="div"
+      smooth={false}
+      className="agent-output-markdown whitespace-pre-wrap"
+    />
+  );
+}
+
+const agentMessagePartComponents = {
+  Text: AgentMessageTextPart,
+};
+
+function EmptyThread() {
+  return (
+    <ThreadPrimitive.Empty>
+      <div className="mx-auto grid max-w-[260px] gap-2 px-4 py-10 text-center">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-accent">
+          Ready
+        </span>
+        <p className="m-0 text-sm leading-relaxed text-text-muted">
+          Ask BigTex to edit, explain, or repair the selected LaTeX file. ACP output will stream
+          here as a chat.
+        </p>
+      </div>
+    </ThreadPrimitive.Empty>
+  );
+}
+
+function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<void> }) {
+  const message = useAuiState((state) => state.message);
+  const custom = message.metadata?.custom as { patch?: unknown } | undefined;
+  const patch = typeof custom?.patch === "string" ? custom.patch : null;
+  const isAssistant = message.role === "assistant";
+
+  return (
+    <MessagePrimitive.Root
+      className={`grid gap-1.5 px-3 py-2 ${message.role === "user" ? "justify-items-end" : "justify-items-start"}`}
+    >
+      <div
+        className={`max-w-[92%] rounded-lg border px-3 py-2 text-[13px] leading-relaxed ${
+          message.role === "user"
+            ? "border-accent/30 bg-accent-muted text-text-primary"
+            : message.role === "system"
+              ? "border-border-subtle bg-transparent text-text-muted"
+              : "border-border bg-surface-raised text-text-secondary"
+        }`}
+      >
+        <MessagePrimitive.Parts components={agentMessagePartComponents} />
+      </div>
+
+      {isAssistant ? (
+        <div className="flex max-w-[92%] flex-wrap items-center gap-1.5">
+          <ActionBarPrimitive.Root hideWhenRunning={false} className="flex items-center gap-1">
+            <ActionBarPrimitive.Copy className="rounded-md border border-border bg-transparent px-2 py-1 text-[11px] text-text-muted transition-colors duration-100 hover:border-accent/40 hover:text-text-secondary">
+              Copy
+            </ActionBarPrimitive.Copy>
+          </ActionBarPrimitive.Root>
+          {patch ? (
+            <button
+              type="button"
+              className="rounded-md border border-accent/30 bg-accent-muted px-2 py-1 text-[11px] font-medium text-accent transition-colors duration-100 hover:bg-accent/20"
+              onClick={() => onApplyPatch(patch)}
+            >
+              Apply detected patch
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </MessagePrimitive.Root>
+  );
+}
+
+function ChatThread({ onApplyPatch }: { onApplyPatch(patch: string): Promise<void> }) {
+  return (
+    <ThreadPrimitive.Root className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
+      <ThreadPrimitive.Viewport
+        autoScroll
+        turnAnchor="bottom"
+        className="min-h-0 overflow-y-auto overscroll-contain bg-surface-inset py-2"
+      >
+        <EmptyThread />
+        <ThreadPrimitive.Messages>
+          {() => <ChatMessage onApplyPatch={onApplyPatch} />}
+        </ThreadPrimitive.Messages>
+        <ThreadPrimitive.ViewportFooter />
+      </ThreadPrimitive.Viewport>
+
+      <ComposerPrimitive.Root className="border-t border-border-subtle bg-surface-raised p-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border border-border bg-surface-inset p-2">
+          <ComposerPrimitive.Input
+            className="max-h-32 min-h-10 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-relaxed text-text-primary outline-none placeholder:text-text-muted"
+            placeholder="Ask BigTex to revise, explain, or fix this LaTeX..."
+            rows={2}
+            submitMode="enter"
+          />
+          <div className="flex items-end">
+            <ComposerPrimitive.Send className="rounded-md border-0 bg-accent px-3 py-2 text-xs font-semibold text-zinc-950 transition-opacity duration-100 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">
+              Send
+            </ComposerPrimitive.Send>
+          </div>
+        </div>
+      </ComposerPrimitive.Root>
+    </ThreadPrimitive.Root>
+  );
 }
 
 export function AgentPanel({
   rootPath,
   activeFile,
   diagnostics,
-  transcript,
+  chat,
   onRun,
   onCancel,
   onApplyPatch,
 }: AgentPanelProps) {
-  const [prompt, setPrompt] = useState(
-    "Improve this LaTeX document. Keep edits minimal and return a unified diff.",
-  );
-  const [busy, setBusy] = useState(false);
-
-  async function submit(): Promise<void> {
-    setBusy(true);
-    try {
-      await onRun(prompt);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
-    <aside className="grid h-full min-h-0 min-w-0 grid-rows-[auto_auto_auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-lg border border-border bg-surface-raised">
-      {/* Header */}
+    <aside className="grid h-full min-h-0 min-w-0 grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-border bg-surface-raised">
       <header className="shrink-0 flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
@@ -46,74 +147,25 @@ export function AgentPanel({
           </span>
           <h2 className="mt-0.5 text-sm font-medium">LaTeX editing assistant</h2>
         </div>
-        {transcript?.running ? (
+        {chat.running ? (
           <button
             type="button"
             className="shrink-0 rounded-md border border-danger/40 bg-transparent px-3 py-1 text-xs font-medium text-danger transition-colors duration-100 hover:bg-danger-muted"
-            onClick={() => onCancel(transcript.runId)}
+            onClick={() => onCancel(chat.runId)}
           >
             Cancel
           </button>
         ) : null}
       </header>
 
-      {/* Fields */}
-      <div className="shrink-0 grid gap-2 px-3 pt-3">
-        <label className="grid gap-1">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-            Prompt
-          </span>
-          <textarea
-            className="w-full resize-none rounded-md border border-border bg-surface-inset px-2.5 py-1.5 text-sm text-text-primary outline-none transition-colors duration-100 focus:border-accent/50"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            rows={3}
-          />
-        </label>
-      </div>
-
-      {/* Context */}
       <div className="shrink-0 flex justify-between gap-2 px-3 py-2 text-[11px] text-text-muted">
         <span>{activeFile ? `Selected: ${activeFile}` : "No active file"}</span>
         <span>{diagnostics.length} diagnostic(s)</span>
       </div>
 
-      {/* Run button */}
-      <div className="shrink-0 px-3 pb-2">
-        <button
-          type="button"
-          className="w-full rounded-md border-0 bg-accent px-4 py-2 text-sm font-semibold text-zinc-950 transition-opacity duration-100 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-          disabled={!rootPath || busy}
-          onClick={submit}
-        >
-          {busy ? "Starting..." : "Run Agent"}
-        </button>
-      </div>
-
-      {/* Output */}
-      <div className="agent-output-markdown mx-3 mb-2 min-h-0 overflow-y-auto overscroll-contain rounded-md bg-surface-inset p-3 text-[13px] leading-relaxed text-text-secondary">
-        {transcript ? (
-          <AgentMarkdown text={transcript.text} streaming={transcript.running} />
-        ) : (
-          <p className="text-text-muted">
-            Agent runs stream here. Final diff blocks are highlighted with Shiki and can be applied
-            explicitly.
-          </p>
-        )}
-      </div>
-
-      {/* Apply patch */}
-      {transcript?.patch ? (
-        <div className="shrink-0 px-3 pb-3">
-          <button
-            type="button"
-            className="w-full rounded-md border border-accent/30 bg-accent-muted px-4 py-2 text-sm font-semibold text-accent transition-colors duration-100 hover:bg-accent/20"
-            onClick={() => onApplyPatch(transcript.patch ?? "")}
-          >
-            Apply detected patch
-          </button>
-        </div>
-      ) : null}
+      <BigTexAssistantRuntime disabled={!rootPath} onRun={onRun} onCancel={onCancel}>
+        <ChatThread onApplyPatch={onApplyPatch} />
+      </BigTexAssistantRuntime>
     </aside>
   );
 }

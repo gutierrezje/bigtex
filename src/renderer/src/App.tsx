@@ -23,7 +23,7 @@ export function App() {
     compiler,
     compileResult,
     pdf,
-    agentTranscript,
+    agentChat,
     metrics,
     setProject,
     setOpenFile,
@@ -122,7 +122,6 @@ export function App() {
 
   async function runAgent(prompt: string): Promise<void> {
     if (!project) return;
-    clearAgent();
     await window.bigTex.agent.run({
       rootPath: project.rootPath,
       prompt,
@@ -210,7 +209,7 @@ export function App() {
                 rootPath={project?.rootPath ?? null}
                 activeFile={openFile?.path ?? null}
                 diagnostics={compileResult?.diagnostics ?? []}
-                transcript={agentTranscript}
+                chat={agentChat}
                 onRun={runAgent}
                 onCancel={(runId) => window.bigTex.agent.cancel({ runId })}
                 onApplyPatch={applyPatch}

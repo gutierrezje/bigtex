@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import type {
   AgentEvent,
-  CompileDiagnostic,
   CompileResult,
   CompilerKind,
   OpenFile,
@@ -10,11 +9,21 @@ import type {
   ProjectSnapshot,
 } from "../../shared/domain";
 
-export interface AgentTranscript {
-  runId: string;
-  text: string;
+export interface AgentChatMessage {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  createdAt: Date;
+  runId?: string;
   patch: string | null;
+  status: "ready" | "running" | "error";
+}
+
+export interface AgentChatState {
+  runId: string;
   running: boolean;
+  activeAssistantMessageId: string | null;
+  messages: AgentChatMessage[];
 }
 
 interface AppState {
@@ -23,7 +32,7 @@ interface AppState {
   compiler: CompilerKind;
   compileResult: CompileResult | null;
   pdf: PdfPayload | null;
-  agentTranscript: AgentTranscript | null;
+  agentChat: AgentChatState;
   metrics: PerformanceMark[];
   setProject(project: ProjectSnapshot | null): void;
   setOpenFile(file: OpenFile | null): void;
@@ -31,19 +40,15 @@ interface AppState {
   setCompileResult(result: CompileResult | null): void;
   setPdf(pdf: PdfPayload | null): void;
   setCompiler(compiler: CompilerKind): void;
+  addAgentUserMessage(content: string): void;
+  createPendingAgentMessage(): string;
   appendAgentEvent(event: AgentEvent): void;
   clearAgent(): void;
   setMetrics(metrics: PerformanceMark[]): void;
 }
 
-function diagnosticsToText(diagnostics: CompileDiagnostic[]): string {
-  if (diagnostics.length === 0) return "";
-  return diagnostics
-    .map((diagnostic) => {
-      const location = [diagnostic.file, diagnostic.line].filter(Boolean).join(":");
-      return `${diagnostic.severity.toUpperCase()} ${location}: ${diagnostic.message}`;
-    })
-    .join("\n");
+function createMessageId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -52,7 +57,12 @@ export const useAppStore = create<AppState>((set) => ({
   compiler: "latexmk",
   compileResult: null,
   pdf: null,
-  agentTranscript: null,
+  agentChat: {
+    runId: "",
+    running: false,
+    activeAssistantMessageId: null,
+    messages: [],
+  },
   metrics: [],
   setProject: (project) => set({ project }),
   setOpenFile: (openFile) => set({ openFile }),
@@ -63,70 +73,151 @@ export const useAppStore = create<AppState>((set) => ({
   setCompileResult: (compileResult) => set({ compileResult }),
   setPdf: (pdf) => set({ pdf }),
   setCompiler: (compiler) => set({ compiler }),
+  addAgentUserMessage: (content) =>
+    set((state) => ({
+      agentChat: {
+        ...state.agentChat,
+        messages: [
+          ...state.agentChat.messages,
+          {
+            id: createMessageId("user"),
+            role: "user",
+            content,
+            createdAt: new Date(),
+            patch: null,
+            status: "ready",
+          },
+        ],
+      },
+    })),
+  createPendingAgentMessage: () => {
+    const id = createMessageId("assistant");
+    set((state) => ({
+      agentChat: {
+        ...state.agentChat,
+        activeAssistantMessageId: id,
+        messages: [
+          ...state.agentChat.messages,
+          {
+            id,
+            role: "assistant",
+            content: "",
+            createdAt: new Date(),
+            patch: null,
+            status: "running",
+          },
+        ],
+      },
+    }));
+    return id;
+  },
   appendAgentEvent: (event) =>
     set((state) => {
-      const current = state.agentTranscript ?? {
-        runId: event.runId,
-        text: "",
-        patch: null,
-        running: false,
-      };
+      const chat = state.agentChat;
+      const lastAssistantMessage = [...chat.messages]
+        .reverse()
+        .find((message) => message.role === "assistant");
+      const activeAssistantMessageId =
+        chat.activeAssistantMessageId ?? lastAssistantMessage?.id ?? null;
+
+      function updateActiveAssistantMessage(
+        updater: (message: AgentChatMessage) => AgentChatMessage,
+      ): AgentChatMessage[] {
+        if (!activeAssistantMessageId) return chat.messages;
+        return chat.messages.map((message) =>
+          message.id === activeAssistantMessageId ? updater(message) : message,
+        );
+      }
 
       if (event.type === "started") {
         return {
-          agentTranscript: {
+          agentChat: {
+            ...chat,
             runId: event.runId,
-            text: `Running ${event.command}\n\n`,
-            patch: null,
             running: true,
+            activeAssistantMessageId,
+            messages: updateActiveAssistantMessage((message) => ({
+              ...message,
+              runId: event.runId,
+              status: "running",
+            })),
           },
         };
       }
 
       if (event.type === "stdout" || event.type === "stderr") {
         return {
-          agentTranscript: {
-            ...current,
-            text: `${current.text}${event.chunk}`,
+          agentChat: {
+            ...chat,
             running: true,
+            activeAssistantMessageId,
+            messages: updateActiveAssistantMessage((message) => ({
+              ...message,
+              runId: event.runId,
+              content: `${message.content}${event.chunk}`,
+              status: event.type === "stderr" ? "error" : "running",
+            })),
           },
         };
       }
 
       if (event.type === "patch") {
         return {
-          agentTranscript: {
-            ...current,
-            patch: event.patch,
-            text: `${current.text}\n\nDetected patch:\n\n\`\`\`diff\n${event.patch}\n\`\`\``,
+          agentChat: {
+            ...chat,
+            activeAssistantMessageId,
+            messages: updateActiveAssistantMessage((message) => ({
+              ...message,
+              runId: event.runId,
+              patch: event.patch,
+            })),
           },
         };
       }
 
       if (event.type === "error") {
         return {
-          agentTranscript: {
-            ...current,
-            text: `${current.text}\n\nAgent error: ${event.message}`,
+          agentChat: {
+            ...chat,
             running: false,
+            activeAssistantMessageId: null,
+            messages: updateActiveAssistantMessage((message) => ({
+              ...message,
+              runId: event.runId,
+              content: message.content
+                ? `${message.content}\n\nAgent error: ${event.message}`
+                : `Agent error: ${event.message}`,
+              status: "error",
+            })),
           },
         };
       }
 
       if (event.type === "finished") {
         return {
-          agentTranscript: {
-            ...current,
-            text: `${current.text}\n\nFinished in ${event.durationMs}ms with exit code ${
-              event.exitCode ?? "unknown"
-            }.\n${diagnosticsToText(state.compileResult?.diagnostics ?? [])}`,
+          agentChat: {
+            ...chat,
             running: false,
+            activeAssistantMessageId: null,
+            messages: updateActiveAssistantMessage((message) => ({
+              ...message,
+              runId: event.runId,
+              status: event.exitCode && event.exitCode !== 0 ? "error" : "ready",
+            })),
           },
         };
       }
 
-      return { agentTranscript: current };
+      return { agentChat: chat };
     }),
-  clearAgent: () => set({ agentTranscript: null }),
+  clearAgent: () =>
+    set({
+      agentChat: {
+        runId: "",
+        running: false,
+        activeAssistantMessageId: null,
+        messages: [],
+      },
+    }),
   setMetrics: (metrics) => set({ metrics }),
 }));
