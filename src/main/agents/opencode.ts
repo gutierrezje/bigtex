@@ -9,6 +9,7 @@ import type {
   AgentRunSummary,
 } from "../../shared/domain";
 import { assertInsideRoot } from "../files/project";
+import { startProjectWatch } from "../files/watch";
 import { unifiedDiffFromTexts } from "./patch";
 
 const PATCH_BLOCK_PATTERN = /```(?:diff|patch)\s*\n([\s\S]*?)```/gi;
@@ -42,6 +43,7 @@ interface JsonRpcResponse {
 interface ActiveAcpRun {
   child: ChildProcessWithoutNullStreams;
   sessionId: string | null;
+  stopWatch: () => void;
 }
 
 const activeRuns = new Map<string, ActiveAcpRun>();
@@ -418,7 +420,8 @@ export async function runOpencode(
     env: process.env,
   });
 
-  activeRuns.set(runId, { child, sessionId: null });
+  const stopWatch = startProjectWatch(input.rootPath, runId, emit);
+  activeRuns.set(runId, { child, sessionId: null, stopWatch });
 
   emit({
     type: "started",
@@ -436,6 +439,7 @@ export async function runOpencode(
   });
 
   child.on("close", (exitCode) => {
+    activeRuns.get(runId)?.stopWatch();
     activeRuns.delete(runId);
     const patch = extractPatch(transcript);
     if (patch) {
@@ -502,6 +506,7 @@ export async function cancelOpencode(runId: string): Promise<void> {
   const active = activeRuns.get(runId);
   if (!active) return;
 
+  active.stopWatch();
   active.child.kill("SIGTERM");
   activeRuns.delete(runId);
 }

@@ -20,6 +20,8 @@ export interface OpenFile {
   absolutePath: string;
   content: string;
   dirty: boolean;
+  /** Bumped on each disk read so the editor can reload external changes. */
+  loadedAt: number;
 }
 
 export type CompilerKind = "latexmk" | "tectonic";

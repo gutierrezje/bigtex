@@ -161,7 +161,7 @@ function LoadedEditorPane({ file, diagnostics, onDraftChange, onSave }: LoadedEd
         </button>
       </header>
       <Editor
-        key={file.path}
+        key={`${file.path}:${file.loadedAt}`}
         height="100%"
         theme="vs-dark"
         language={languageForPath(file.path)}
@@ -199,7 +199,7 @@ export function EditorPane({ file, diagnostics, onDraftChange, onSave }: EditorP
   if (!file) return <EmptyEditorPane />;
   return (
     <LoadedEditorPane
-      key={file.path}
+      key={`${file.path}:${file.loadedAt}`}
       file={file}
       diagnostics={diagnostics}
       onDraftChange={onDraftChange}

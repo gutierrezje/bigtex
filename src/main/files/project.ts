@@ -134,6 +134,7 @@ export async function readProjectFile(rootPath: string, path: string): Promise<O
     absolutePath,
     content,
     dirty: false,
+    loadedAt: Date.now(),
   };
 }
 

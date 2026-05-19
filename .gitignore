@@ -43,6 +43,9 @@ samples/JesusGutierrezResume/
 *.fls
 *.log
 *.out
+*.pdf
 *.run.xml
 *.synctex.gz
 *.toc
+*.tex.bak
+*.tex.rej

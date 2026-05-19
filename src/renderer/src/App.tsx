@@ -36,20 +36,26 @@ export function App() {
   const [toast, setToast] = useState<string | null>(null);
   const activeDraftRef = useRef<{ path: string; content: string } | null>(null);
   const openFileRef = useRef(openFile);
+  const projectRef = useRef(project);
   openFileRef.current = openFile;
+  projectRef.current = project;
 
   const refreshProjectFiles = useCallback(
     async (paths?: string[], toastMessage?: string) => {
-      if (!project) return;
-      const refreshed = await window.bigTex.project.load(project.rootPath);
+      const currentProject = projectRef.current;
+      if (!currentProject) return;
+
+      const refreshed = await window.bigTex.project.load(currentProject.rootPath);
       setProject(refreshed);
 
       const activePath = openFileRef.current?.path;
       const reloadPath =
-        activePath && paths?.includes(activePath) ? activePath : (paths?.[0] ?? activePath);
+        activePath && paths?.some((path) => path === activePath || path.endsWith(`/${activePath}`))
+          ? activePath
+          : paths?.[0];
       if (reloadPath) {
         const file = await window.bigTex.files.read({
-          rootPath: project.rootPath,
+          rootPath: currentProject.rootPath,
           path: reloadPath,
         });
         setOpenFile(file);
@@ -58,16 +64,21 @@ export function App() {
 
       if (toastMessage) setToast(toastMessage);
     },
-    [project, setProject, setOpenFile],
+    [setProject, setOpenFile],
   );
 
-  useAgentEvents((event) => {
-    void refreshProjectFiles(
-      event.paths,
-      event.paths.length === 1
-        ? `Agent updated ${event.paths[0]}.`
-        : `Agent updated ${event.paths.length} files.`,
-    );
+  useAgentEvents({
+    onFilesChanged: (event) => {
+      void refreshProjectFiles(
+        event.paths,
+        event.paths.length === 1
+          ? `Agent updated ${event.paths[0]}.`
+          : `Agent updated ${event.paths.length} files.`,
+      );
+    },
+    onFinished: () => {
+      void refreshProjectFiles();
+    },
   });
 
   useEffect(() => {
