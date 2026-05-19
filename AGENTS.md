@@ -1,71 +1,78 @@
-# AGENTS.md
+# BigTex
 
-## Task Completion Requirements
+**Generated:** 2026-05-19T22:20:47Z
+**Commit:** d4ec686
 
-- All of `pnpm run format`, `pnpm run lint`, and `pnpm run typecheck` should pass before considering formatting or code-quality-sensitive tasks complete.
-- For implementation changes, also run `pnpm run build` unless the change is docs-only or clearly cannot affect runtime/build output.
-- Do not run `pnpm run dev`
-- Do not run destructive cleanup commands against LaTeX projects. If generated artifacts need cleanup, prefer `latexmk -C` scoped to the sample or active project file.
+Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with ACP (opencode) agent and local LaTeX compilation.
 
-## Project Snapshot
+## STRUCTURE
 
-BigTex is a very early MVP for an agentic LaTeX desktop editor.
+```
+{root}/
+├── src/main/            # Electron main: IPC, filesystem, compile, agents, patches
+├── src/preload/         # window.bigTex IPC bridge
+├── src/renderer/        # Vite shell; UI in src/renderer/src (AGENTS.md)
+├── src/shared/          # IPC contracts + domain types
+├── samples/minimal/     # sample LaTeX project for smoke tests
+└── electron.vite.config.ts
+```
 
-The app is Electron-based:
+## WHERE TO LOOK
 
-- The Electron main process owns filesystem access, LaTeX compilation, PDF reads, agent subprocesses, and patch application.
-- The preload script exposes a narrow typed IPC bridge on `window.bigTex`.
-- The React/Vite renderer owns the project tree, Monaco editor, PDF.js preview, diagnostics panel, command bar, and agent UI.
+| Task | Location |
+|------|----------|
+| IPC contracts | src/shared/ipc.ts |
+| IPC handlers + window lifecycle | src/main/index.ts |
+| Preload API surface | src/preload/index.ts |
+| Project tree + file IO | src/main/files/project.ts |
+| LaTeX compile runner | src/main/compile/latex.ts |
+| Agent ACP runtime | src/main/agents/opencode.ts |
+| Patch application | src/main/agents/patch.ts |
+| Renderer layout + flows | src/renderer/src/App.tsx |
+| Editor autosave + diagnostics | src/renderer/src/components/EditorPane.tsx |
+| PDF preview | src/renderer/src/components/PdfPreview.tsx |
+| Assistant UI runtime | src/renderer/src/components/agent/BigTexAssistantRuntime.tsx |
 
-This repository is a very early WIP. Refactors that improve performance, correctness, and long-term maintainability are welcome when they are grounded in the current architecture.
+## CONVENTIONS
 
-## Core Priorities
+- IPC contracts live in src/shared; main/preload/renderer import from there.
+- Renderer calls window.bigTex only; filesystem/compile/agent work stays in main.
+- Agent backend is ACP-only (`opencode acp`); patches are unified diffs.
+- Compiler runs must flush the current draft before invocation.
 
-1. Performance first.
-2. Reliability first.
-3. Local-first behavior: keep project files, compiler runs, and agent runs on the user's machine.
-4. Keep behavior predictable under load and during failures: compiler errors, missing tools, cancelled agents, partial streams, and app restarts.
+## ANTI-PATTERNS
 
-If a tradeoff is required, choose correctness and robustness over short-term convenience.
+- Hardcoding TeX install paths; rely on PATH + user shell setup.
+- Spawning `opencode run` or surfacing the opencode command in UI.
+- Applying agent patches without the patch IPC (git apply + path checks).
+- Throwing compile/agent failures into UI; surface as diagnostics/toasts.
 
-## Maintainability
+## COMMANDS
 
-- Prefer shared modules over duplicating logic across components or IPC handlers.
-- Keep process boundaries clear: renderer code should not perform direct filesystem, compiler, patch, or subprocess work.
-- Keep IPC contracts in `src/shared` and implementation details in `src/main` or `src/renderer`.
-- Do not add broad abstractions until they remove real duplication or match an established project pattern.
-- Follow React guidance from "You Might Not Need an Effect": use Effects only for external synchronization, not for derived state or user-event logic.
+```bash
+pnpm run format
+pnpm run lint
+pnpm run typecheck
+pnpm run build
+```
 
-## Package Roles
+## KEY CONFIGS
 
-- `src/main`: Electron main process. Owns window creation, IPC registration, filesystem services, LaTeX compile runner, opencode runner, patch application, and performance marks.
-- `src/preload`: Secure Electron preload bridge. Exposes the typed `window.bigTex` API and nothing else.
-- `src/renderer`: React UI. Owns editor/preview/agent UX, client state, autosave behavior, and rendering.
-- `src/shared`: Shared TypeScript contracts for domain types and IPC channel/API shapes. Keep this schema/type-focused.
-- `samples/minimal`: Small LaTeX project used for smoke testing compiler and PDF preview behavior.
+| Tool | Entry | Notes |
+|------|-------|-------|
+| TypeScript | tsconfig.json | Shared tsconfig for main/preload/renderer |
+| Electron/Vite | electron.vite.config.ts | Build/serve wiring |
 
-## LaTeX Compilation
+## UNIQUE STYLES
 
-- `latexmk` is the default compiler target. `tectonic` is supported as an alternate compiler option.
-- Do not hardcode TeX installation paths. MacTeX users may need to restart their shell or run their shell's path-helper equivalent after install.
-- Compile should save or flush the current editor draft before invoking the compiler.
-- Compiler subprocesses belong in `src/main/compile`, never in the renderer.
-- Surface compiler failures as diagnostics instead of throwing UI-breaking errors.
+- Project tree filters build/aux dirs (out, dist, build, .latex-cache) + LaTeX aux extensions.
+- ACP messages are parsed for fenced diff blocks; extracted patches emit via IPC.
+- Compiler diagnostics parsed from stdout/stderr; capped at 100 entries.
+- Performance marks recorded in main via measure()/recordMark; renderer shows latest.
 
-## Agent Runtime
+## NOTES
 
-BigTex is currently opencode ACP-first.
-
-- The default command is `opencode acp`.
-- Do not use `opencode run` as a fallback.
-- Backend startup is internal. Do not expose the opencode command as normal user-facing UI; future backends should be selected through a backend/provider abstraction.
-- The app assumes the user installs and authenticates `opencode` separately, including opencode Go if desired.
-- Agent subprocess management lives in `src/main/agents/opencode.ts`.
-- Agent communication uses ACP JSON-RPC over stdio: `initialize`, `session/new`, `session/prompt`, `session/update`, and client file/permission callbacks.
-- Agent output streams to the renderer through IPC events on `agent:event`.
-- Agent-proposed file changes should be reviewable unified diffs. Applying patches is explicit and goes through `src/main/agents/patch.ts`.
-
-## Reference Repos and Docs
-
-- opencode docs: https://opencode.ai/docs
-- React guidance for Effects: https://react.dev/learn/you-might-not-need-an-effect
+- Do not run `pnpm run dev`.
+- Cleanup: use `latexmk -C` scoped to the sample or active project.
+- macOS TeX installs may require PATH helper restart for latexmk/tectonic.
+- `out/` is build output; avoid editing by hand.

@@ -31,6 +31,9 @@ Thumbs.db
 !.vscode/extensions.json
 !.vscode/settings.json
 
+# Personal samples (keep local only)
+samples/JesusGutierrezResume/
+
 # LaTeX generated files
 *.aux
 *.bbl
