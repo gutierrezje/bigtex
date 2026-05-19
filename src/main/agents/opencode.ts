@@ -1,6 +1,7 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
+import { relative, resolve, sep } from "node:path";
 import type {
   AgentAvailability,
   AgentEvent,
@@ -8,6 +9,7 @@ import type {
   AgentRunSummary,
 } from "../../shared/domain";
 import { assertInsideRoot } from "../files/project";
+import { unifiedDiffFromTexts } from "./patch";
 
 const PATCH_BLOCK_PATTERN = /```(?:diff|patch)\s*\n([\s\S]*?)```/gi;
 const OPENCODE_ACP_COMMAND = "opencode";
@@ -81,6 +83,31 @@ function extractPatch(text: string): string | null {
   return patches.length > 0 ? patches.join("\n\n") : null;
 }
 
+function toProjectRelative(rootPath: string, filePath: string): string {
+  const root = resolve(rootPath);
+  const absolute = filePath.startsWith("/") ? resolve(filePath) : resolve(root, filePath);
+  return relative(root, absolute).split(sep).join("/");
+}
+
+function patchFromToolCallUpdate(update: Record<string, unknown>, rootPath: string): string | null {
+  const content = update.content;
+  if (!Array.isArray(content)) return null;
+
+  for (const item of content) {
+    if (!item || typeof item !== "object") continue;
+    const block = item as { type?: unknown; path?: unknown; oldText?: unknown; newText?: unknown };
+    if (block.type !== "diff" || typeof block.path !== "string") continue;
+
+    const oldText = typeof block.oldText === "string" ? block.oldText : "";
+    const newText = typeof block.newText === "string" ? block.newText : "";
+    const relativePath = toProjectRelative(rootPath, block.path);
+    const patch = unifiedDiffFromTexts(relativePath, oldText, newText);
+    if (patch) return patch;
+  }
+
+  return null;
+}
+
 function textFromAcpContent(content: unknown): string | null {
   if (!content || typeof content !== "object") return null;
   const block = content as { type?: unknown; text?: unknown; content?: unknown };
@@ -103,6 +130,7 @@ function acpPrompt(input: AgentRunInput): Array<{ type: "text"; text: string }> 
 function handleAcpNotification(
   message: JsonRpcNotification,
   runId: string,
+  rootPath: string,
   appendTranscript: (text: string) => void,
   emit: (event: AgentEvent) => void,
 ): void {
@@ -137,6 +165,13 @@ function handleAcpNotification(
     const chunk = `\n[tool:${status}] ${title}\n`;
     appendTranscript(chunk);
     emit({ type: "stdout", runId, chunk, at: Date.now() });
+
+    if (status === "completed") {
+      const patch = patchFromToolCallUpdate(update, rootPath);
+      if (patch) {
+        emit({ type: "patch", runId, patch, at: Date.now() });
+      }
+    }
     return;
   }
 
@@ -253,7 +288,7 @@ class AcpConnection {
     }
 
     if ("method" in message && !("id" in message)) {
-      handleAcpNotification(message, this.runId, this.appendTranscript, this.emit);
+      handleAcpNotification(message, this.runId, this.rootPath, this.appendTranscript, this.emit);
       return;
     }
 
@@ -280,9 +315,17 @@ class AcpConnection {
 
   private async resolveClientRequest(method: string, params: unknown): Promise<unknown> {
     if (method === "session/request_permission") {
+      const request = params as {
+        options?: Array<{ optionId?: string; kind?: string }>;
+      };
+      const allowOption =
+        request.options?.find((option) => option.kind?.startsWith("allow")) ??
+        request.options?.find((option) => option.optionId === "once");
+
       return {
         outcome: {
-          outcome: "allowed",
+          outcome: "selected",
+          optionId: allowOption?.optionId ?? "once",
         },
       };
     }
@@ -305,6 +348,13 @@ class AcpConnection {
       if (typeof request.content !== "string") throw new Error("Missing content");
       const absolutePath = assertInsideRoot(this.rootPath, request.path);
       await writeFile(absolutePath, request.content, "utf8");
+      const relativePath = toProjectRelative(this.rootPath, request.path);
+      this.emit({
+        type: "filesChanged",
+        runId: this.runId,
+        paths: [relativePath],
+        at: Date.now(),
+      });
       return {};
     }
 
@@ -431,6 +481,8 @@ export async function runOpencode(
         prompt: acpPrompt(input),
       });
 
+      // OpenCode may emit session/update notifications after the prompt RPC returns.
+      await new Promise((resolve) => setTimeout(resolve, 750));
       child.stdin.end();
     } catch (error) {
       emit({

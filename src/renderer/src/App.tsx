@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import type { ProjectFile, ProjectSnapshot } from "../../shared/domain";
 import { AgentPanel } from "./components/AgentPanel";
@@ -16,7 +16,6 @@ function selectable(file: ProjectFile): boolean {
 }
 
 export function App() {
-  useAgentEvents();
   const {
     project,
     openFile,
@@ -36,6 +35,40 @@ export function App() {
   const [compiling, setCompiling] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const activeDraftRef = useRef<{ path: string; content: string } | null>(null);
+  const openFileRef = useRef(openFile);
+  openFileRef.current = openFile;
+
+  const refreshProjectFiles = useCallback(
+    async (paths?: string[], toastMessage?: string) => {
+      if (!project) return;
+      const refreshed = await window.bigTex.project.load(project.rootPath);
+      setProject(refreshed);
+
+      const activePath = openFileRef.current?.path;
+      const reloadPath =
+        activePath && paths?.includes(activePath) ? activePath : (paths?.[0] ?? activePath);
+      if (reloadPath) {
+        const file = await window.bigTex.files.read({
+          rootPath: project.rootPath,
+          path: reloadPath,
+        });
+        setOpenFile(file);
+        activeDraftRef.current = { path: file.path, content: file.content };
+      }
+
+      if (toastMessage) setToast(toastMessage);
+    },
+    [project, setProject, setOpenFile],
+  );
+
+  useAgentEvents((event) => {
+    void refreshProjectFiles(
+      event.paths,
+      event.paths.length === 1
+        ? `Agent updated ${event.paths[0]}.`
+        : `Agent updated ${event.paths.length} files.`,
+    );
+  });
 
   useEffect(() => {
     void refreshMetrics();
@@ -133,15 +166,14 @@ export function App() {
   async function applyPatch(patch: string): Promise<void> {
     if (!project) return;
     const result = await window.bigTex.patch.apply({ rootPath: project.rootPath, patch });
-    setToast(result.message);
-
-    const refreshed = await window.bigTex.project.load(project.rootPath);
-    setProject(refreshed);
-    if (openFile) {
-      setOpenFile(
-        await window.bigTex.files.read({ rootPath: project.rootPath, path: openFile.path }),
+    if (result.applied) {
+      await refreshProjectFiles(
+        result.changedFiles,
+        result.message || `Applied ${result.changedFiles.length} file change(s).`,
       );
+      return;
     }
+    setToast(result.message ? `Patch failed: ${result.message}` : "Patch failed.");
   }
 
   return (

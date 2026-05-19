@@ -87,6 +87,12 @@ export type AgentEvent =
       at: number;
     }
   | {
+      type: "filesChanged";
+      runId: string;
+      paths: string[];
+      at: number;
+    }
+  | {
       type: "finished";
       runId: string;
       exitCode: number | null;
