@@ -56,6 +56,8 @@ pnpm run typecheck
 pnpm run build
 ```
 
+Pre-commit runs Biome lint + format on staged files (`pnpm install` registers hooks).
+
 ## KEY CONFIGS
 
 | Tool | Entry | Notes |

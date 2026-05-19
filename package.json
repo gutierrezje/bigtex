@@ -12,12 +12,17 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "prepare": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "sh scripts/pre-commit.sh"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron",
-      "esbuild"
+      "esbuild",
+      "simple-git-hooks"
     ]
   },
   "dependencies": {
@@ -45,6 +50,7 @@
     "@types/react-dom": "latest",
     "electron": "latest",
     "electron-vite": "latest",
+    "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.2.4",
     "typescript": "latest",
     "vite": "^7.3.2"
