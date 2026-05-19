@@ -34,6 +34,10 @@ export function App() {
   } = useAppStore();
   const [compiling, setCompiling] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [showDiagnostics, setShowDiagnostics] = useState(true);
+  const [showPdf, setShowPdf] = useState(true);
+  const [showAgent, setShowAgent] = useState(true);
   const activeDraftRef = useRef<{ path: string; content: string } | null>(null);
   const openFileRef = useRef(openFile);
   const projectRef = useRef(project);
@@ -188,79 +192,110 @@ export function App() {
   }
 
   return (
-    <main className="grid h-screen min-h-0 grid-cols-[clamp(190px,18vw,256px)_minmax(0,1fr)] overflow-hidden">
-      <ProjectSidebar
-        project={project}
-        activePath={openFile?.path ?? null}
-        onOpenProject={() => void openProjectFromDialog()}
-        onOpenSample={() => void loadSample()}
-        onOpenFile={(file) => void openProjectFile(file)}
-      />
-
-      <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-        <TitleBar />
-        <CommandBar
-          compiler={compiler}
-          metrics={metrics}
-          onCompilerChange={setCompiler}
-          onRefreshMetrics={() => void refreshMetrics()}
-        />
-
-        <div className="min-h-0 flex-1 overflow-hidden px-3 pb-3">
-          <Group
-            className="h-full min-h-0 min-w-0"
-            id="bigtex-main-panels"
-            orientation="horizontal"
-          >
-            <Panel defaultSize="42%" minSize="28%" className="min-h-0 min-w-0">
-              <Group
-                className="h-full min-h-0 min-w-0"
-                id="bigtex-editor-panels"
-                orientation="vertical"
-              >
-                <Panel defaultSize="78%" minSize="40%" className="min-h-0 min-w-0">
-                  <EditorPane
-                    file={openFile}
-                    diagnostics={compileResult?.diagnostics ?? []}
-                    onDraftChange={(path, content) => {
-                      activeDraftRef.current = { path, content };
-                    }}
-                    onSave={(content) => void saveOpenFile(content)}
-                  />
-                </Panel>
-                <Separator className="resize-handle-vertical" />
-                <Panel defaultSize="22%" minSize="14%" maxSize="45%" className="min-h-0 min-w-0">
-                  <DiagnosticsPanel
-                    result={compileResult}
-                    compiling={compiling}
-                    onCompile={() => void compile()}
-                  />
-                </Panel>
-              </Group>
-            </Panel>
-
-            <Separator className="resize-handle-horizontal" />
-
-            <Panel defaultSize="33%" minSize="22%" className="min-h-0 min-w-0">
-              <PdfPreview pdf={pdf} />
-            </Panel>
-
-            <Separator className="resize-handle-horizontal" />
-
-            <Panel defaultSize="25%" minSize="20%" className="min-h-0 min-w-0">
-              <AgentPanel
-                rootPath={project?.rootPath ?? null}
-                activeFile={openFile?.path ?? null}
-                diagnostics={compileResult?.diagnostics ?? []}
-                chat={agentChat}
-                onRun={runAgent}
-                onCancel={(runId) => window.bigTex.agent.cancel({ runId })}
-                onApplyPatch={applyPatch}
+    <main className="flex h-screen w-screen min-h-0 overflow-hidden bg-background">
+      <Group
+        className="h-full w-full min-h-0 min-w-0"
+        id="bigtex-outer-layout"
+        orientation="horizontal"
+      >
+        {showSidebar && (
+          <>
+            <Panel defaultSize={16} minSize={12} maxSize={25} className="h-full min-h-0 min-w-0">
+              <ProjectSidebar
+                project={project}
+                activePath={openFile?.path ?? null}
+                onOpenProject={() => void openProjectFromDialog()}
+                onOpenSample={() => void loadSample()}
+                onOpenFile={(file) => void openProjectFile(file)}
               />
             </Panel>
-          </Group>
-        </div>
-      </section>
+            <Separator className="resize-handle-horizontal" />
+          </>
+        )}
+
+        <Panel className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+          <TitleBar />
+          <CommandBar
+            compiler={compiler}
+            metrics={metrics}
+            onCompilerChange={setCompiler}
+            onRefreshMetrics={() => void refreshMetrics()}
+            showSidebar={showSidebar}
+            onToggleSidebar={() => setShowSidebar(!showSidebar)}
+            showDiagnostics={showDiagnostics}
+            onToggleDiagnostics={() => setShowDiagnostics(!showDiagnostics)}
+            showPdf={showPdf}
+            onTogglePdf={() => setShowPdf(!showPdf)}
+            showAgent={showAgent}
+            onToggleAgent={() => setShowAgent(!showAgent)}
+          />
+
+          <div className="min-h-0 flex-1 overflow-hidden px-3 pb-3">
+            <Group
+              className="h-full min-h-0 min-w-0"
+              id="bigtex-main-panels"
+              orientation="horizontal"
+            >
+              <Panel defaultSize={38} minSize={25} className="min-h-0 min-w-0">
+                <Group
+                  className="h-full min-h-0 min-w-0"
+                  id="bigtex-editor-panels"
+                  orientation="vertical"
+                >
+                  <Panel defaultSize={78} minSize={40} className="min-h-0 min-w-0">
+                    <EditorPane
+                      file={openFile}
+                      diagnostics={compileResult?.diagnostics ?? []}
+                      onDraftChange={(path, content) => {
+                        activeDraftRef.current = { path, content };
+                      }}
+                      onSave={(content) => void saveOpenFile(content)}
+                    />
+                  </Panel>
+                  {showDiagnostics && (
+                    <>
+                      <Separator className="resize-handle-vertical" />
+                      <Panel defaultSize={22} minSize={14} maxSize={45} className="min-h-0 min-w-0">
+                        <DiagnosticsPanel
+                          result={compileResult}
+                          compiling={compiling}
+                          onCompile={() => void compile()}
+                        />
+                      </Panel>
+                    </>
+                  )}
+                </Group>
+              </Panel>
+
+              {showPdf && (
+                <>
+                  <Separator className="resize-handle-horizontal" />
+                  <Panel defaultSize={35} minSize={20} className="min-h-0 min-w-0">
+                    <PdfPreview pdf={pdf} />
+                  </Panel>
+                </>
+              )}
+
+              {showAgent && (
+                <>
+                  <Separator className="resize-handle-horizontal" />
+                  <Panel defaultSize={27} minSize={20} className="min-h-0 min-w-0">
+                    <AgentPanel
+                      rootPath={project?.rootPath ?? null}
+                      activeFile={openFile?.path ?? null}
+                      diagnostics={compileResult?.diagnostics ?? []}
+                      chat={agentChat}
+                      onRun={runAgent}
+                      onCancel={(runId) => window.bigTex.agent.cancel({ runId })}
+                      onApplyPatch={applyPatch}
+                    />
+                  </Panel>
+                </>
+              )}
+            </Group>
+          </div>
+        </Panel>
+      </Group>
 
       {toast ? (
         <button
