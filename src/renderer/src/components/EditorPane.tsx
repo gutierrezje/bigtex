@@ -66,7 +66,7 @@ function configureMonaco(monaco: Monaco): void {
 
 function EmptyEditorPane() {
   return (
-    <section className="grid h-full min-h-0 min-w-0 place-items-center overflow-hidden rounded-lg border border-border bg-surface-raised">
+    <section className="grid h-full min-h-0 min-w-0 place-items-center overflow-hidden bg-surface-raised">
       <div className="max-w-sm text-center">
         <span className="text-[10px] font-semibold uppercase tracking-widest text-accent">
           Ready
@@ -138,7 +138,7 @@ function LoadedEditorPane({ file, diagnostics, onDraftChange, onSave }: LoadedEd
   }
 
   return (
-    <section className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-border bg-surface-raised">
+    <section className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-surface-raised">
       <header className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">

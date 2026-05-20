@@ -140,54 +140,66 @@ ul {
 }
 
 /* ── Resizable Panels ── */
-.resize-handle-horizontal,
-.resize-handle-vertical {
+.resize-handle-horizontal {
   position: relative;
-  flex: 0 0 8px;
-  transition: background 120ms ease;
+  flex: 0 0 6px;
+  width: 6px;
+  background: transparent;
+  cursor: col-resize;
+  z-index: 10;
 }
 
-.resize-handle-horizontal::after,
-.resize-handle-vertical::after {
-  position: absolute;
-  display: block;
-  content: "";
-  border-radius: 999px;
-  background: var(--color-border);
-  transition:
-    background 120ms ease,
-    transform 120ms ease;
+.resize-handle-vertical {
+  position: relative;
+  flex: 0 0 6px;
+  height: 6px;
+  background: transparent;
+  cursor: row-resize;
+  z-index: 10;
 }
 
 .resize-handle-horizontal::after {
-  top: 10px;
-  bottom: 10px;
-  left: 3px;
-  width: 2px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2.5px;
+  width: 1px;
+  content: "";
+  background: var(--color-border);
+  opacity: 0.4;
+  transition:
+    background 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
 }
 
 .resize-handle-vertical::after {
-  right: 10px;
-  bottom: 3px;
-  left: 10px;
-  height: 2px;
-}
-
-.resize-handle-horizontal[data-resize-handle-active]::after,
-.resize-handle-vertical[data-resize-handle-active]::after,
-.resize-handle-horizontal:hover::after,
-.resize-handle-vertical:hover::after {
-  background: var(--color-accent);
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 2.5px;
+  height: 1px;
+  content: "";
+  background: var(--color-border);
+  opacity: 0.4;
+  transition:
+    background 150ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
 }
 
 .resize-handle-horizontal[data-resize-handle-active]::after,
 .resize-handle-horizontal:hover::after {
-  transform: scaleX(1.6);
+  background: var(--color-accent);
+  opacity: 1;
+  transform: scaleX(2);
 }
 
 .resize-handle-vertical[data-resize-handle-active]::after,
 .resize-handle-vertical:hover::after {
-  transform: scaleY(1.6);
+  background: var(--color-accent);
+  opacity: 1;
+  transform: scaleY(2);
 }
 
 .agent-output-markdown code {

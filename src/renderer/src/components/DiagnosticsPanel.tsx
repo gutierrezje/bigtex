@@ -8,7 +8,7 @@ interface DiagnosticsPanelProps {
 
 export function DiagnosticsPanel({ result, onCompile, compiling }: DiagnosticsPanelProps) {
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface-raised">
+    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
       <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2">
         <div>
           <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">

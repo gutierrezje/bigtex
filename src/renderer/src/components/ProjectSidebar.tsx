@@ -262,7 +262,7 @@ export function ProjectSidebar({
   };
 
   return (
-    <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-r border-border bg-surface-raised">
+    <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
       {/* Brand */}
       <div className="flex min-w-0 items-center gap-3 px-4 pt-4 pb-4">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent text-xs font-bold tracking-tight text-zinc-950 shadow-sm transition-transform hover:scale-102">

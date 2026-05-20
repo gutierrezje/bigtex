@@ -303,7 +303,7 @@ export function App() {
           />
 
           <Panel defaultSize="84%" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-            <div className="min-h-0 flex-1 overflow-hidden p-3">
+            <div className="min-h-0 flex-1 overflow-hidden">
               <Group
                 className="h-full min-h-0 min-w-0"
                 id="bigtex-main-panels"
