@@ -3,8 +3,8 @@ import type { AgentProviderGroup, AgentSessionConfig } from "./domain";
 /** Highest reasoning effort first; unknown variants sort alphabetically after these. */
 const REASONING_LEVEL_ORDER = [
   "xhigh",
-  "high",
   "max",
+  "high",
   "medium",
   "med",
   "low",
@@ -17,10 +17,11 @@ const REASONING_LEVEL_ORDER = [
 const HIDDEN_VARIANTS = new Set(["default"]);
 
 /** Candidate suffixes probed via ACP when OpenCode omits variant metadata. */
+/** Fallback when OpenCode serve providers API is unavailable. */
 export const REASONING_VARIANT_PROBE_CANDIDATES = [
+  "max",
   "xhigh",
   "high",
-  "max",
   "medium",
   "med",
   "low",

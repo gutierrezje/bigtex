@@ -23,6 +23,7 @@ export interface AgentSettingsState {
   providerGroup: AgentProviderGroup;
   modelId: string;
   reasoningLevel: string | null;
+  reasoningProbing: boolean;
   loading: boolean;
   error: string | null;
 }
@@ -92,6 +93,7 @@ export const useAppStore = create<AppState>((set) => ({
     providerGroup: "free",
     modelId: "",
     reasoningLevel: null,
+    reasoningProbing: false,
     loading: false,
     error: null,
   },
@@ -256,20 +258,17 @@ export const useAppStore = create<AppState>((set) => ({
       agentSettings: { ...state.agentSettings, loading: true, error: null },
     }));
     try {
-      let config = await window.bigTex.agent.loadConfig(rootPath);
+      const config = await window.bigTex.agent.loadConfig(rootPath);
       const currentGroup = providerGroupFromModelId(config.currentModelId);
       const providerGroup: AgentProviderGroup = currentGroup === "go" ? "go" : "free";
       const modelId = baseModelId(config.currentModelId) || pickDefaultModel(config, providerGroup);
-      if (!config.variantsByModel[modelId]?.length) {
-        const variants = await window.bigTex.agent.probeModelVariants(rootPath, modelId);
-        config = withModelVariants(config, modelId, variants);
-      }
       set({
         agentSettings: {
           config,
           providerGroup,
           modelId,
           reasoningLevel: normalizeReasoningLevel(config, modelId, config.currentVariant),
+          reasoningProbing: false,
           loading: false,
           error: null,
         },
@@ -327,6 +326,10 @@ export const useAppStore = create<AppState>((set) => ({
     const cached = useAppStore.getState().agentSettings.config?.variantsByModel[base];
     if (cached && cached.length > 0) return;
 
+    set((state) => ({
+      agentSettings: { ...state.agentSettings, reasoningProbing: true },
+    }));
+
     try {
       const variants = await window.bigTex.agent.probeModelVariants(rootPath, base);
       set((state) => {
@@ -337,6 +340,7 @@ export const useAppStore = create<AppState>((set) => ({
           agentSettings: {
             ...state.agentSettings,
             config: merged,
+            reasoningProbing: false,
             reasoningLevel: normalizeReasoningLevel(
               merged,
               base,
@@ -346,7 +350,9 @@ export const useAppStore = create<AppState>((set) => ({
         };
       });
     } catch {
-      // Reasoning probe failed; leave dropdown disabled.
+      set((state) => ({
+        agentSettings: { ...state.agentSettings, reasoningProbing: false },
+      }));
     }
   },
   setAgentReasoningLevel: (reasoningLevel) =>

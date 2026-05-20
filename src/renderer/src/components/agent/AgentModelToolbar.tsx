@@ -30,7 +30,8 @@ export function AgentModelToolbar() {
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showReasoningDropdown, setShowReasoningDropdown] = useState(false);
 
-  const { config, providerGroup, modelId, reasoningLevel, loading, error } = agentSettings;
+  const { config, providerGroup, modelId, reasoningLevel, reasoningProbing, loading, error } =
+    agentSettings;
   const modelsForGroup =
     config?.models.filter(
       (model) => model.providerGroup === providerGroup && model.variant === null,
@@ -121,11 +122,13 @@ export function AgentModelToolbar() {
         <div className="relative">
           <button
             type="button"
-            disabled={!reasoningAvailable}
+            disabled={!reasoningAvailable || reasoningProbing}
             title={
-              reasoningAvailable
-                ? "Reasoning effort (xhigh → none) when the model exposes variants"
-                : "No reasoning variants for this model"
+              reasoningProbing
+                ? "Loading reasoning levels…"
+                : reasoningAvailable
+                  ? "Reasoning effort (max → low); off uses the base model"
+                  : "No reasoning variants for this model"
             }
             className={`flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-all duration-100 disabled:cursor-not-allowed disabled:opacity-40 ${reasoningLevel ? "border-accent-muted bg-accent-muted/10 text-text-primary" : "border-border bg-surface-inset text-text-muted hover:border-accent/40"}`}
             onClick={() => {
@@ -134,7 +137,7 @@ export function AgentModelToolbar() {
               setShowModelDropdown(false);
             }}
           >
-            <span>{reasoningLevel ?? "off"}</span>
+            <span>{reasoningProbing ? "…" : (reasoningLevel ?? "off")}</span>
             <ChevronDown />
           </button>
           {showReasoningDropdown ? (

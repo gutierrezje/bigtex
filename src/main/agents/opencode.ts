@@ -25,6 +25,11 @@ import {
   parseAgentSessionConfig,
   resolveModelIdForRun,
 } from "./acp-config";
+import {
+  getOpencodeVariantsByModel,
+  getVariantsForModel,
+  opencodeShellEnv,
+} from "./opencode-providers";
 import { unifiedDiffFromTexts } from "./patch";
 
 const PATCH_BLOCK_PATTERN = /```(?:diff|patch)\s*\n([\s\S]*?)```/gi;
@@ -457,7 +462,7 @@ async function withOpencodeAcpSession<T>(
   const child = spawn(OPENCODE_ACP_COMMAND, [...OPENCODE_ACP_ARGS], {
     cwd: rootPath,
     shell: false,
-    env: process.env,
+    env: opencodeShellEnv(),
   });
 
   const connection = new AcpConnection(
@@ -485,10 +490,14 @@ export async function probeOpencodeModelVariants(
   rootPath: string,
   modelId: string,
 ): Promise<string[]> {
-  const base = baseModelId(modelId);
-  return withOpencodeAcpSession(rootPath, async (connection, session) =>
-    discoverModelVariantsViaAcp(connection, session.sessionId, base),
-  );
+  try {
+    return await getVariantsForModel(rootPath, modelId);
+  } catch {
+    const base = baseModelId(modelId);
+    return withOpencodeAcpSession(rootPath, async (connection, session) =>
+      discoverModelVariantsViaAcp(connection, session.sessionId, base),
+    );
+  }
 }
 
 export async function loadOpencodeSessionConfig(rootPath: string): Promise<AgentSessionConfig> {
@@ -499,8 +508,18 @@ export async function loadOpencodeSessionConfig(rootPath: string): Promise<Agent
     if (refreshed) {
       config = mergeAgentSessionConfig(config, refreshed);
     }
-    const variants = await discoverModelVariantsViaAcp(connection, session.sessionId, probeModelId);
-    return withModelVariants(config, probeModelId, variants);
+
+    try {
+      const variantsByModel = await getOpencodeVariantsByModel(rootPath, { force: true });
+      return { ...config, variantsByModel };
+    } catch {
+      const variants = await discoverModelVariantsViaAcp(
+        connection,
+        session.sessionId,
+        probeModelId,
+      );
+      return withModelVariants(config, probeModelId, variants);
+    }
   });
 }
 
@@ -557,7 +576,7 @@ export async function runOpencode(
   const child = spawn(command, args, {
     cwd: input.rootPath,
     shell: false,
-    env: process.env,
+    env: opencodeShellEnv(),
   });
 
   const stopWatch = startProjectWatch(input.rootPath, runId, emit);
