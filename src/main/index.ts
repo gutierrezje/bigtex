@@ -8,7 +8,13 @@ import {
   type ReadFileRequest,
   type WriteFileRequest,
 } from "../shared/ipc";
-import { cancelOpencode, checkOpencode, runOpencode } from "./agents/opencode";
+import {
+  cancelOpencode,
+  checkOpencode,
+  loadOpencodeSessionConfig,
+  probeOpencodeModelVariants,
+  runOpencode,
+} from "./agents/opencode";
 import { applyUnifiedPatch } from "./agents/patch";
 import { compileLatex } from "./compile/latex";
 import {
@@ -115,6 +121,14 @@ function registerIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.agentCheck, (_event, request: AgentCheckRequest) =>
     checkOpencode(request.command),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.agentConfig, (_event, rootPath: string) =>
+    loadOpencodeSessionConfig(rootPath),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.agentProbeModel, (_event, rootPath: string, modelId: string) =>
+    probeOpencodeModelVariants(rootPath, modelId),
   );
 
   ipcMain.handle(IPC_CHANNELS.agentRun, (_event, request: AgentRunInput) =>

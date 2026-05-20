@@ -21,6 +21,9 @@ const api: BigTexApi = {
   },
   agent: {
     check: (request) => ipcRenderer.invoke(IPC_CHANNELS.agentCheck, request),
+    loadConfig: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.agentConfig, rootPath),
+    probeModelVariants: (rootPath, modelId) =>
+      ipcRenderer.invoke(IPC_CHANNELS.agentProbeModel, rootPath, modelId),
     run: (request) => ipcRenderer.invoke(IPC_CHANNELS.agentRun, request),
     cancel: (request) => ipcRenderer.invoke(IPC_CHANNELS.agentCancel, request),
     onEvent: (listener) => {

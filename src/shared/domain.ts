@@ -62,11 +62,32 @@ export interface AgentAvailability {
   message: string;
 }
 
+export type AgentProviderGroup = "free" | "go";
+
+export interface AgentModelOption {
+  id: string;
+  name: string;
+  label: string;
+  providerGroup: AgentProviderGroup;
+  variant: string | null;
+}
+
+export interface AgentSessionConfig {
+  models: AgentModelOption[];
+  currentModelId: string;
+  availableVariants: string[];
+  currentVariant: string | null;
+  /** Variants discovered per base model id (e.g. opencode-go/deepseek-v4-pro → xhigh, med, …). */
+  variantsByModel: Record<string, string[]>;
+}
+
 export interface AgentRunInput {
   rootPath: string;
   prompt: string;
   selectedFiles: string[];
   diagnostics: CompileDiagnostic[];
+  modelId: string;
+  reasoningLevel: string | null;
 }
 
 export type AgentEvent =

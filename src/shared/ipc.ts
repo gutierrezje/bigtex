@@ -3,6 +3,7 @@ import type {
   AgentEvent,
   AgentRunInput,
   AgentRunSummary,
+  AgentSessionConfig,
   CompileRequest,
   CompileResult,
   OpenFile,
@@ -25,6 +26,8 @@ export const IPC_CHANNELS = {
   agentCheck: "agent:check",
   agentRun: "agent:run",
   agentCancel: "agent:cancel",
+  agentConfig: "agent:config",
+  agentProbeModel: "agent:probe-model",
   agentEvent: "agent:event",
   patchApply: "patch:apply",
 } as const;
@@ -65,6 +68,8 @@ export interface BigTexApi {
   };
   agent: {
     check(request: AgentCheckRequest): Promise<AgentAvailability>;
+    loadConfig(rootPath: string): Promise<AgentSessionConfig>;
+    probeModelVariants(rootPath: string, modelId: string): Promise<string[]>;
     run(request: AgentRunInput): Promise<AgentRunSummary>;
     cancel(request: AgentCancelRequest): Promise<void>;
     onEvent(listener: (event: AgentEvent) => void): () => void;

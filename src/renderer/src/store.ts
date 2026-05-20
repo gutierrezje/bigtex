@@ -1,6 +1,15 @@
 import { create } from "zustand";
+import {
+  baseModelId,
+  normalizeReasoningLevel,
+  pickDefaultModel,
+  providerGroupFromModelId,
+  withModelVariants,
+} from "../../shared/agent-models";
 import type {
   AgentEvent,
+  AgentProviderGroup,
+  AgentSessionConfig,
   CompileResult,
   CompilerKind,
   OpenFile,
@@ -8,6 +17,15 @@ import type {
   PerformanceMark,
   ProjectSnapshot,
 } from "../../shared/domain";
+
+export interface AgentSettingsState {
+  config: AgentSessionConfig | null;
+  providerGroup: AgentProviderGroup;
+  modelId: string;
+  reasoningLevel: string | null;
+  loading: boolean;
+  error: string | null;
+}
 
 export interface AgentChatMessage {
   id: string;
@@ -33,6 +51,7 @@ interface AppState {
   compileResult: CompileResult | null;
   pdf: PdfPayload | null;
   agentChat: AgentChatState;
+  agentSettings: AgentSettingsState;
   metrics: PerformanceMark[];
   setProject(project: ProjectSnapshot | null): void;
   setOpenFile(file: OpenFile | null): void;
@@ -44,6 +63,11 @@ interface AppState {
   createPendingAgentMessage(): string;
   appendAgentEvent(event: AgentEvent): void;
   clearAgent(): void;
+  loadAgentConfig(rootPath: string): Promise<void>;
+  setAgentProviderGroup(group: AgentProviderGroup): void;
+  setAgentModelId(modelId: string): void;
+  refreshAgentModelVariants(rootPath: string, modelId: string): Promise<void>;
+  setAgentReasoningLevel(level: string | null): void;
   setMetrics(metrics: PerformanceMark[]): void;
 }
 
@@ -62,6 +86,14 @@ export const useAppStore = create<AppState>((set) => ({
     running: false,
     activeAssistantMessageId: null,
     messages: [],
+  },
+  agentSettings: {
+    config: null,
+    providerGroup: "free",
+    modelId: "",
+    reasoningLevel: null,
+    loading: false,
+    error: null,
   },
   metrics: [],
   setProject: (project) => set({ project }),
@@ -219,5 +251,107 @@ export const useAppStore = create<AppState>((set) => ({
         messages: [],
       },
     }),
+  loadAgentConfig: async (rootPath) => {
+    set((state) => ({
+      agentSettings: { ...state.agentSettings, loading: true, error: null },
+    }));
+    try {
+      let config = await window.bigTex.agent.loadConfig(rootPath);
+      const currentGroup = providerGroupFromModelId(config.currentModelId);
+      const providerGroup: AgentProviderGroup = currentGroup === "go" ? "go" : "free";
+      const modelId = baseModelId(config.currentModelId) || pickDefaultModel(config, providerGroup);
+      if (!config.variantsByModel[modelId]?.length) {
+        const variants = await window.bigTex.agent.probeModelVariants(rootPath, modelId);
+        config = withModelVariants(config, modelId, variants);
+      }
+      set({
+        agentSettings: {
+          config,
+          providerGroup,
+          modelId,
+          reasoningLevel: normalizeReasoningLevel(config, modelId, config.currentVariant),
+          loading: false,
+          error: null,
+        },
+      });
+    } catch (error) {
+      set((state) => ({
+        agentSettings: {
+          ...state.agentSettings,
+          loading: false,
+          error: error instanceof Error ? error.message : "Failed to load OpenCode models",
+        },
+      }));
+    }
+  },
+  setAgentProviderGroup: (providerGroup) =>
+    set((state) => {
+      const config = state.agentSettings.config;
+      if (!config) return { agentSettings: { ...state.agentSettings, providerGroup } };
+      const modelId = pickDefaultModel(config, providerGroup);
+      const next = {
+        agentSettings: {
+          ...state.agentSettings,
+          providerGroup,
+          modelId,
+          reasoningLevel: null,
+        },
+      };
+      const rootPath = state.project?.rootPath;
+      if (rootPath) {
+        void useAppStore.getState().refreshAgentModelVariants(rootPath, modelId);
+      }
+      return next;
+    }),
+  setAgentModelId: (modelId) => {
+    const base = baseModelId(modelId);
+    set((state) => {
+      const config = state.agentSettings.config;
+      return {
+        agentSettings: {
+          ...state.agentSettings,
+          modelId: base,
+          reasoningLevel: config
+            ? normalizeReasoningLevel(config, base, state.agentSettings.reasoningLevel)
+            : null,
+        },
+      };
+    });
+    const rootPath = useAppStore.getState().project?.rootPath;
+    if (rootPath) {
+      void useAppStore.getState().refreshAgentModelVariants(rootPath, base);
+    }
+  },
+  refreshAgentModelVariants: async (rootPath, modelId) => {
+    const base = baseModelId(modelId);
+    const cached = useAppStore.getState().agentSettings.config?.variantsByModel[base];
+    if (cached && cached.length > 0) return;
+
+    try {
+      const variants = await window.bigTex.agent.probeModelVariants(rootPath, base);
+      set((state) => {
+        const config = state.agentSettings.config;
+        if (!config) return state;
+        const merged = withModelVariants(config, base, variants);
+        return {
+          agentSettings: {
+            ...state.agentSettings,
+            config: merged,
+            reasoningLevel: normalizeReasoningLevel(
+              merged,
+              base,
+              state.agentSettings.reasoningLevel,
+            ),
+          },
+        };
+      });
+    } catch {
+      // Reasoning probe failed; leave dropdown disabled.
+    }
+  },
+  setAgentReasoningLevel: (reasoningLevel) =>
+    set((state) => ({
+      agentSettings: { ...state.agentSettings, reasoningLevel },
+    })),
   setMetrics: (metrics) => set({ metrics }),
 }));

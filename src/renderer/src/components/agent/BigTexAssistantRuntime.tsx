@@ -11,7 +11,7 @@ import { useAppStore } from "../../store";
 interface BigTexAssistantRuntimeProps {
   children: ReactNode;
   disabled: boolean;
-  onRun(prompt: string): Promise<void>;
+  onRun(prompt: string, modelId: string, reasoningLevel: string | null): Promise<void>;
   onCancel(runId: string): Promise<void>;
 }
 
@@ -58,6 +58,8 @@ export function BigTexAssistantRuntime({
   const runId = useAppStore((state) => state.agentChat.runId);
   const addAgentUserMessage = useAppStore((state) => state.addAgentUserMessage);
   const createPendingAgentMessage = useAppStore((state) => state.createPendingAgentMessage);
+  const modelId = useAppStore((state) => state.agentSettings.modelId);
+  const reasoningLevel = useAppStore((state) => state.agentSettings.reasoningLevel);
 
   const runtime = useExternalStoreRuntime<AgentChatMessage>({
     messages,
@@ -70,7 +72,8 @@ export function BigTexAssistantRuntime({
 
       addAgentUserMessage(prompt);
       createPendingAgentMessage();
-      await onRun(prompt);
+      if (!modelId) return;
+      await onRun(prompt, modelId, reasoningLevel);
     },
     onCancel: async () => {
       if (runId) await onCancel(runId);

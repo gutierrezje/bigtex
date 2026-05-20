@@ -2,14 +2,29 @@ import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
+import {
+  baseModelId,
+  pickDefaultModel,
+  REASONING_VARIANT_PROBE_CANDIDATES,
+  sortReasoningVariants,
+  withModelVariants,
+} from "../../shared/agent-models";
 import type {
   AgentAvailability,
   AgentEvent,
   AgentRunInput,
   AgentRunSummary,
+  AgentSessionConfig,
 } from "../../shared/domain";
 import { assertInsideRoot } from "../files/project";
 import { startProjectWatch } from "../files/watch";
+import {
+  type AcpSessionNewResult,
+  type AcpSetConfigOptionResult,
+  mergeAgentSessionConfig,
+  parseAgentSessionConfig,
+  resolveModelIdForRun,
+} from "./acp-config";
 import { unifiedDiffFromTexts } from "./patch";
 
 const PATCH_BLOCK_PATTERN = /```(?:diff|patch)\s*\n([\s\S]*?)```/gi;
@@ -364,6 +379,131 @@ class AcpConnection {
   }
 }
 
+const ACP_INITIALIZE_PARAMS = {
+  protocolVersion: 1,
+  clientCapabilities: {
+    fs: {
+      readTextFile: true,
+      writeTextFile: true,
+    },
+    terminal: false,
+  },
+  clientInfo: {
+    name: "bigtex",
+    title: "BigTex",
+    version: "0.1.0",
+  },
+} as const;
+
+function currentModelFromSetResult(result: AcpSetConfigOptionResult | null): string | null {
+  const modelOption = result?.configOptions?.find((option) => option.id === "model");
+  return modelOption?.currentValue ?? null;
+}
+
+async function discoverModelVariantsViaAcp(
+  connection: AcpConnection,
+  sessionId: string,
+  modelId: string,
+): Promise<string[]> {
+  const base = baseModelId(modelId);
+  const valid: string[] = [];
+
+  for (const variant of REASONING_VARIANT_PROBE_CANDIDATES) {
+    const candidate = `${base}/${variant}`;
+    try {
+      const result = await connection.request<AcpSetConfigOptionResult>(
+        "session/set_config_option",
+        {
+          sessionId,
+          configId: "model",
+          value: candidate,
+        },
+      );
+      if (currentModelFromSetResult(result) === candidate) {
+        valid.push(variant);
+      }
+    } catch {
+      // Variant not supported for this model.
+    }
+  }
+
+  await applySessionModel(connection, sessionId, base);
+  return sortReasoningVariants(valid);
+}
+
+async function applySessionModel(
+  connection: AcpConnection,
+  sessionId: string,
+  modelId: string,
+): Promise<AcpSetConfigOptionResult | null> {
+  try {
+    return await connection.request<AcpSetConfigOptionResult>("session/set_config_option", {
+      sessionId,
+      configId: "model",
+      value: modelId,
+    });
+  } catch {
+    // Older OpenCode builds expose unstable_setSessionModel instead.
+  }
+
+  await connection.request("session/set_model", { sessionId, modelId });
+  return null;
+}
+
+async function withOpencodeAcpSession<T>(
+  rootPath: string,
+  run: (connection: AcpConnection, session: AcpSessionNewResult) => Promise<T>,
+): Promise<T> {
+  const child = spawn(OPENCODE_ACP_COMMAND, [...OPENCODE_ACP_ARGS], {
+    cwd: rootPath,
+    shell: false,
+    env: process.env,
+  });
+
+  const connection = new AcpConnection(
+    child,
+    "config",
+    rootPath,
+    () => {},
+    () => {},
+  );
+
+  try {
+    await connection.request("initialize", ACP_INITIALIZE_PARAMS);
+    const session = await connection.request<AcpSessionNewResult>("session/new", {
+      cwd: rootPath,
+      mcpServers: [],
+    });
+    return await run(connection, session);
+  } finally {
+    child.stdin.end();
+    child.kill("SIGTERM");
+  }
+}
+
+export async function probeOpencodeModelVariants(
+  rootPath: string,
+  modelId: string,
+): Promise<string[]> {
+  const base = baseModelId(modelId);
+  return withOpencodeAcpSession(rootPath, async (connection, session) =>
+    discoverModelVariantsViaAcp(connection, session.sessionId, base),
+  );
+}
+
+export async function loadOpencodeSessionConfig(rootPath: string): Promise<AgentSessionConfig> {
+  return withOpencodeAcpSession(rootPath, async (connection, session) => {
+    let config = parseAgentSessionConfig(session);
+    const probeModelId = baseModelId(config.currentModelId) || pickDefaultModel(config, "free");
+    const refreshed = await applySessionModel(connection, session.sessionId, probeModelId);
+    if (refreshed) {
+      config = mergeAgentSessionConfig(config, refreshed);
+    }
+    const variants = await discoverModelVariantsViaAcp(connection, session.sessionId, probeModelId);
+    return withModelVariants(config, probeModelId, variants);
+  });
+}
+
 export async function checkOpencode(commandLine = "opencode"): Promise<AgentAvailability> {
   const [command, ...args] = splitCommand(commandLine);
 
@@ -456,29 +596,21 @@ export async function runOpencode(
 
   void (async () => {
     try {
-      await connection.request("initialize", {
-        protocolVersion: 1,
-        clientCapabilities: {
-          fs: {
-            readTextFile: true,
-            writeTextFile: true,
-          },
-          terminal: false,
-        },
-        clientInfo: {
-          name: "bigtex",
-          title: "BigTex",
-          version: "0.1.0",
-        },
-      });
+      await connection.request("initialize", ACP_INITIALIZE_PARAMS);
 
-      const session = await connection.request<{ sessionId: string }>("session/new", {
+      const session = await connection.request<AcpSessionNewResult>("session/new", {
         cwd: input.rootPath,
         mcpServers: [],
       });
 
       const active = activeRuns.get(runId);
       if (active) active.sessionId = session.sessionId;
+
+      const sessionConfig = parseAgentSessionConfig(session);
+      const modelId = resolveModelIdForRun(sessionConfig, input.modelId, input.reasoningLevel);
+      if (modelId && modelId !== sessionConfig.currentModelId) {
+        await applySessionModel(connection, session.sessionId, modelId);
+      }
 
       await connection.request("session/prompt", {
         sessionId: session.sessionId,
