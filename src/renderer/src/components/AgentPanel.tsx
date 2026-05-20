@@ -6,7 +6,6 @@ import {
   ThreadPrimitive,
   useAuiState,
 } from "@assistant-ui/react";
-import { useState } from "react";
 import type { CompileDiagnostic } from "../../../shared/domain";
 import type { AgentChatState } from "../store";
 import { AgentModelToolbar } from "./agent/AgentModelToolbar";
@@ -97,7 +96,11 @@ function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<vo
   );
 }
 
-function ChatThread({ onApplyPatch }: { onApplyPatch: (patch: string) => Promise<void> }) {
+interface ChatThreadProps {
+  onApplyPatch(patch: string): Promise<void>;
+}
+
+function ChatThread({ onApplyPatch }: ChatThreadProps) {
   return (
     <ThreadPrimitive.Root className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
       <ThreadPrimitive.Viewport
@@ -111,8 +114,11 @@ function ChatThread({ onApplyPatch }: { onApplyPatch: (patch: string) => Promise
         </ThreadPrimitive.Messages>
         <ThreadPrimitive.ViewportFooter />
       </ThreadPrimitive.Viewport>
+
       <ComposerPrimitive.Root className="border-t border-border-subtle bg-surface-raised p-2">
+        {/* Model & Thinking Toolbar */}
         <AgentModelToolbar />
+
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border border-border bg-surface-inset p-2">
           <ComposerPrimitive.Input
             className="max-h-32 min-h-10 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-relaxed text-text-primary outline-none placeholder:text-text-muted"
