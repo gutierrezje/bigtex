@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { PatchApplyRequest, PatchApplyResult } from "../../shared/domain";
 import { assertInsideRoot } from "../files/project";
 
@@ -21,11 +21,121 @@ function changedFilesFromPatch(patch: string): string[] {
   return [...files];
 }
 
+const HUNK_HEADER_PATTERN = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)$/;
+
+/** Fix LLM hunks where @@ old/new line counts do not match the hunk body (git: corrupt patch). */
+export function repairUnifiedPatchHunks(patch: string): string {
+  const lines = patch.split(/\r?\n/);
+  const out: string[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line.startsWith("@@ ")) {
+      out.push(line);
+      index += 1;
+      continue;
+    }
+
+    const headerLine = line;
+    index += 1;
+    const body: string[] = [];
+
+    while (index < lines.length) {
+      const bodyLine = lines[index];
+      if (
+        bodyLine.startsWith("@@ ") ||
+        bodyLine.startsWith("--- ") ||
+        bodyLine.startsWith("+++ ")
+      ) {
+        break;
+      }
+
+      if (
+        bodyLine.startsWith("\\") ||
+        bodyLine.startsWith(" ") ||
+        bodyLine.startsWith("+") ||
+        bodyLine.startsWith("-")
+      ) {
+        body.push(bodyLine);
+      } else if (bodyLine.length > 0) {
+        body.push(` ${bodyLine}`);
+      } else {
+        body.push(" ");
+      }
+      index += 1;
+    }
+
+    out.push(repairHunkHeaderLine(headerLine, body));
+    out.push(...body);
+  }
+
+  return out.join("\n");
+}
+
+function repairHunkHeaderLine(header: string, body: string[]): string {
+  let oldCount = 0;
+  let newCount = 0;
+
+  for (const line of body) {
+    if (line.startsWith("\\")) continue;
+    const prefix = line[0];
+    if (prefix === " " || prefix === "-") oldCount += 1;
+    if (prefix === " " || prefix === "+") newCount += 1;
+  }
+
+  const match = header.match(HUNK_HEADER_PATTERN);
+  if (!match) return header;
+
+  const [, oldStart, newStart, suffix] = match;
+  return `@@ -${oldStart},${oldCount} +${newStart},${newCount} @@${suffix}`;
+}
+
+/** Map diff paths to project-root-relative paths for `git apply` (cwd = project root). */
+export function normalizePatchPath(path: string, rootPath: string): string {
+  let cleaned = path.replace(/^(?:a|b)\//, "").trim();
+  if (!cleaned || cleaned === "/dev/null") return cleaned;
+
+  const root = resolve(rootPath);
+
+  if (isAbsolute(cleaned)) {
+    const rel = relative(root, resolve(cleaned));
+    if (!rel.startsWith("..") && rel !== "") {
+      return rel.split(sep).join("/");
+    }
+  }
+
+  const rootPrefix = `${root}/`;
+  if (cleaned.startsWith(rootPrefix)) {
+    cleaned = cleaned.slice(rootPrefix.length);
+  }
+
+  // Agent paths like `samples/minimal/main.tex` when project root is `.../samples/minimal`.
+  let dir = root;
+  let longestPrefix = "";
+  for (;;) {
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    const prefix = relative(parent, root).split(sep).join("/");
+    if (
+      prefix &&
+      prefix !== "." &&
+      (cleaned === prefix || cleaned.startsWith(`${prefix}/`)) &&
+      prefix.length > longestPrefix.length
+    ) {
+      longestPrefix = prefix;
+    }
+    dir = parent;
+  }
+  if (longestPrefix) {
+    cleaned = cleaned === longestPrefix ? "" : cleaned.slice(longestPrefix.length + 1);
+  }
+
+  return cleaned;
+}
+
 /** Normalize agent-produced diffs so `git apply` can match project-relative paths. */
 export function normalizeUnifiedPatch(patch: string, rootPath: string): string {
-  const root = resolve(rootPath);
-  const rootPrefix = `${root}/`;
-
   return patch
     .split(/\r?\n/)
     .map((line) => {
@@ -33,9 +143,7 @@ export function normalizeUnifiedPatch(patch: string, rootPath: string): string {
         const prefix = line.slice(0, 4);
         const path = pathFromDiffHeader(line);
         if (!path) return line;
-        const normalized = path.startsWith(rootPrefix)
-          ? path.slice(rootPrefix.length)
-          : path.replace(/^(?:a|b)\//, "");
+        const normalized = normalizePatchPath(path, rootPath);
         const timestamp = line.includes("\t") ? line.slice(line.indexOf("\t")) : "";
         return `${prefix}${normalized}${timestamp}`;
       }
@@ -82,13 +190,26 @@ export function unifiedDiffFromTexts(
   }
 }
 
+function summarizeGitApplyOutput(output: string): string {
+  if (!output) return "Patch failed.";
+  const lines = output.split(/\r?\n/).filter(Boolean);
+  const errorLine = lines.find((line) => line.startsWith("error:"));
+  if (errorLine) return errorLine.replace(/^error:\s*/i, "").trim();
+  if (output.includes("usage: git apply")) {
+    return lines[0]?.trim() || "Patch failed.";
+  }
+  return output.length > 240 ? `${output.slice(0, 240)}…` : output;
+}
+
 async function runGitApply(
   rootPath: string,
   patch: string,
   strip: number,
 ): Promise<{ exitCode: number | null; output: string }> {
+  const args = ["apply", "--whitespace=nowarn", "--reject", `-p${strip}`, "-"];
+
   return new Promise((resolve) => {
-    const child = spawn("git", ["apply", "--whitespace=nowarn", "--reject", `-${strip}`, "-"], {
+    const child = spawn("git", args, {
       cwd: rootPath,
       shell: false,
     });
@@ -106,12 +227,13 @@ async function runGitApply(
     child.on("close", (exitCode) => {
       resolve({ exitCode, output: output.trim() });
     });
-    child.stdin.end(patch);
+    const payload = patch.endsWith("\n") ? patch : `${patch}\n`;
+    child.stdin.end(payload);
   });
 }
 
 export async function applyUnifiedPatch(request: PatchApplyRequest): Promise<PatchApplyResult> {
-  const patch = normalizeUnifiedPatch(request.patch, request.rootPath);
+  const patch = repairUnifiedPatchHunks(normalizeUnifiedPatch(request.patch, request.rootPath));
   const changedFiles = changedFilesFromPatch(patch);
   for (const file of changedFiles) {
     assertInsideRoot(request.rootPath, file);
@@ -133,6 +255,6 @@ export async function applyUnifiedPatch(request: PatchApplyRequest): Promise<Pat
   return {
     applied: false,
     changedFiles,
-    message: result.output || "Patch failed.",
+    message: summarizeGitApplyOutput(result.output),
   };
 }
