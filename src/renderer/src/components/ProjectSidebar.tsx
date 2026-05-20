@@ -262,7 +262,7 @@ export function ProjectSidebar({
   };
 
   return (
-    <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-border bg-surface-raised">
+    <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-r border-border bg-surface-raised">
       {/* Draggable top region for traffic lights */}
       <div className="h-11 shrink-0" style={{ WebkitAppRegion: "drag" } as React.CSSProperties} />
 

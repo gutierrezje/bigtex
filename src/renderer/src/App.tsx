@@ -263,11 +263,14 @@ export function App() {
         <Panel
           panelRef={sidebarRef}
           collapsible={true}
-          defaultSize={16}
-          minSize={12}
-          maxSize={25}
-          onCollapse={() => setIsSidebarCollapsed(true)}
-          onExpand={() => setIsSidebarCollapsed(false)}
+          defaultSize="16%"
+          minSize="12%"
+          maxSize="25%"
+          onResize={(size, _, prev) => {
+            if (prev !== undefined) {
+              setIsSidebarCollapsed(size.asPercentage === 0);
+            }
+          }}
           className="h-full min-h-0 min-w-0"
         >
           <ProjectSidebar
@@ -285,7 +288,7 @@ export function App() {
           }`}
         />
 
-        <Panel className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+        <Panel defaultSize="84%" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
           <TitleBar />
           <CommandBar
             compiler={compiler}
@@ -308,13 +311,13 @@ export function App() {
               id="bigtex-main-panels"
               orientation="horizontal"
             >
-              <Panel defaultSize={38} minSize={25} className="min-h-0 min-w-0">
+              <Panel defaultSize="38%" minSize="25%" className="min-h-0 min-w-0">
                 <Group
                   className="h-full min-h-0 min-w-0"
                   id="bigtex-editor-panels"
                   orientation="vertical"
                 >
-                  <Panel defaultSize={78} minSize={40} className="min-h-0 min-w-0">
+                  <Panel defaultSize="78%" minSize="40%" className="min-h-0 min-w-0">
                     <EditorPane
                       file={openFile}
                       diagnostics={compileResult?.diagnostics ?? []}
@@ -334,11 +337,14 @@ export function App() {
                   <Panel
                     panelRef={diagnosticsRef}
                     collapsible={true}
-                    defaultSize={22}
-                    minSize={14}
-                    maxSize={45}
-                    onCollapse={() => setIsDiagnosticsCollapsed(true)}
-                    onExpand={() => setIsDiagnosticsCollapsed(false)}
+                    defaultSize="22%"
+                    minSize="14%"
+                    maxSize="45%"
+                    onResize={(size, _, prev) => {
+                      if (prev !== undefined) {
+                        setIsDiagnosticsCollapsed(size.asPercentage === 0);
+                      }
+                    }}
                     className="min-h-0 min-w-0"
                   >
                     <DiagnosticsPanel
@@ -359,10 +365,13 @@ export function App() {
               <Panel
                 panelRef={pdfRef}
                 collapsible={true}
-                defaultSize={35}
-                minSize={20}
-                onCollapse={() => setIsPdfCollapsed(true)}
-                onExpand={() => setIsPdfCollapsed(false)}
+                defaultSize="35%"
+                minSize="20%"
+                onResize={(size, _, prev) => {
+                  if (prev !== undefined) {
+                    setIsPdfCollapsed(size.asPercentage === 0);
+                  }
+                }}
                 className="min-h-0 min-w-0"
               >
                 <PdfPreview pdf={pdf} />
@@ -377,10 +386,13 @@ export function App() {
               <Panel
                 panelRef={agentRef}
                 collapsible={true}
-                defaultSize={27}
-                minSize={20}
-                onCollapse={() => setIsAgentCollapsed(true)}
-                onExpand={() => setIsAgentCollapsed(false)}
+                defaultSize="27%"
+                minSize="20%"
+                onResize={(size, _, prev) => {
+                  if (prev !== undefined) {
+                    setIsAgentCollapsed(size.asPercentage === 0);
+                  }
+                }}
                 className="min-h-0 min-w-0"
               >
                 <AgentPanel
