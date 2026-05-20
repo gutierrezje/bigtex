@@ -98,7 +98,25 @@ export type AgentEvent =
       at: number;
     }
   | {
-      type: "stdout" | "stderr";
+      type: "thought";
+      runId: string;
+      chunk: string;
+      at: number;
+    }
+  | {
+      type: "message";
+      runId: string;
+      chunk: string;
+      at: number;
+    }
+  | {
+      type: "activity";
+      runId: string;
+      chunk: string;
+      at: number;
+    }
+  | {
+      type: "stderr";
       runId: string;
       chunk: string;
       at: number;

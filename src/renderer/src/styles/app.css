@@ -126,17 +126,102 @@ ul {
 }
 
 /* ── Agent Markdown Overrides ── */
-.agent-output-markdown {
+.agent-output-markdown,
+.agent-thinking {
   min-width: 0;
+  max-width: 100%;
 }
 
-.agent-output-markdown pre[class] {
+.agent-thinking--streaming {
+  contain: inline-size;
+  overflow-x: hidden;
+}
+
+.agent-thinking--streaming pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.agent-code-block-wrap {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 0 10px;
   overflow-x: auto;
+}
+
+.agent-output-markdown .agent-code-block,
+.agent-output-markdown pre[class] {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+  margin: 0;
+  overflow-x: visible;
+  border: 1px solid var(--color-border-subtle);
   border-radius: 6px;
   padding: 12px;
   background: var(--color-surface);
   font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.agent-output-markdown .agent-code-block--streaming {
+  background: color-mix(in oklab, var(--color-surface) 85%, var(--color-accent-muted) 15%);
+}
+
+/* Clamp width while tokens stream in (before Shiki / closed fences). */
+.agent-output-markdown--streaming {
+  contain: inline-size;
+  overflow-x: hidden;
+}
+
+.agent-output-markdown--streaming .agent-streaming-p,
+.agent-output-markdown--streaming p,
+.agent-output-markdown--streaming li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.agent-output-markdown--streaming .agent-code-block-wrap {
+  overflow-x: auto;
+}
+
+.agent-output-markdown .agent-inline-code {
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  background: var(--color-surface-inset);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.agent-output-markdown code {
+  font-family: var(--font-mono);
   font-size: 13px;
+}
+
+.agent-output-markdown--streaming .agent-code-block,
+.agent-output-markdown--streaming .agent-code-block--streaming {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  white-space: pre;
+}
+
+.agent-output-markdown--streaming .agent-code-block code {
+  display: block;
+  min-width: 0;
+}
+
+.agent-output-markdown p {
+  margin: 0 0 8px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.agent-output-markdown p:last-child {
+  margin-bottom: 0;
 }
 
 /* ── Resizable Panels ── */
@@ -200,20 +285,6 @@ ul {
   background: var(--color-accent);
   opacity: 1;
   transform: scaleY(2);
-}
-
-.agent-output-markdown code {
-  font-family: var(--font-mono);
-  font-size: 13px;
-}
-
-.agent-output-markdown p {
-  margin: 0 0 8px;
-  line-height: 1.55;
-}
-
-.agent-output-markdown p:last-child {
-  margin-bottom: 0;
 }
 
 /* ── PDF Canvas ── */

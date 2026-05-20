@@ -29,7 +29,8 @@ function CodeBlock({
   const code = String(children).replace(/\n$/, "");
 
   useEffect(() => {
-    if (!className || streaming) return;
+    const isBlock = Boolean(className) || code.includes("\n");
+    if (!isBlock || streaming) return;
 
     let cancelled = false;
     void getAgentHighlighter().then((loadedHighlighter) => {
@@ -39,22 +40,39 @@ function CodeBlock({
     return () => {
       cancelled = true;
     };
-  }, [className, streaming]);
+  }, [className, code, streaming]);
 
-  if (!className || streaming || !highlighter) {
-    return <code className={className}>{children}</code>;
+  const isBlock = Boolean(className) || code.includes("\n");
+
+  if (!isBlock) {
+    return <code className="agent-inline-code">{children}</code>;
   }
 
+  if (streaming || !highlighter) {
+    return (
+      <div className="agent-code-block-wrap">
+        <pre className="agent-code-block agent-code-block--streaming">
+          <code className={className}>{children}</code>
+        </pre>
+      </div>
+    );
+  }
+
+  const showLanguage = language === "latex" || language === "diff" || language === "bibtex";
+
   return (
-    <ShikiHighlighter
-      highlighter={highlighter}
-      language={language}
-      theme="github-dark"
-      as="pre"
-      showLanguage={false}
-    >
-      {code}
-    </ShikiHighlighter>
+    <div className="agent-code-block-wrap">
+      <ShikiHighlighter
+        highlighter={highlighter}
+        language={language}
+        theme="github-dark"
+        as="pre"
+        showLanguage={showLanguage}
+        className="agent-code-block"
+      >
+        {code}
+      </ShikiHighlighter>
+    </div>
   );
 }
 
@@ -63,6 +81,12 @@ export function AgentMarkdown({ text, streaming }: AgentMarkdownProps) {
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
+        p({ children }) {
+          return <p className={streaming ? "agent-streaming-p" : undefined}>{children}</p>;
+        },
+        pre({ children }) {
+          return <>{children}</>;
+        },
         code({ className, children }) {
           return (
             <CodeBlock className={className} streaming={streaming}>

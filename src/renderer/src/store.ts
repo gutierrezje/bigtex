@@ -31,7 +31,12 @@ export interface AgentSettingsState {
 export interface AgentChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
+  /** User-visible assistant reply (ACP agent_message_chunk). */
   content: string;
+  /** Model reasoning stream (ACP agent_thought_chunk). */
+  reasoning: string;
+  /** Tool calls, plans, and other operational log lines. */
+  activity: string;
   createdAt: Date;
   runId?: string;
   patch: string | null;
@@ -117,6 +122,8 @@ export const useAppStore = create<AppState>((set) => ({
             id: createMessageId("user"),
             role: "user",
             content,
+            reasoning: "",
+            activity: "",
             createdAt: new Date(),
             patch: null,
             status: "ready",
@@ -136,6 +143,8 @@ export const useAppStore = create<AppState>((set) => ({
             id,
             role: "assistant",
             content: "",
+            reasoning: "",
+            activity: "",
             createdAt: new Date(),
             patch: null,
             status: "running",
@@ -179,7 +188,23 @@ export const useAppStore = create<AppState>((set) => ({
         };
       }
 
-      if (event.type === "stdout" || event.type === "stderr") {
+      if (event.type === "thought") {
+        return {
+          agentChat: {
+            ...chat,
+            running: true,
+            activeAssistantMessageId,
+            messages: updateActiveAssistantMessage((message) => ({
+              ...message,
+              runId: event.runId,
+              reasoning: `${message.reasoning}${event.chunk}`,
+              status: "running",
+            })),
+          },
+        };
+      }
+
+      if (event.type === "message") {
         return {
           agentChat: {
             ...chat,
@@ -189,6 +214,22 @@ export const useAppStore = create<AppState>((set) => ({
               ...message,
               runId: event.runId,
               content: `${message.content}${event.chunk}`,
+              status: "running",
+            })),
+          },
+        };
+      }
+
+      if (event.type === "activity" || event.type === "stderr") {
+        return {
+          agentChat: {
+            ...chat,
+            running: true,
+            activeAssistantMessageId,
+            messages: updateActiveAssistantMessage((message) => ({
+              ...message,
+              runId: event.runId,
+              activity: `${message.activity}${event.chunk}`,
               status: event.type === "stderr" ? "error" : "running",
             })),
           },

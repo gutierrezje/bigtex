@@ -164,12 +164,21 @@ function handleAcpNotification(
 
   const updateKind = update.sessionUpdate;
 
-  if (updateKind === "agent_message_chunk" || updateKind === "agent_thought_chunk") {
+  if (updateKind === "agent_thought_chunk") {
     const text = textFromAcpContent(update.content);
     if (!text) return;
 
     appendTranscript(text);
-    emit({ type: "stdout", runId, chunk: text, at: Date.now() });
+    emit({ type: "thought", runId, chunk: text, at: Date.now() });
+    return;
+  }
+
+  if (updateKind === "agent_message_chunk") {
+    const text = textFromAcpContent(update.content);
+    if (!text) return;
+
+    appendTranscript(text);
+    emit({ type: "message", runId, chunk: text, at: Date.now() });
     return;
   }
 
@@ -177,7 +186,7 @@ function handleAcpNotification(
     const title = typeof update.title === "string" ? update.title : "Tool call";
     const chunk = `\n\n[tool] ${title}\n`;
     appendTranscript(chunk);
-    emit({ type: "stdout", runId, chunk, at: Date.now() });
+    emit({ type: "activity", runId, chunk, at: Date.now() });
     return;
   }
 
@@ -186,7 +195,7 @@ function handleAcpNotification(
     const status = typeof update.status === "string" ? update.status : "updated";
     const chunk = `\n[tool:${status}] ${title}\n`;
     appendTranscript(chunk);
-    emit({ type: "stdout", runId, chunk, at: Date.now() });
+    emit({ type: "activity", runId, chunk, at: Date.now() });
 
     if (status === "completed") {
       const patch = patchFromToolCallUpdate(update, rootPath);
@@ -210,7 +219,7 @@ function handleAcpNotification(
     if (chunk) {
       const planText = `\n\nPlan:\n${chunk}\n`;
       appendTranscript(planText);
-      emit({ type: "stdout", runId, chunk: planText, at: Date.now() });
+      emit({ type: "activity", runId, chunk: planText, at: Date.now() });
     }
   }
 }

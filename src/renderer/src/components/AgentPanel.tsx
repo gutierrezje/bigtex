@@ -1,13 +1,14 @@
 import {
   ActionBarPrimitive,
   ComposerPrimitive,
-  MessagePartPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
   useAuiState,
 } from "@assistant-ui/react";
 import type { CompileDiagnostic } from "../../../shared/domain";
 import type { AgentChatState } from "../store";
+import { AgentMessageReasoningPart } from "./agent/AgentMessageReasoningPart";
+import { AgentMessageTextPart } from "./agent/AgentMessageTextPart";
 import { AgentModelToolbar } from "./agent/AgentModelToolbar";
 import { BigTexAssistantRuntime } from "./agent/BigTexAssistantRuntime";
 
@@ -21,19 +22,10 @@ interface AgentPanelProps {
   onApplyPatch(patch: string): Promise<void>;
 }
 
-/** Stable part component; inline lambdas in `components` would remount on every stream chunk. */
-function AgentMessageTextPart() {
-  return (
-    <MessagePartPrimitive.Text
-      component="div"
-      smooth={false}
-      className="agent-output-markdown whitespace-pre-wrap"
-    />
-  );
-}
-
+/** Stable part components — no inline lambdas (remount on every stream chunk). */
 const agentMessagePartComponents = {
   Text: AgentMessageTextPart,
+  Reasoning: AgentMessageReasoningPart,
 };
 
 function EmptyThread() {
@@ -54,16 +46,17 @@ function EmptyThread() {
 
 function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<void> }) {
   const message = useAuiState((state) => state.message);
-  const custom = message.metadata?.custom as { patch?: unknown } | undefined;
+  const custom = message.metadata?.custom as { patch?: unknown; activity?: unknown } | undefined;
   const patch = typeof custom?.patch === "string" ? custom.patch : null;
+  const activity = typeof custom?.activity === "string" ? custom.activity.trim() : "";
   const isAssistant = message.role === "assistant";
 
   return (
     <MessagePrimitive.Root
-      className={`grid gap-1.5 px-3 py-2 ${message.role === "user" ? "justify-items-end" : "justify-items-start"}`}
+      className={`grid w-full min-w-0 gap-1.5 px-3 py-2 ${message.role === "user" ? "justify-items-end" : "justify-items-start"}`}
     >
       <div
-        className={`max-w-[92%] rounded-lg border px-3 py-2 text-[13px] leading-relaxed ${
+        className={`min-w-0 w-fit max-w-full rounded-lg border px-3 py-2 text-[13px] leading-relaxed sm:max-w-[92%] ${
           message.role === "user"
             ? "border-accent/30 bg-accent-muted text-text-primary"
             : message.role === "system"
@@ -71,11 +64,16 @@ function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<vo
               : "border-border bg-surface-raised text-text-secondary"
         }`}
       >
+        {activity ? (
+          <pre className="agent-activity mb-2 max-h-32 min-w-0 max-w-full overflow-x-auto overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-border-subtle bg-zinc-950/60 px-2.5 py-2 font-mono text-[10px] leading-relaxed text-text-muted">
+            {activity}
+          </pre>
+        ) : null}
         <MessagePrimitive.Parts components={agentMessagePartComponents} />
       </div>
 
       {isAssistant ? (
-        <div className="flex max-w-[92%] flex-wrap items-center gap-1.5">
+        <div className="flex min-w-0 w-fit max-w-full flex-wrap items-center gap-1.5 sm:max-w-[92%]">
           <ActionBarPrimitive.Root hideWhenRunning={false} className="flex items-center gap-1">
             <ActionBarPrimitive.Copy className="rounded-md border border-border bg-transparent px-2 py-1 text-[11px] text-text-muted transition-colors duration-100 hover:border-accent/40 hover:text-text-secondary">
               Copy
@@ -106,7 +104,7 @@ function ChatThread({ onApplyPatch }: ChatThreadProps) {
       <ThreadPrimitive.Viewport
         autoScroll
         turnAnchor="bottom"
-        className="min-h-0 overflow-y-auto overscroll-contain bg-surface-inset py-2"
+        className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain bg-surface-inset py-2"
       >
         <EmptyThread />
         <ThreadPrimitive.Messages>

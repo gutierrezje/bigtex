@@ -32,16 +32,30 @@ function statusForMessage(message: AgentChatMessage): ThreadMessageLike["status"
 }
 
 function convertMessage(message: AgentChatMessage): ThreadMessageLike {
+  const parts: Array<{ type: "reasoning"; text: string } | { type: "text"; text: string }> = [];
+
+  if (message.role === "assistant") {
+    if (message.reasoning.trim()) {
+      parts.push({ type: "reasoning", text: message.reasoning });
+    }
+    if (message.content.trim()) {
+      parts.push({ type: "text", text: message.content });
+    }
+  } else if (message.content.trim()) {
+    parts.push({ type: "text", text: message.content });
+  }
+
   return {
     id: message.id,
     role: message.role,
-    content: [{ type: "text", text: message.content }],
+    content: parts.length > 0 ? parts : [{ type: "text", text: "" }],
     createdAt: message.createdAt,
     status: statusForMessage(message),
     metadata: {
       custom: {
         patch: message.patch,
         runId: message.runId,
+        activity: message.activity,
       },
     },
   };
@@ -59,7 +73,6 @@ export function BigTexAssistantRuntime({
   const addAgentUserMessage = useAppStore((state) => state.addAgentUserMessage);
   const createPendingAgentMessage = useAppStore((state) => state.createPendingAgentMessage);
 
-  // Read model selection from the global store
   const modelId = useAppStore((state) => state.agentSettings.modelId);
   const reasoningLevel = useAppStore((state) => state.agentSettings.reasoningLevel);
 
