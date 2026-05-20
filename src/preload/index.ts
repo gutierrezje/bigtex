@@ -16,6 +16,7 @@ const api: BigTexApi = {
       return () => ipcRenderer.off(IPC_CHANNELS.projectOpened, handler);
     },
     load: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.projectLoad, rootPath),
+    loadSample: () => ipcRenderer.invoke(IPC_CHANNELS.projectLoadSample),
   },
   files: {
     read: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileRead, request),
@@ -45,6 +46,11 @@ const api: BigTexApi = {
   },
   patch: {
     apply: (request) => ipcRenderer.invoke(IPC_CHANNELS.patchApply, request),
+  },
+  recents: {
+    get: () => ipcRenderer.invoke(IPC_CHANNELS.recentsGet),
+    remove: (path) => ipcRenderer.invoke(IPC_CHANNELS.recentsRemove, path),
+    clear: () => ipcRenderer.invoke(IPC_CHANNELS.recentsClear),
   },
 };
 

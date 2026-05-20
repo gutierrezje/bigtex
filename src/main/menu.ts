@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, Menu } from "electron";
 import type { ProjectSnapshot } from "../shared/domain";
 import { IPC_CHANNELS } from "../shared/ipc";
 import { loadProject } from "./files/project";
+import { addRecent } from "./files/recents";
 import { measure } from "./performance/marks";
 
 export async function openProjectFolderDialog(
@@ -26,6 +27,7 @@ export function setApplicationMenu(getTargetWindow: () => BrowserWindow | null):
     const win = BrowserWindow.getFocusedWindow() ?? getTargetWindow();
     const snapshot = await openProjectFolderDialog(win);
     if (snapshot && win && !win.isDestroyed()) {
+      await addRecent(snapshot.rootPath);
       win.webContents.send(IPC_CHANNELS.projectOpened, snapshot);
     }
   };

@@ -15,6 +15,12 @@ export interface ProjectSnapshot {
   mainFile: string | null;
 }
 
+export interface RecentProject {
+  path: string;
+  name: string;
+  lastOpened: number;
+}
+
 export interface OpenFile {
   path: string;
   absolutePath: string;

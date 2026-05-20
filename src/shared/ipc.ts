@@ -12,6 +12,7 @@ import type {
   PdfPayload,
   PerformanceMark,
   ProjectSnapshot,
+  RecentProject,
 } from "./domain";
 
 export const IPC_CHANNELS = {
@@ -19,6 +20,7 @@ export const IPC_CHANNELS = {
   projectOpenDialog: "project:open-dialog",
   projectOpened: "project:opened",
   projectLoad: "project:load",
+  projectLoadSample: "project:load-sample",
   fileRead: "file:read",
   fileWrite: "file:write",
   fileCreate: "file:create",
@@ -33,6 +35,9 @@ export const IPC_CHANNELS = {
   agentProbeModel: "agent:probe-model",
   agentEvent: "agent:event",
   patchApply: "patch:apply",
+  recentsGet: "recents:get",
+  recentsRemove: "recents:remove",
+  recentsClear: "recents:clear",
 } as const;
 
 export interface ReadFileRequest {
@@ -78,6 +83,7 @@ export interface BigTexApi {
     /** Main process notifies when a folder is opened from the app menu (e.g. File → Open Folder). */
     onOpened(listener: (snapshot: ProjectSnapshot) => void): () => void;
     load(rootPath: string): Promise<ProjectSnapshot>;
+    loadSample(): Promise<ProjectSnapshot>;
   };
   files: {
     read(request: ReadFileRequest): Promise<OpenFile>;
@@ -100,6 +106,11 @@ export interface BigTexApi {
   };
   patch: {
     apply(request: PatchApplyRequest): Promise<PatchApplyResult>;
+  };
+  recents: {
+    get(): Promise<RecentProject[]>;
+    remove(path: string): Promise<RecentProject[]>;
+    clear(): Promise<void>;
   };
 }
 

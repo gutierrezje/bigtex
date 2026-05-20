@@ -28,6 +28,7 @@ import {
   renameProjectPath,
   writeProjectFile,
 } from "./files/project";
+import { addRecent, clearRecents, getRecents, removeRecent } from "./files/recents";
 import { openProjectFolderDialog, setApplicationMenu } from "./menu";
 import { getMarks, measure, recordMark } from "./performance/marks";
 
@@ -88,13 +89,34 @@ function createWindow(): void {
 function registerIpc(): void {
   ipcMain.handle(IPC_CHANNELS.appMetrics, () => getMarks());
 
-  ipcMain.handle(IPC_CHANNELS.projectOpenDialog, async () =>
-    openProjectFolderDialog(BrowserWindow.getFocusedWindow() ?? mainWindow),
-  );
+  ipcMain.handle(IPC_CHANNELS.projectOpenDialog, async () => {
+    const snapshot = await openProjectFolderDialog(BrowserWindow.getFocusedWindow() ?? mainWindow);
+    if (snapshot) {
+      await addRecent(snapshot.rootPath);
+    }
+    return snapshot;
+  });
 
-  ipcMain.handle(IPC_CHANNELS.projectLoad, (_event, rootPath: string) =>
-    measure("project:load", () => loadProject(rootPath)),
-  );
+  ipcMain.handle(IPC_CHANNELS.projectLoad, async (_event, rootPath: string) => {
+    const snapshot = await measure("project:load", () => loadProject(rootPath));
+    if (snapshot) {
+      await addRecent(rootPath);
+    }
+    return snapshot;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.projectLoadSample, async () => {
+    const samplePath = join(app.getAppPath(), "samples/minimal");
+    const snapshot = await measure("project:load", () => loadProject(samplePath));
+    if (snapshot) {
+      await addRecent(samplePath, "Sample Project");
+    }
+    return snapshot;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.recentsGet, () => getRecents());
+  ipcMain.handle(IPC_CHANNELS.recentsRemove, (_event, path: string) => removeRecent(path));
+  ipcMain.handle(IPC_CHANNELS.recentsClear, () => clearRecents());
 
   ipcMain.handle(IPC_CHANNELS.fileRead, (_event, request: ReadFileRequest) =>
     measure("file:read", () => readProjectFile(request.rootPath, request.path)),
