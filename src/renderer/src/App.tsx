@@ -174,10 +174,20 @@ export function App() {
   loadProjectRef.current = loadProject;
 
   useEffect(() => {
-    return window.bigTex.project.onOpened((snapshot) => {
+    const unsubOpened = window.bigTex.project.onOpened((snapshot) => {
       void loadProjectRef.current(snapshot);
     });
-  }, []);
+    const unsubClosed = window.bigTex.project.onClosed(() => {
+      setProject(null);
+      setOpenFile(null);
+      setCompileResult(null);
+      setPdf(null);
+    });
+    return () => {
+      unsubOpened();
+      unsubClosed();
+    };
+  }, [setProject, setOpenFile, setCompileResult, setPdf]);
 
   async function openProjectFile(file: ProjectFile): Promise<void> {
     if (!project || !selectable(file)) return;
@@ -333,12 +343,6 @@ export function App() {
         onTogglePdf={handleTogglePdf}
         showAgent={!isAgentCollapsed}
         onToggleAgent={handleToggleAgent}
-        onCloseWorkspace={() => {
-          setProject(null);
-          setOpenFile(null);
-          setCompileResult(null);
-          setPdf(null);
-        }}
       />
       <div className="flex-1 min-h-0 w-full overflow-hidden">
         {project ? (

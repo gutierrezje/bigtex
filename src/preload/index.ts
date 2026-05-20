@@ -15,6 +15,13 @@ const api: BigTexApi = {
       ipcRenderer.on(IPC_CHANNELS.projectOpened, handler);
       return () => ipcRenderer.off(IPC_CHANNELS.projectOpened, handler);
     },
+    onClosed: (listener) => {
+      const handler = () => {
+        listener();
+      };
+      ipcRenderer.on(IPC_CHANNELS.projectClosed, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.projectClosed, handler);
+    },
     load: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.projectLoad, rootPath),
     loadSample: () => ipcRenderer.invoke(IPC_CHANNELS.projectLoadSample),
   },

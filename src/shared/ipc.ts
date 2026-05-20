@@ -19,6 +19,7 @@ export const IPC_CHANNELS = {
   appMetrics: "app:metrics",
   projectOpenDialog: "project:open-dialog",
   projectOpened: "project:opened",
+  projectClosed: "project:closed",
   projectLoad: "project:load",
   projectLoadSample: "project:load-sample",
   fileRead: "file:read",
@@ -82,6 +83,8 @@ export interface BigTexApi {
     openDialog(): Promise<ProjectSnapshot | null>;
     /** Main process notifies when a folder is opened from the app menu (e.g. File → Open Folder). */
     onOpened(listener: (snapshot: ProjectSnapshot) => void): () => void;
+    /** Main process notifies when a folder is closed from the app menu (e.g. File → Close Folder). */
+    onClosed(listener: () => void): () => void;
     load(rootPath: string): Promise<ProjectSnapshot>;
     loadSample(): Promise<ProjectSnapshot>;
   };

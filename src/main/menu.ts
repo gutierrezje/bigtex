@@ -59,6 +59,16 @@ export function setApplicationMenu(getTargetWindow: () => BrowserWindow | null):
           accelerator: "CmdOrCtrl+O",
           click: () => void onOpenFolder(),
         },
+        {
+          label: "Close Folder",
+          accelerator: "CmdOrCtrl+Shift+W",
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow() ?? getTargetWindow();
+            if (win && !win.isDestroyed()) {
+              win.webContents.send(IPC_CHANNELS.projectClosed);
+            }
+          },
+        },
         ...(process.platform === "darwin"
           ? []
           : ([

@@ -14,7 +14,6 @@ interface CommandBarProps {
   onTogglePdf(): void;
   showAgent: boolean;
   onToggleAgent(): void;
-  onCloseWorkspace?(): void;
 }
 
 export function CommandBar({
@@ -30,7 +29,6 @@ export function CommandBar({
   onTogglePdf,
   showAgent,
   onToggleAgent,
-  onCloseWorkspace,
 }: CommandBarProps) {
   const latestMetric = metrics.at(-1);
 
@@ -42,16 +40,6 @@ export function CommandBar({
         className="flex shrink-0 items-center gap-3 px-4"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
-        {projectName && onCloseWorkspace && (
-          <button
-            type="button"
-            className="rounded-md border border-border/60 bg-transparent px-2.5 py-1 text-xs font-medium text-rose-400/90 transition-colors duration-100 hover:border-rose-400/40 hover:bg-rose-950/20 cursor-pointer"
-            onClick={onCloseWorkspace}
-          >
-            Close Workspace
-          </button>
-        )}
-
         <button
           type="button"
           className="rounded-md border border-border bg-transparent px-3 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:border-accent/40 hover:text-text-secondary"
