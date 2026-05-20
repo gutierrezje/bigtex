@@ -25,6 +25,7 @@ import {
   parseAgentSessionConfig,
   resolveModelIdForRun,
 } from "./acp-config";
+import { extractPatch } from "./extract-patch";
 import {
   getOpencodeVariantsByModel,
   getVariantsForModel,
@@ -32,7 +33,6 @@ import {
 } from "./opencode-providers";
 import { unifiedDiffFromTexts } from "./patch";
 
-const PATCH_BLOCK_PATTERN = /```(?:diff|patch)\s*\n([\s\S]*?)```/gi;
 const OPENCODE_ACP_COMMAND = "opencode";
 const OPENCODE_ACP_ARGS = ["acp"] as const;
 
@@ -95,14 +95,6 @@ function agentSystemPrompt(input: AgentRunInput): string {
       : "No compile diagnostics are loaded.",
     `User request:\n${input.prompt}`,
   ].join("\n\n");
-}
-
-function extractPatch(text: string): string | null {
-  const patches: string[] = [];
-  for (const match of text.matchAll(PATCH_BLOCK_PATTERN)) {
-    patches.push(match[1].trim());
-  }
-  return patches.length > 0 ? patches.join("\n\n") : null;
 }
 
 function toProjectRelative(rootPath: string, filePath: string): string {

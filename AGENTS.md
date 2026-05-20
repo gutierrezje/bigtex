@@ -53,6 +53,7 @@ Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with
 pnpm run format
 pnpm run lint
 pnpm run typecheck
+pnpm test
 pnpm run build
 ```
 

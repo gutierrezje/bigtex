@@ -1,45 +1,10 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { basename } from "node:path";
-import type { CompileDiagnostic, CompileRequest, CompileResult } from "../../shared/domain";
+import type { CompileRequest, CompileResult } from "../../shared/domain";
 import { assertInsideRoot, outputPdfPath } from "../files/project";
 import { measure } from "../performance/marks";
-
-function parseDiagnostics(output: string): CompileDiagnostic[] {
-  const diagnostics: CompileDiagnostic[] = [];
-  const fileLinePattern = /^(.+?):(\d+):\s*(.+)$/;
-
-  for (const line of output.split(/\r?\n/)) {
-    const fileLine = line.match(fileLinePattern);
-    if (fileLine) {
-      diagnostics.push({
-        file: fileLine[1],
-        line: Number(fileLine[2]),
-        severity: /warning/i.test(fileLine[3]) ? "warning" : "error",
-        message: fileLine[3].trim(),
-      });
-      continue;
-    }
-
-    if (line.startsWith("! ")) {
-      diagnostics.push({
-        file: null,
-        line: null,
-        severity: "error",
-        message: line.slice(2).trim(),
-      });
-    } else if (/warning/i.test(line)) {
-      diagnostics.push({
-        file: null,
-        line: null,
-        severity: "warning",
-        message: line.trim(),
-      });
-    }
-  }
-
-  return diagnostics.slice(0, 100);
-}
+import { parseDiagnostics } from "./diagnostics";
 
 function compilerCommand(request: CompileRequest): { command: string; args: string[] } {
   const mainFile = assertInsideRoot(request.rootPath, request.mainFile);

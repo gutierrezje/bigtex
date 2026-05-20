@@ -11,3 +11,5 @@ if [ -n "$staged" ]; then
     fi
   done
 fi
+
+pnpm test
