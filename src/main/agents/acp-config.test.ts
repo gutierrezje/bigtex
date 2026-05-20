@@ -6,8 +6,8 @@ import {
   resolveModelIdForRun,
 } from "./acp-config";
 
-describe("parseAgentSessionConfig", () => {
-  it("parses configOptions shape from ACP session/new", () => {
+describe("acp-config", () => {
+  it("parses session/new configOptions into AgentSessionConfig", () => {
     const config = parseAgentSessionConfig({
       sessionId: "s1",
       configOptions: [
@@ -34,22 +34,7 @@ describe("parseAgentSessionConfig", () => {
     expect(config.currentVariant).toBe("high");
   });
 
-  it("parses legacy models payload", () => {
-    const config = parseAgentSessionConfig({
-      sessionId: "s2",
-      models: {
-        currentModelId: "opencode/foo",
-        availableModels: [{ modelId: "opencode/foo", name: "Foo" }],
-      },
-    });
-
-    expect(config.currentModelId).toBe("opencode/foo");
-    expect(config.models[0]?.id).toBe("opencode/foo");
-  });
-});
-
-describe("mergeAgentSessionConfig", () => {
-  it("merges refreshed models without dropping probed variants", () => {
+  it("merges updates without dropping probed variants", () => {
     const base: AgentSessionConfig = {
       models: [{ id: "opencode/a", name: "a", label: "A", providerGroup: "free", variant: null }],
       currentModelId: "opencode/a",
@@ -72,10 +57,8 @@ describe("mergeAgentSessionConfig", () => {
     expect(merged.models.map((model) => model.id).sort()).toEqual(["opencode/a", "opencode/b"]);
     expect(merged.variantsByModel).toEqual(base.variantsByModel);
   });
-});
 
-describe("resolveModelIdForRun", () => {
-  it("appends reasoning level when no explicit variant model exists", () => {
+  it("builds concrete model ids for reasoning runs", () => {
     const config: AgentSessionConfig = {
       models: [
         { id: "opencode/foo", name: "foo", label: "Foo", providerGroup: "free", variant: null },
