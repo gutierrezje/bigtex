@@ -4,8 +4,11 @@ import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import type { AgentRunInput, CompileRequest, PatchApplyRequest } from "../shared/domain";
 import {
   type AgentCheckRequest,
+  type CreateFileRequest,
+  type DeletePathRequest,
   IPC_CHANNELS,
   type ReadFileRequest,
+  type RenamePathRequest,
   type WriteFileRequest,
 } from "../shared/ipc";
 import {
@@ -18,9 +21,12 @@ import {
 import { applyUnifiedPatch } from "./agents/patch";
 import { compileLatex } from "./compile/latex";
 import {
+  createProjectFile,
   defaultSampleProjectPath,
+  deleteProjectPath,
   loadProject,
   readProjectFile,
+  renameProjectPath,
   writeProjectFile,
 } from "./files/project";
 import { getMarks, measure, recordMark } from "./performance/marks";
@@ -104,6 +110,22 @@ function registerIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.fileWrite, (_event, request: WriteFileRequest) =>
     measure("file:write", () => writeProjectFile(request.rootPath, request.path, request.content)),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.fileCreate, (_event, request: CreateFileRequest) =>
+    measure("file:create", () =>
+      createProjectFile(request.rootPath, request.parentPath, request.name),
+    ),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.fileRename, (_event, request: RenamePathRequest) =>
+    measure("file:rename", () =>
+      renameProjectPath(request.rootPath, request.path, request.newName),
+    ),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.fileDelete, (_event, request: DeletePathRequest) =>
+    measure("file:delete", () => deleteProjectPath(request.rootPath, request.path)),
   );
 
   ipcMain.handle(IPC_CHANNELS.latexCompile, (_event, request: CompileRequest) =>

@@ -1,5 +1,10 @@
-import { useEffect, useState } from "react";
+import { type MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectFile, ProjectSnapshot } from "../../../shared/domain";
+import {
+  CREATABLE_FILE_EXTENSIONS,
+  DEFAULT_NEW_FILE_NAME,
+  parentDirectoryPath,
+} from "../../../shared/projectFiles";
 
 interface ProjectSidebarProps {
   project: ProjectSnapshot | null;
@@ -7,6 +12,16 @@ interface ProjectSidebarProps {
   onOpenProject(): void;
   onOpenSample(): void;
   onOpenFile(file: ProjectFile): void;
+  onCreateFile(parentPath: string, name: string): Promise<void>;
+  onRenamePath(path: string, newName: string): Promise<void>;
+  onDeletePath(path: string): Promise<void>;
+  onError(message: string): void;
+}
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  target: ProjectFile | null;
 }
 
 function ChevronIcon({ expanded }: { expanded: boolean }) {
@@ -122,7 +137,6 @@ function FileIcon({ kind }: { kind: string }) {
     );
   }
 
-  // Default document icon
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -143,24 +157,82 @@ function FileIcon({ kind }: { kind: string }) {
   );
 }
 
+function InlineNameEditor({
+  initialValue,
+  onCommit,
+  onCancel,
+}: {
+  initialValue: string;
+  onCommit(value: string): void;
+  onCancel(): void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState(initialValue);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={value}
+      className="min-w-0 flex-1 rounded border border-accent/50 bg-zinc-900 px-1.5 py-0 text-[13px] text-text-primary outline-none"
+      onChange={(event) => setValue(event.target.value)}
+      onBlur={() => onCommit(value.trim())}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Enter") {
+          event.preventDefault();
+          onCommit(value.trim());
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onCancel();
+        }
+      }}
+      onClick={(event) => event.stopPropagation()}
+    />
+  );
+}
+
 function FileRow({
   file,
   activePath,
+  selectedPath,
+  renamingPath,
   onOpenFile,
+  onSelect,
+  onStartRename,
+  onCommitRename,
+  onCancelRename,
   expandedPaths,
   onToggleExpand,
+  onContextMenu,
 }: {
   file: ProjectFile;
   activePath: string | null;
+  selectedPath: string | null;
+  renamingPath: string | null;
   onOpenFile(file: ProjectFile): void;
+  onSelect(file: ProjectFile): void;
+  onStartRename(path: string): void;
+  onCommitRename(path: string, newName: string): void;
+  onCancelRename(): void;
   expandedPaths: Set<string>;
   onToggleExpand(path: string): void;
+  onContextMenu(event: MouseEvent, file: ProjectFile): void;
 }) {
   const isFolder = file.kind === "folder";
   const isExpanded = expandedPaths.has(file.path);
   const isActive = activePath === file.path;
+  const isSelected = selectedPath === file.path;
+  const isRenaming = renamingPath === file.path;
 
   const handleClick = () => {
+    onSelect(file);
     if (isFolder) {
       onToggleExpand(file.path);
     } else {
@@ -172,12 +244,17 @@ function FileRow({
     <li className="list-none">
       <button
         className={`flex w-full items-center gap-2 rounded-md border-0 bg-transparent px-2 py-1 text-left text-[13px] transition-colors duration-100 ${
-          isActive
+          isActive || isSelected
             ? "bg-accent-muted text-text-primary font-medium"
             : "text-text-secondary hover:bg-zinc-800/40 hover:text-text-primary"
         }`}
         type="button"
         onClick={handleClick}
+        onDoubleClick={(event) => {
+          event.preventDefault();
+          onStartRename(file.path);
+        }}
+        onContextMenu={(event) => onContextMenu(event, file)}
       >
         {isFolder ? (
           <>
@@ -190,7 +267,15 @@ function FileRow({
             <FileIcon kind={file.kind} />
           </>
         )}
-        <span className="truncate">{file.name}</span>
+        {isRenaming ? (
+          <InlineNameEditor
+            initialValue={file.name}
+            onCommit={(newName) => onCommitRename(file.path, newName)}
+            onCancel={onCancelRename}
+          />
+        ) : (
+          <span className="truncate">{file.name}</span>
+        )}
       </button>
 
       {file.children && isExpanded ? (
@@ -200,9 +285,16 @@ function FileRow({
               key={child.path}
               file={child}
               activePath={activePath}
+              selectedPath={selectedPath}
+              renamingPath={renamingPath}
               onOpenFile={onOpenFile}
+              onSelect={onSelect}
+              onStartRename={onStartRename}
+              onCommitRename={onCommitRename}
+              onCancelRename={onCancelRename}
               expandedPaths={expandedPaths}
               onToggleExpand={onToggleExpand}
+              onContextMenu={onContextMenu}
             />
           ))}
         </ul>
@@ -217,24 +309,21 @@ export function ProjectSidebar({
   onOpenProject,
   onOpenSample,
   onOpenFile,
+  onCreateFile,
+  onRenamePath,
+  onDeletePath,
+  onError,
 }: ProjectSidebarProps) {
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    if (project) {
-      for (const f of project.files) {
-        if (f.kind === "folder") {
-          initial.add(f.path);
-        }
-      }
-    }
-    return initial;
-  });
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set());
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [renamingPath, setRenamingPath] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const treeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (project) {
       setExpandedPaths((prev) => {
         const next = new Set(prev);
-        // Helper to recursively auto-expand directories on first load
         const expandRecursive = (files: ProjectFile[]) => {
           for (const f of files) {
             if (f.kind === "folder") {
@@ -246,24 +335,125 @@ export function ProjectSidebar({
         expandRecursive(project.files);
         return next;
       });
+    } else {
+      setSelectedPath(null);
+      setRenamingPath(null);
     }
   }, [project]);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    window.addEventListener("click", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [contextMenu]);
+
+  const findFile = useCallback(
+    (path: string | null): ProjectFile | null => {
+      if (!project || !path) return null;
+      const walk = (files: ProjectFile[]): ProjectFile | null => {
+        for (const file of files) {
+          if (file.path === path) return file;
+          if (file.children) {
+            const match = walk(file.children);
+            if (match) return match;
+          }
+        }
+        return null;
+      };
+      return walk(project.files);
+    },
+    [project],
+  );
+
+  const parentPathForSelection = useCallback((): string => {
+    const selected = findFile(selectedPath);
+    if (!selected) return "";
+    if (selected.kind === "folder") return selected.path;
+    return parentDirectoryPath(selected.path);
+  }, [findFile, selectedPath]);
 
   const handleToggleExpand = (path: string) => {
     setExpandedPaths((prev) => {
       const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
       return next;
     });
   };
 
+  const handleContextMenu = (event: React.MouseEvent, file: ProjectFile) => {
+    event.preventDefault();
+    setSelectedPath(file.path);
+    setContextMenu({ x: event.clientX, y: event.clientY, target: file });
+  };
+
+  const handleWorkspaceContextMenu = (event: React.MouseEvent) => {
+    if (!project) return;
+    event.preventDefault();
+    setContextMenu({ x: event.clientX, y: event.clientY, target: null });
+  };
+
+  const startRename = (path: string) => {
+    setRenamingPath(path);
+    setSelectedPath(path);
+    setContextMenu(null);
+  };
+
+  const commitRename = async (path: string, newName: string) => {
+    setRenamingPath(null);
+    if (!newName) return;
+    const current = findFile(path);
+    if (!current || newName === current.name) return;
+    try {
+      await onRenamePath(path, newName);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : "Rename failed");
+    }
+  };
+
+  const handleDelete = async (path: string) => {
+    const file = findFile(path);
+    if (!file) return;
+    const label = file.kind === "folder" ? "folder" : "file";
+    if (!window.confirm(`Delete ${label} "${file.name}"?`)) return;
+    try {
+      await onDeletePath(path);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : "Delete failed");
+    }
+  };
+
+  const handleNewFile = async () => {
+    setContextMenu(null);
+    try {
+      await onCreateFile(parentPathForSelection(), DEFAULT_NEW_FILE_NAME);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : "Could not create file");
+    }
+  };
+
+  const handleTreeKeyDown = (event: React.KeyboardEvent) => {
+    if (!selectedPath || renamingPath) return;
+    if (event.key === "F2") {
+      event.preventDefault();
+      startRename(selectedPath);
+    }
+    if (event.key === "Delete" || event.key === "Backspace") {
+      event.preventDefault();
+      void handleDelete(selectedPath);
+    }
+  };
+
+  const contextTarget = contextMenu?.target ?? null;
+  const contextPath = contextTarget?.path ?? selectedPath;
+
   return (
     <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
-      {/* Brand */}
       <div className="flex min-w-0 items-center gap-3 px-4 pt-4 pb-4">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent text-xs font-bold tracking-tight text-zinc-950 shadow-sm transition-transform hover:scale-102">
           BT
@@ -274,7 +464,6 @@ export function ProjectSidebar({
         </div>
       </div>
 
-      {/* Actions */}
       <div className="grid grid-cols-1 gap-1.5 px-4 pb-4 xl:grid-cols-2">
         <button
           type="button"
@@ -292,36 +481,109 @@ export function ProjectSidebar({
         </button>
       </div>
 
-      {/* Workspace label */}
-      <div className="px-4 pb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-          Workspace
-        </span>
-        <strong className="mt-0.5 block truncate text-sm font-medium text-text-primary">
-          {project?.name ?? "No project"}
-        </strong>
-      </div>
+      <section
+        className="flex items-start justify-between gap-2 px-4 pb-2"
+        onContextMenu={handleWorkspaceContextMenu}
+        aria-label="Workspace"
+      >
+        <div>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
+            Workspace
+          </span>
+          <strong className="mt-0.5 block truncate text-sm font-medium text-text-primary">
+            {project?.name ?? "No project"}
+          </strong>
+        </div>
+        {project ? (
+          <button
+            type="button"
+            title={`New file (${CREATABLE_FILE_EXTENSIONS.join(", ")})`}
+            className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-text-muted transition-colors hover:border-accent/40 hover:text-text-primary"
+            onClick={() => void handleNewFile()}
+          >
+            New
+          </button>
+        ) : null}
+      </section>
 
-      {/* File tree */}
       {project ? (
-        <ul className="flex-1 overflow-y-auto px-2 pb-4 my-0">
-          {project.files.map((file) => (
-            <FileRow
-              key={file.path}
-              file={file}
-              activePath={activePath}
-              onOpenFile={onOpenFile}
-              expandedPaths={expandedPaths}
-              onToggleExpand={handleToggleExpand}
-            />
-          ))}
-        </ul>
+        <div
+          ref={treeRef}
+          role="tree"
+          tabIndex={0}
+          className="flex-1 overflow-y-auto px-2 pb-4 my-0 outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+          onKeyDown={handleTreeKeyDown}
+          onContextMenu={handleWorkspaceContextMenu}
+        >
+          <ul className="m-0 p-0">
+            {project.files.map((file) => (
+              <FileRow
+                key={file.path}
+                file={file}
+                activePath={activePath}
+                selectedPath={selectedPath}
+                renamingPath={renamingPath}
+                onOpenFile={onOpenFile}
+                onSelect={(entry) => setSelectedPath(entry.path)}
+                onStartRename={startRename}
+                onCommitRename={(path, newName) => void commitRename(path, newName)}
+                onCancelRename={() => setRenamingPath(null)}
+                expandedPaths={expandedPaths}
+                onToggleExpand={handleToggleExpand}
+                onContextMenu={handleContextMenu}
+              />
+            ))}
+          </ul>
+        </div>
       ) : (
         <div className="px-4 text-xs leading-relaxed text-text-muted">
           Open a folder with a <code className="font-mono text-text-secondary">.tex</code> file, or
           load the bundled sample to explore the MVP.
         </div>
       )}
+
+      {contextMenu ? (
+        <div
+          role="menu"
+          className="fixed z-50 min-w-[11rem] rounded-lg border border-border bg-surface-raised py-1 shadow-xl"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="w-full px-3 py-1.5 text-left text-xs text-text-secondary hover:bg-zinc-800/60 hover:text-text-primary"
+            onClick={() => void handleNewFile()}
+          >
+            New File
+          </button>
+          {contextPath ? (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full px-3 py-1.5 text-left text-xs text-text-secondary hover:bg-zinc-800/60 hover:text-text-primary"
+                onClick={() => startRename(contextPath)}
+              >
+                Rename
+                <span className="ml-2 text-text-muted">F2</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="w-full px-3 py-1.5 text-left text-xs text-red-400/90 hover:bg-zinc-800/60"
+                onClick={() => void handleDelete(contextPath)}
+              >
+                Delete
+              </button>
+            </>
+          ) : null}
+          <p className="mt-1 border-t border-border/50 px-3 py-1.5 text-[10px] text-text-muted">
+            New files: {CREATABLE_FILE_EXTENSIONS.join(", ")}
+          </p>
+        </div>
+      ) : null}
     </aside>
   );
 }

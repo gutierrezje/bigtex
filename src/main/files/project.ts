@@ -1,6 +1,7 @@
-import { readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { access, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { FileKind, OpenFile, ProjectFile, ProjectSnapshot } from "../../shared/domain";
+import { CREATABLE_FILE_EXTENSIONS, isCreatableFileName } from "../../shared/projectFiles";
 
 const MAX_TREE_DEPTH = 8;
 const IGNORED_DIRECTORIES = new Set([
@@ -159,4 +160,102 @@ export function defaultMainFile(rootPath: string, preferred: string | null): str
 export function outputPdfPath(rootPath: string, mainFile: string): string {
   const source = assertInsideRoot(rootPath, mainFile);
   return join(dirname(source), `${basename(source, extname(source))}.pdf`);
+}
+
+function validateEntryName(name: string): void {
+  if (!name.trim()) throw new Error("Name is required");
+  if (name.includes("/") || name.includes("\\") || name === "." || name === "..") {
+    throw new Error("Invalid name");
+  }
+}
+
+function assertCreatableFileName(name: string): void {
+  validateEntryName(name);
+  if (!isCreatableFileName(name)) {
+    throw new Error(
+      `Only LaTeX-related files are supported (${CREATABLE_FILE_EXTENSIONS.join(", ")})`,
+    );
+  }
+}
+
+async function pathExists(absolutePath: string): Promise<boolean> {
+  try {
+    await access(absolutePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function uniqueFileName(directoryAbs: string, baseName: string): Promise<string> {
+  const ext = extname(baseName);
+  const stem = basename(baseName, ext);
+  let candidate = baseName;
+  let index = 1;
+  while (await pathExists(join(directoryAbs, candidate))) {
+    candidate = `${stem}-${index}${ext}`;
+    index += 1;
+  }
+  return candidate;
+}
+
+function resolveParentDirectory(rootPath: string, parentPath: string): string {
+  const parent = parentPath.trim();
+  if (!parent) return resolve(rootPath);
+  return assertInsideRoot(rootPath, parent);
+}
+
+export async function createProjectFile(
+  rootPath: string,
+  parentPath: string,
+  name: string,
+): Promise<{ snapshot: ProjectSnapshot; createdPath: string }> {
+  const root = resolve(rootPath);
+  const parentAbs = resolveParentDirectory(root, parentPath);
+  const parentInfo = await stat(parentAbs);
+  if (!parentInfo.isDirectory()) {
+    throw new Error("Parent must be a folder");
+  }
+
+  const fileName = await uniqueFileName(parentAbs, name);
+  assertCreatableFileName(fileName);
+
+  const absolutePath = join(parentAbs, fileName);
+  await writeFile(absolutePath, "", "utf8");
+  const createdPath = toProjectRelative(root, absolutePath);
+  return { snapshot: await loadProject(rootPath), createdPath };
+}
+
+export async function renameProjectPath(
+  rootPath: string,
+  path: string,
+  newName: string,
+): Promise<{ snapshot: ProjectSnapshot; newPath: string }> {
+  validateEntryName(newName);
+  const fromAbs = assertInsideRoot(rootPath, path);
+  const toAbs = join(dirname(fromAbs), newName);
+  if (toAbs === fromAbs) {
+    const snapshot = await loadProject(rootPath);
+    return { snapshot, newPath: path };
+  }
+
+  if (await pathExists(toAbs)) {
+    throw new Error("A file or folder with that name already exists");
+  }
+
+  await rename(fromAbs, toAbs);
+  const root = resolve(rootPath);
+  const newPath = toProjectRelative(root, toAbs);
+  return { snapshot: await loadProject(rootPath), newPath };
+}
+
+export async function deleteProjectPath(rootPath: string, path: string): Promise<ProjectSnapshot> {
+  const root = resolve(rootPath);
+  const targetAbs = assertInsideRoot(rootPath, path);
+  if (targetAbs === root) {
+    throw new Error("Cannot delete the project root");
+  }
+
+  await rm(targetAbs, { recursive: true, force: true });
+  return loadProject(rootPath);
 }

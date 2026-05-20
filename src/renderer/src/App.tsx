@@ -252,6 +252,67 @@ export function App() {
     setToast(result.message ? `Patch failed: ${result.message}` : "Patch failed.");
   }
 
+  async function createProjectFile(parentPath: string, name: string): Promise<void> {
+    if (!project) return;
+    try {
+      const { snapshot, createdPath } = await window.bigTex.files.create({
+        rootPath: project.rootPath,
+        parentPath,
+        name,
+      });
+      setProject(snapshot);
+      await refreshProjectFiles([createdPath], `Created ${createdPath}.`);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Could not create file");
+      throw error;
+    }
+  }
+
+  async function renameProjectPath(path: string, newName: string): Promise<void> {
+    if (!project) return;
+    try {
+      const { snapshot, newPath } = await window.bigTex.files.rename({
+        rootPath: project.rootPath,
+        path,
+        newName,
+      });
+      setProject(snapshot);
+      const wasOpen = openFileRef.current?.path === path;
+      if (wasOpen) {
+        const file = await window.bigTex.files.read({
+          rootPath: project.rootPath,
+          path: newPath,
+        });
+        setOpenFile(file);
+        activeDraftRef.current = { path: file.path, content: file.content };
+      }
+      setToast(`Renamed to ${newName}.`);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Rename failed");
+      throw error;
+    }
+  }
+
+  async function deleteProjectPath(path: string): Promise<void> {
+    if (!project) return;
+    try {
+      const wasOpen = openFileRef.current?.path === path;
+      const snapshot = await window.bigTex.files.delete({
+        rootPath: project.rootPath,
+        path,
+      });
+      setProject(snapshot);
+      if (wasOpen) {
+        setOpenFile(null);
+        activeDraftRef.current = null;
+      }
+      setToast("Deleted.");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Delete failed");
+      throw error;
+    }
+  }
+
   return (
     <main className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-background">
       <CommandBar
@@ -293,6 +354,10 @@ export function App() {
               onOpenProject={() => void openProjectFromDialog()}
               onOpenSample={() => void loadSample()}
               onOpenFile={(file) => void openProjectFile(file)}
+              onCreateFile={createProjectFile}
+              onRenamePath={renameProjectPath}
+              onDeletePath={deleteProjectPath}
+              onError={(message) => setToast(message)}
             />
           </Panel>
 

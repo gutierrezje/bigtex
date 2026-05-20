@@ -21,6 +21,9 @@ export const IPC_CHANNELS = {
   projectLoad: "project:load",
   fileRead: "file:read",
   fileWrite: "file:write",
+  fileCreate: "file:create",
+  fileRename: "file:rename",
+  fileDelete: "file:delete",
   latexCompile: "latex:compile",
   pdfRead: "pdf:read",
   agentCheck: "agent:check",
@@ -39,6 +42,23 @@ export interface ReadFileRequest {
 
 export interface WriteFileRequest extends ReadFileRequest {
   content: string;
+}
+
+export interface CreateFileRequest {
+  rootPath: string;
+  parentPath: string;
+  name: string;
+}
+
+export interface RenamePathRequest {
+  rootPath: string;
+  path: string;
+  newName: string;
+}
+
+export interface DeletePathRequest {
+  rootPath: string;
+  path: string;
 }
 
 export interface AgentCheckRequest {
@@ -61,6 +81,9 @@ export interface BigTexApi {
   files: {
     read(request: ReadFileRequest): Promise<OpenFile>;
     write(request: WriteFileRequest): Promise<OpenFile>;
+    create(request: CreateFileRequest): Promise<{ snapshot: ProjectSnapshot; createdPath: string }>;
+    rename(request: RenamePathRequest): Promise<{ snapshot: ProjectSnapshot; newPath: string }>;
+    delete(request: DeletePathRequest): Promise<ProjectSnapshot>;
   };
   latex: {
     compile(request: CompileRequest): Promise<CompileResult>;

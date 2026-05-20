@@ -14,6 +14,9 @@ const api: BigTexApi = {
   files: {
     read: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileRead, request),
     write: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileWrite, request),
+    create: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileCreate, request),
+    rename: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileRename, request),
+    delete: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileDelete, request),
   },
   latex: {
     compile: (request) => ipcRenderer.invoke(IPC_CHANNELS.latexCompile, request),
