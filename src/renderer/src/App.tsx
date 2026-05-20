@@ -8,7 +8,6 @@ import { DiagnosticsPanel } from "./components/DiagnosticsPanel";
 import { EditorPane } from "./components/EditorPane";
 import { PdfPreview } from "./components/PdfPreview";
 import { ProjectSidebar } from "./components/ProjectSidebar";
-import { TitleBar } from "./components/TitleBar";
 import { useAgentEvents } from "./hooks/useAgentEvents";
 import { useAppStore } from "./store";
 
@@ -254,161 +253,161 @@ export function App() {
   }
 
   return (
-    <main className="flex h-screen w-screen min-h-0 overflow-hidden bg-background">
-      <Group
-        className="h-full w-full min-h-0 min-w-0"
-        id="bigtex-outer-layout"
-        orientation="horizontal"
-      >
-        <Panel
-          panelRef={sidebarRef}
-          collapsible={true}
-          defaultSize="16%"
-          minSize="12%"
-          maxSize="25%"
-          onResize={(size, _, prev) => {
-            if (prev !== undefined) {
-              setIsSidebarCollapsed(size.asPercentage < 1);
-            }
-          }}
-          className="h-full min-h-0 min-w-0"
+    <main className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-background">
+      <CommandBar
+        compiler={compiler}
+        metrics={metrics}
+        onCompilerChange={setCompiler}
+        onRefreshMetrics={() => void refreshMetrics()}
+        showSidebar={!isSidebarCollapsed}
+        onToggleSidebar={handleToggleSidebar}
+        showDiagnostics={!isDiagnosticsCollapsed}
+        onToggleDiagnostics={handleToggleDiagnostics}
+        showPdf={!isPdfCollapsed}
+        onTogglePdf={handleTogglePdf}
+        showAgent={!isAgentCollapsed}
+        onToggleAgent={handleToggleAgent}
+      />
+      <div className="flex-1 min-h-0 w-full overflow-hidden">
+        <Group
+          className="h-full w-full min-h-0 min-w-0"
+          id="bigtex-outer-layout"
+          orientation="horizontal"
         >
-          <ProjectSidebar
-            project={project}
-            activePath={openFile?.path ?? null}
-            onOpenProject={() => void openProjectFromDialog()}
-            onOpenSample={() => void loadSample()}
-            onOpenFile={(file) => void openProjectFile(file)}
-          />
-        </Panel>
+          <Panel
+            panelRef={sidebarRef}
+            collapsible={true}
+            defaultSize="16%"
+            minSize="12%"
+            maxSize="25%"
+            onResize={(size, _, prev) => {
+              if (prev !== undefined) {
+                setIsSidebarCollapsed(size.asPercentage < 1);
+              }
+            }}
+            className="h-full min-h-0 min-w-0"
+          >
+            <ProjectSidebar
+              project={project}
+              activePath={openFile?.path ?? null}
+              onOpenProject={() => void openProjectFromDialog()}
+              onOpenSample={() => void loadSample()}
+              onOpenFile={(file) => void openProjectFile(file)}
+            />
+          </Panel>
 
-        <Separator
-          className={`resize-handle-horizontal ${
-            isSidebarCollapsed ? "hidden pointer-events-none" : ""
-          }`}
-        />
-
-        <Panel defaultSize="84%" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-          <TitleBar />
-          <CommandBar
-            compiler={compiler}
-            metrics={metrics}
-            onCompilerChange={setCompiler}
-            onRefreshMetrics={() => void refreshMetrics()}
-            showSidebar={!isSidebarCollapsed}
-            onToggleSidebar={handleToggleSidebar}
-            showDiagnostics={!isDiagnosticsCollapsed}
-            onToggleDiagnostics={handleToggleDiagnostics}
-            showPdf={!isPdfCollapsed}
-            onTogglePdf={handleTogglePdf}
-            showAgent={!isAgentCollapsed}
-            onToggleAgent={handleToggleAgent}
+          <Separator
+            className={`resize-handle-horizontal ${
+              isSidebarCollapsed ? "hidden pointer-events-none" : ""
+            }`}
           />
 
-          <div className="min-h-0 flex-1 overflow-hidden px-3 pb-3">
-            <Group
-              className="h-full min-h-0 min-w-0"
-              id="bigtex-main-panels"
-              orientation="horizontal"
-            >
-              <Panel defaultSize="38%" minSize="25%" className="min-h-0 min-w-0">
-                <Group
-                  className="h-full min-h-0 min-w-0"
-                  id="bigtex-editor-panels"
-                  orientation="vertical"
-                >
-                  <Panel defaultSize="78%" minSize="40%" className="min-h-0 min-w-0">
-                    <EditorPane
-                      file={openFile}
-                      diagnostics={compileResult?.diagnostics ?? []}
-                      onDraftChange={(path, content) => {
-                        activeDraftRef.current = { path, content };
-                      }}
-                      onSave={(content) => void saveOpenFile(content)}
-                    />
-                  </Panel>
-
-                  <Separator
-                    className={`resize-handle-vertical ${
-                      isDiagnosticsCollapsed ? "hidden pointer-events-none" : ""
-                    }`}
-                  />
-
-                  <Panel
-                    panelRef={diagnosticsRef}
-                    collapsible={true}
-                    defaultSize="22%"
-                    minSize="14%"
-                    maxSize="45%"
-                    onResize={(size, _, prev) => {
-                      if (prev !== undefined) {
-                        setIsDiagnosticsCollapsed(size.asPercentage < 1);
-                      }
-                    }}
-                    className="min-h-0 min-w-0"
+          <Panel defaultSize="84%" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-hidden p-3">
+              <Group
+                className="h-full min-h-0 min-w-0"
+                id="bigtex-main-panels"
+                orientation="horizontal"
+              >
+                <Panel defaultSize="38%" minSize="25%" className="min-h-0 min-w-0">
+                  <Group
+                    className="h-full min-h-0 min-w-0"
+                    id="bigtex-editor-panels"
+                    orientation="vertical"
                   >
-                    <DiagnosticsPanel
-                      result={compileResult}
-                      compiling={compiling}
-                      onCompile={() => void compile()}
+                    <Panel defaultSize="78%" minSize="40%" className="min-h-0 min-w-0">
+                      <EditorPane
+                        file={openFile}
+                        diagnostics={compileResult?.diagnostics ?? []}
+                        onDraftChange={(path, content) => {
+                          activeDraftRef.current = { path, content };
+                        }}
+                        onSave={(content) => void saveOpenFile(content)}
+                      />
+                    </Panel>
+
+                    <Separator
+                      className={`resize-handle-vertical ${
+                        isDiagnosticsCollapsed ? "hidden pointer-events-none" : ""
+                      }`}
                     />
-                  </Panel>
-                </Group>
-              </Panel>
 
-              <Separator
-                className={`resize-handle-horizontal ${
-                  isPdfCollapsed ? "hidden pointer-events-none" : ""
-                }`}
-              />
+                    <Panel
+                      panelRef={diagnosticsRef}
+                      collapsible={true}
+                      defaultSize="22%"
+                      minSize="14%"
+                      maxSize="45%"
+                      onResize={(size, _, prev) => {
+                        if (prev !== undefined) {
+                          setIsDiagnosticsCollapsed(size.asPercentage < 1);
+                        }
+                      }}
+                      className="min-h-0 min-w-0"
+                    >
+                      <DiagnosticsPanel
+                        result={compileResult}
+                        compiling={compiling}
+                        onCompile={() => void compile()}
+                      />
+                    </Panel>
+                  </Group>
+                </Panel>
 
-              <Panel
-                panelRef={pdfRef}
-                collapsible={true}
-                defaultSize="35%"
-                minSize="20%"
-                onResize={(size, _, prev) => {
-                  if (prev !== undefined) {
-                    setIsPdfCollapsed(size.asPercentage < 1);
-                  }
-                }}
-                className="min-h-0 min-w-0"
-              >
-                <PdfPreview pdf={pdf} />
-              </Panel>
-
-              <Separator
-                className={`resize-handle-horizontal ${
-                  isAgentCollapsed ? "hidden pointer-events-none" : ""
-                }`}
-              />
-
-              <Panel
-                panelRef={agentRef}
-                collapsible={true}
-                defaultSize="27%"
-                minSize="20%"
-                onResize={(size, _, prev) => {
-                  if (prev !== undefined) {
-                    setIsAgentCollapsed(size.asPercentage < 1);
-                  }
-                }}
-                className="min-h-0 min-w-0"
-              >
-                <AgentPanel
-                  rootPath={project?.rootPath ?? null}
-                  activeFile={openFile?.path ?? null}
-                  diagnostics={compileResult?.diagnostics ?? []}
-                  chat={agentChat}
-                  onRun={runAgent}
-                  onCancel={(runId) => window.bigTex.agent.cancel({ runId })}
-                  onApplyPatch={applyPatch}
+                <Separator
+                  className={`resize-handle-horizontal ${
+                    isPdfCollapsed ? "hidden pointer-events-none" : ""
+                  }`}
                 />
-              </Panel>
-            </Group>
-          </div>
-        </Panel>
-      </Group>
+
+                <Panel
+                  panelRef={pdfRef}
+                  collapsible={true}
+                  defaultSize="35%"
+                  minSize="20%"
+                  onResize={(size, _, prev) => {
+                    if (prev !== undefined) {
+                      setIsPdfCollapsed(size.asPercentage < 1);
+                    }
+                  }}
+                  className="min-h-0 min-w-0"
+                >
+                  <PdfPreview pdf={pdf} />
+                </Panel>
+
+                <Separator
+                  className={`resize-handle-horizontal ${
+                    isAgentCollapsed ? "hidden pointer-events-none" : ""
+                  }`}
+                />
+
+                <Panel
+                  panelRef={agentRef}
+                  collapsible={true}
+                  defaultSize="27%"
+                  minSize="20%"
+                  onResize={(size, _, prev) => {
+                    if (prev !== undefined) {
+                      setIsAgentCollapsed(size.asPercentage < 1);
+                    }
+                  }}
+                  className="min-h-0 min-w-0"
+                >
+                  <AgentPanel
+                    rootPath={project?.rootPath ?? null}
+                    activeFile={openFile?.path ?? null}
+                    diagnostics={compileResult?.diagnostics ?? []}
+                    chat={agentChat}
+                    onRun={runAgent}
+                    onCancel={(runId) => window.bigTex.agent.cancel({ runId })}
+                    onApplyPatch={applyPatch}
+                  />
+                </Panel>
+              </Group>
+            </div>
+          </Panel>
+        </Group>
+      </div>
 
       {toast ? (
         <button

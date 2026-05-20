@@ -32,49 +32,64 @@ export function CommandBar({
   const latestMetric = metrics.at(-1);
 
   return (
-    <div className="flex items-center gap-2 px-3 pb-2">
-      {/* Compiler toggle */}
-      <div className="flex gap-0.5 rounded-md bg-zinc-900 p-0.5">
+    <div
+      className="flex h-11 shrink-0 items-center justify-between border-b border-border/40 bg-zinc-950 px-4 select-none"
+      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+    >
+      {/* Left traffic-light safety spacing */}
+      <div className="w-20 shrink-0" />
+
+      {/* Center/Left: Compiler selectors and metrics */}
+      <div
+        className="flex items-center gap-3"
+        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+      >
+        {/* Compiler toggle */}
+        <div className="flex gap-0.5 rounded-md bg-zinc-900 p-0.5">
+          <button
+            type="button"
+            className={`rounded-[5px] border-0 px-3 py-1 text-xs font-medium transition-colors duration-100 ${
+              compiler === "latexmk"
+                ? "bg-accent text-zinc-950"
+                : "bg-transparent text-text-muted hover:text-text-secondary"
+            }`}
+            onClick={() => onCompilerChange("latexmk")}
+          >
+            latexmk
+          </button>
+          <button
+            type="button"
+            className={`rounded-[5px] border-0 px-3 py-1 text-xs font-medium transition-colors duration-100 ${
+              compiler === "tectonic"
+                ? "bg-accent text-zinc-950"
+                : "bg-transparent text-text-muted hover:text-text-secondary"
+            }`}
+            onClick={() => onCompilerChange("tectonic")}
+          >
+            tectonic
+          </button>
+        </div>
+
         <button
           type="button"
-          className={`rounded-[5px] border-0 px-3 py-1 text-xs font-medium transition-colors duration-100 ${
-            compiler === "latexmk"
-              ? "bg-accent text-zinc-950"
-              : "bg-transparent text-text-muted hover:text-text-secondary"
-          }`}
-          onClick={() => onCompilerChange("latexmk")}
+          className="rounded-md border border-border bg-transparent px-3 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:border-accent/40 hover:text-text-secondary"
+          onClick={onRefreshMetrics}
         >
-          latexmk
+          Refresh metrics
         </button>
-        <button
-          type="button"
-          className={`rounded-[5px] border-0 px-3 py-1 text-xs font-medium transition-colors duration-100 ${
-            compiler === "tectonic"
-              ? "bg-accent text-zinc-950"
-              : "bg-transparent text-text-muted hover:text-text-secondary"
-          }`}
-          onClick={() => onCompilerChange("tectonic")}
-        >
-          tectonic
-        </button>
+
+        <span className="font-mono text-xs text-text-muted select-none">
+          {latestMetric
+            ? `${latestMetric.name}: ${Math.round(latestMetric.durationMs)}ms`
+            : "No metrics yet"}
+        </span>
       </div>
 
-      <button
-        type="button"
-        className="rounded-md border border-border bg-transparent px-3 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:border-accent/40 hover:text-text-secondary"
-        onClick={onRefreshMetrics}
+      {/* Right: Panel Toggles */}
+      <div
+        className="flex items-center gap-1 bg-zinc-900/60 p-0.5 rounded-md border border-border/40"
+        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
-        Refresh metrics
-      </button>
-
-      <span className="font-mono text-xs text-text-muted select-none">
-        {latestMetric
-          ? `${latestMetric.name}: ${Math.round(latestMetric.durationMs)}ms`
-          : "No metrics yet"}
-      </span>
-
-      {/* Panel Toggles */}
-      <div className="ml-auto flex items-center gap-1 bg-zinc-900/60 p-0.5 rounded-md border border-border/40">
         <button
           type="button"
           title="Toggle Sidebar (Files)"
