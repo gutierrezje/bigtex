@@ -266,8 +266,10 @@ export function App() {
           defaultSize="16%"
           minSize="12%"
           maxSize="25%"
-          onResize={(size) => {
-            setIsSidebarCollapsed(size.asPercentage < 1);
+          onResize={(size, _, prev) => {
+            if (prev !== undefined) {
+              setIsSidebarCollapsed(size.asPercentage < 1);
+            }
           }}
           className="h-full min-h-0 min-w-0"
         >
@@ -338,8 +340,10 @@ export function App() {
                     defaultSize="22%"
                     minSize="14%"
                     maxSize="45%"
-                    onResize={(size) => {
-                      setIsDiagnosticsCollapsed(size.asPercentage < 1);
+                    onResize={(size, _, prev) => {
+                      if (prev !== undefined) {
+                        setIsDiagnosticsCollapsed(size.asPercentage < 1);
+                      }
                     }}
                     className="min-h-0 min-w-0"
                   >
@@ -363,8 +367,10 @@ export function App() {
                 collapsible={true}
                 defaultSize="35%"
                 minSize="20%"
-                onResize={(size) => {
-                  setIsPdfCollapsed(size.asPercentage < 1);
+                onResize={(size, _, prev) => {
+                  if (prev !== undefined) {
+                    setIsPdfCollapsed(size.asPercentage < 1);
+                  }
                 }}
                 className="min-h-0 min-w-0"
               >
@@ -382,8 +388,10 @@ export function App() {
                 collapsible={true}
                 defaultSize="27%"
                 minSize="20%"
-                onResize={(size) => {
-                  setIsAgentCollapsed(size.asPercentage < 1);
+                onResize={(size, _, prev) => {
+                  if (prev !== undefined) {
+                    setIsAgentCollapsed(size.asPercentage < 1);
+                  }
                 }}
                 className="min-h-0 min-w-0"
               >
