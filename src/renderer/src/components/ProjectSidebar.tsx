@@ -459,7 +459,7 @@ export function ProjectSidebar({
           BT
         </span>
         <div className="min-w-0">
-          <h1 className="text-sm font-semibold tracking-tight text-text-primary">BigTex</h1>
+          <h1 className="text-sm font-semibold tracking-tight text-text-primary">BigTeX</h1>
           <p className="text-[11px] text-text-muted">Agentic LaTeX editor</p>
         </div>
       </div>

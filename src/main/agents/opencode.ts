@@ -83,7 +83,7 @@ function agentSystemPrompt(input: AgentRunInput): string {
     .join("\n");
 
   return [
-    "You are editing a local LaTeX project from inside BigTex.",
+    "You are editing a local LaTeX project from inside BigTeX.",
     "Prefer precise, small patches. Do not rewrite unrelated files.",
     "When changing files, respond with one or more fenced diff blocks using unified diff format.",
     "Do not apply changes yourself unless the user explicitly asks through the host app.",
@@ -395,7 +395,7 @@ const ACP_INITIALIZE_PARAMS = {
   },
   clientInfo: {
     name: "bigtex",
-    title: "BigTex",
+    title: "BigTeX",
     version: "0.1.0",
   },
 } as const;

@@ -1,4 +1,4 @@
-# BigTex
+# BigTeX
 
 Agent-first Electron LaTeX editor prototype focused on local performance.
 

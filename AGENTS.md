@@ -1,4 +1,4 @@
-# BigTex
+# BigTeX
 
 **Generated:** 2026-05-19T22:20:47Z
 **Commit:** d4ec686

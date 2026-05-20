@@ -44,7 +44,7 @@ function EmptyThread() {
           Ready
         </span>
         <p className="m-0 text-sm leading-relaxed text-text-muted">
-          Ask BigTex to edit, explain, or repair the selected LaTeX file. ACP output will stream
+          Ask BigTeX to edit, explain, or repair the selected LaTeX file. ACP output will stream
           here as a chat.
         </p>
       </div>
@@ -122,7 +122,7 @@ function ChatThread({ onApplyPatch }: ChatThreadProps) {
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border border-border bg-surface-inset p-2">
           <ComposerPrimitive.Input
             className="max-h-32 min-h-10 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-relaxed text-text-primary outline-none placeholder:text-text-muted"
-            placeholder="Ask BigTex to revise, explain, or fix this LaTeX..."
+            placeholder="Ask BigTeX to revise, explain, or fix this LaTeX..."
             rows={2}
             submitMode="enter"
           />
