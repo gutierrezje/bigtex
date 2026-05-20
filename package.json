@@ -1,5 +1,6 @@
 {
   "name": "bigtex",
+  "productName": "BigTeX",
   "version": "0.1.0",
   "private": true,
   "description": "Agent-first Electron LaTeX editor prototype.",
@@ -13,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "format": "biome format --write .",
+    "postinstall": "node scripts/patch-electron-mac-name.mjs",
     "prepare": "simple-git-hooks"
   },
   "simple-git-hooks": {

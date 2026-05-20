@@ -9,6 +9,7 @@ import { EditorPane } from "./components/EditorPane";
 import { PdfPreview } from "./components/PdfPreview";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { useAgentEvents } from "./hooks/useAgentEvents";
+import { formatWindowChromeLabel } from "./lib/windowChrome";
 import { useAppStore } from "./store";
 
 function selectable(file: ProjectFile): boolean {
@@ -44,6 +45,10 @@ export function App() {
   const diagnosticsRef = useRef<PanelImperativeHandle>(null);
   const pdfRef = useRef<PanelImperativeHandle>(null);
   const agentRef = useRef<PanelImperativeHandle>(null);
+
+  useEffect(() => {
+    document.title = formatWindowChromeLabel(project?.name ?? null, openFile?.path ?? null);
+  }, [project?.name, openFile?.path]);
 
   const activeDraftRef = useRef<{ path: string; content: string } | null>(null);
   const openFileRef = useRef(openFile);
@@ -313,6 +318,8 @@ export function App() {
   return (
     <main className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-background">
       <CommandBar
+        projectName={project?.name ?? null}
+        filePath={openFile?.path ?? null}
         metrics={metrics}
         onRefreshMetrics={() => void refreshMetrics()}
         showSidebar={!isSidebarCollapsed}

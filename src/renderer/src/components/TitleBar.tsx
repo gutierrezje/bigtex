@@ -1,13 +1,23 @@
+import { formatWindowChromeLabel } from "../lib/windowChrome";
+
+interface TitleBarProps {
+  projectName: string | null;
+  filePath: string | null;
+}
+
 /**
- * Draggable title-bar region for the frameless window.
- * On macOS with `titleBarStyle: 'hiddenInset'`, this provides the
- * drag handle area while the native traffic lights remain visible.
+ * Workspace title beside the traffic lights (`titleBarStyle: hiddenInset`).
+ * Stays in the drag region so the window can be moved from this strip.
  */
-export function TitleBar() {
+export function TitleBar({ projectName, filePath }: TitleBarProps) {
   return (
     <div
-      className="h-11 shrink-0 select-none"
+      className="flex min-w-0 flex-1 items-center overflow-hidden pl-20 pr-3"
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-    />
+    >
+      <span className="truncate text-[13px] font-medium text-text-muted">
+        {formatWindowChromeLabel(projectName, filePath)}
+      </span>
+    </div>
   );
 }

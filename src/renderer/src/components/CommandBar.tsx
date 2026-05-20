@@ -1,6 +1,9 @@
 import type { PerformanceMark } from "../../../shared/domain";
+import { TitleBar } from "./TitleBar";
 
 interface CommandBarProps {
+  projectName: string | null;
+  filePath: string | null;
   metrics: PerformanceMark[];
   onRefreshMetrics(): void;
   showSidebar: boolean;
@@ -14,6 +17,8 @@ interface CommandBarProps {
 }
 
 export function CommandBar({
+  projectName,
+  filePath,
   metrics,
   onRefreshMetrics,
   showSidebar,
@@ -28,16 +33,11 @@ export function CommandBar({
   const latestMetric = metrics.at(-1);
 
   return (
-    <div
-      className="flex h-11 shrink-0 items-center justify-between border-b border-border/40 bg-zinc-950 px-4 select-none"
-      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-    >
-      {/* Left traffic-light safety spacing */}
-      <div className="w-20 shrink-0" />
+    <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/40 bg-zinc-950 select-none">
+      <TitleBar projectName={projectName} filePath={filePath} />
 
-      {/* Center/Left: metrics */}
       <div
-        className="flex items-center gap-3"
+        className="flex shrink-0 items-center gap-3 px-4"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         <button
@@ -55,9 +55,8 @@ export function CommandBar({
         </span>
       </div>
 
-      {/* Right: Panel Toggles */}
       <div
-        className="flex items-center gap-1 bg-zinc-900/60 p-0.5 rounded-md border border-border/40"
+        className="flex shrink-0 items-center gap-1 rounded-md border border-border/40 bg-zinc-900/60 p-0.5 px-4"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         <button

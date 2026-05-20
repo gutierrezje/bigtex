@@ -34,6 +34,8 @@ import { getMarks, measure, recordMark } from "./performance/marks";
 const appStartedAt = performance.now();
 let mainWindow: BrowserWindow | null = null;
 
+app.setName("BigTeX");
+
 function createWindow(): void {
   const windowStartedAt = performance.now();
 
