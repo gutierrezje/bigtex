@@ -23,6 +23,7 @@ Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with
 |------|----------|
 | IPC contracts | src/shared/ipc.ts |
 | IPC handlers + window lifecycle | src/main/index.ts |
+| Application menu (Open/Close Folder) | src/main/menu.ts |
 | Preload API surface | src/preload/index.ts |
 | Project tree + file IO | src/main/files/project.ts |
 | LaTeX compile runner | src/main/compile/latex.ts |
@@ -57,7 +58,7 @@ pnpm test
 pnpm run build
 ```
 
-Pre-commit runs Biome lint + format on staged files (`pnpm install` registers hooks).
+Pre-commit runs Biome lint + format on staged files, then `pnpm test` (`pnpm install` registers hooks).
 
 ## KEY CONFIGS
 

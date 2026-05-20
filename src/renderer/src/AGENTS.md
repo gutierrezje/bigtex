@@ -34,6 +34,7 @@ src/renderer/src/
 ## CONVENTIONS
 
 - App.tsx owns IPC calls and draft flushing; leaf components stay mostly presentational.
+- Projects are opened/closed either via the native app menu (File → Open/Close Folder) or the welcome screen; App.tsx listens via `window.bigTex.project.onOpened/onClosed`.
 - useAgentEvents is the single agent stream listener; keep it mounted at app root.
 - EditorPane debounces autosave (~650ms); always call onDraftChange before compile.
 - Assistant UI parts must be stable components (no inline lambdas) to avoid remounts.
