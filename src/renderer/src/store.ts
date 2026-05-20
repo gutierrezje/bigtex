@@ -16,6 +16,9 @@ import type {
   PerformanceMark,
   ProjectSnapshot,
 } from "../../shared/domain";
+import { type AgentChatMessage, type AgentChatState, reduceAgentChat } from "./agent-chat-reducer";
+
+export type { AgentChatMessage, AgentChatState };
 
 export interface AgentSettingsState {
   config: AgentSessionConfig | null;
@@ -25,28 +28,6 @@ export interface AgentSettingsState {
   reasoningProbing: boolean;
   loading: boolean;
   error: string | null;
-}
-
-export interface AgentChatMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  /** User-visible assistant reply (ACP agent_message_chunk). */
-  content: string;
-  /** Model reasoning stream (ACP agent_thought_chunk). */
-  reasoning: string;
-  /** Tool calls, plans, and other operational log lines. */
-  activity: string;
-  createdAt: Date;
-  runId?: string;
-  patch: string | null;
-  status: "ready" | "running" | "error";
-}
-
-export interface AgentChatState {
-  runId: string;
-  running: boolean;
-  activeAssistantMessageId: string | null;
-  messages: AgentChatMessage[];
 }
 
 interface AppState {
@@ -150,136 +131,9 @@ export const useAppStore = create<AppState>((set) => ({
     return id;
   },
   appendAgentEvent: (event) =>
-    set((state) => {
-      const chat = state.agentChat;
-      const lastAssistantMessage = [...chat.messages]
-        .reverse()
-        .find((message) => message.role === "assistant");
-      const activeAssistantMessageId =
-        chat.activeAssistantMessageId ?? lastAssistantMessage?.id ?? null;
-
-      function updateActiveAssistantMessage(
-        updater: (message: AgentChatMessage) => AgentChatMessage,
-      ): AgentChatMessage[] {
-        if (!activeAssistantMessageId) return chat.messages;
-        return chat.messages.map((message) =>
-          message.id === activeAssistantMessageId ? updater(message) : message,
-        );
-      }
-
-      if (event.type === "started") {
-        return {
-          agentChat: {
-            ...chat,
-            runId: event.runId,
-            running: true,
-            activeAssistantMessageId,
-            messages: updateActiveAssistantMessage((message) => ({
-              ...message,
-              runId: event.runId,
-              status: "running",
-            })),
-          },
-        };
-      }
-
-      if (event.type === "thought") {
-        return {
-          agentChat: {
-            ...chat,
-            running: true,
-            activeAssistantMessageId,
-            messages: updateActiveAssistantMessage((message) => ({
-              ...message,
-              runId: event.runId,
-              reasoning: `${message.reasoning}${event.chunk}`,
-              status: "running",
-            })),
-          },
-        };
-      }
-
-      if (event.type === "message") {
-        return {
-          agentChat: {
-            ...chat,
-            running: true,
-            activeAssistantMessageId,
-            messages: updateActiveAssistantMessage((message) => ({
-              ...message,
-              runId: event.runId,
-              content: `${message.content}${event.chunk}`,
-              status: "running",
-            })),
-          },
-        };
-      }
-
-      if (event.type === "activity" || event.type === "stderr") {
-        return {
-          agentChat: {
-            ...chat,
-            running: true,
-            activeAssistantMessageId,
-            messages: updateActiveAssistantMessage((message) => ({
-              ...message,
-              runId: event.runId,
-              activity: `${message.activity}${event.chunk}`,
-              status: event.type === "stderr" ? "error" : "running",
-            })),
-          },
-        };
-      }
-
-      if (event.type === "patch") {
-        return {
-          agentChat: {
-            ...chat,
-            activeAssistantMessageId,
-            messages: updateActiveAssistantMessage((message) => ({
-              ...message,
-              runId: event.runId,
-              patch: event.patch,
-            })),
-          },
-        };
-      }
-
-      if (event.type === "error") {
-        return {
-          agentChat: {
-            ...chat,
-            running: false,
-            activeAssistantMessageId: null,
-            messages: updateActiveAssistantMessage((message) => ({
-              ...message,
-              runId: event.runId,
-              content: message.content
-                ? `${message.content}\n\nAgent error: ${event.message}`
-                : `Agent error: ${event.message}`,
-              status: "error",
-            })),
-          },
-        };
-      }
-
-      if (event.type === "finished") {
-        return {
-          agentChat: {
-            ...chat,
-            running: false,
-            activeAssistantMessageId: null,
-            messages: updateActiveAssistantMessage((message) => ({
-              ...message,
-              runId: event.runId,
-              status: event.exitCode && event.exitCode !== 0 ? "error" : "ready",
-            })),
-          },
-        };
-      }
-
-      return { agentChat: chat };
-    }),
+    set((state) => ({
+      agentChat: reduceAgentChat(state.agentChat, event),
+    })),
   clearAgent: () =>
     set({
       agentChat: {
