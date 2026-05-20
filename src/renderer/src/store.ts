@@ -11,7 +11,6 @@ import type {
   AgentProviderGroup,
   AgentSessionConfig,
   CompileResult,
-  CompilerKind,
   OpenFile,
   PdfPayload,
   PerformanceMark,
@@ -53,7 +52,6 @@ export interface AgentChatState {
 interface AppState {
   project: ProjectSnapshot | null;
   openFile: OpenFile | null;
-  compiler: CompilerKind;
   compileResult: CompileResult | null;
   pdf: PdfPayload | null;
   agentChat: AgentChatState;
@@ -64,7 +62,6 @@ interface AppState {
   updateOpenFileContent(content: string): void;
   setCompileResult(result: CompileResult | null): void;
   setPdf(pdf: PdfPayload | null): void;
-  setCompiler(compiler: CompilerKind): void;
   addAgentUserMessage(content: string): void;
   createPendingAgentMessage(): string;
   appendAgentEvent(event: AgentEvent): void;
@@ -84,7 +81,6 @@ function createMessageId(prefix: string): string {
 export const useAppStore = create<AppState>((set) => ({
   project: null,
   openFile: null,
-  compiler: "latexmk",
   compileResult: null,
   pdf: null,
   agentChat: {
@@ -111,7 +107,6 @@ export const useAppStore = create<AppState>((set) => ({
     })),
   setCompileResult: (compileResult) => set({ compileResult }),
   setPdf: (pdf) => set({ pdf }),
-  setCompiler: (compiler) => set({ compiler }),
   addAgentUserMessage: (content) =>
     set((state) => ({
       agentChat: {

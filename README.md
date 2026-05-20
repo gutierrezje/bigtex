@@ -9,12 +9,19 @@ Agent-first Electron LaTeX editor prototype focused on local performance.
 - `opencode` is the default local agent command so users can bring their own opencode Go setup.
 - Agent markdown code fences use Shiki highlighting after streaming settles.
 
+## OpenCode
+
+The agent needs [OpenCode](https://opencode.ai/docs/) on your `PATH`. Install it, then log in:
+
+```bash
+opencode auth login
+```
+
 ## Development
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
-Compile requires either `latexmk` or `tectonic` on your `PATH`. Agent runs require `opencode`
-to be installed and authenticated separately.
+Compile requires `latexmk` on your `PATH`. The agent requires OpenCode as described above.

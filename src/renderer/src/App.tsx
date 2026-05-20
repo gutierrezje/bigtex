@@ -19,7 +19,6 @@ export function App() {
   const {
     project,
     openFile,
-    compiler,
     compileResult,
     pdf,
     agentChat,
@@ -28,7 +27,6 @@ export function App() {
     setOpenFile,
     setCompileResult,
     setPdf,
-    setCompiler,
     clearAgent,
     setMetrics,
   } = useAppStore();
@@ -210,7 +208,6 @@ export function App() {
       const result = await window.bigTex.latex.compile({
         rootPath: project.rootPath,
         mainFile,
-        compiler,
       });
       setCompileResult(result);
       if (result.pdfPath) {
@@ -316,9 +313,7 @@ export function App() {
   return (
     <main className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-background">
       <CommandBar
-        compiler={compiler}
         metrics={metrics}
-        onCompilerChange={setCompiler}
         onRefreshMetrics={() => void refreshMetrics()}
         showSidebar={!isSidebarCollapsed}
         onToggleSidebar={handleToggleSidebar}

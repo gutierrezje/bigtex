@@ -1,9 +1,7 @@
-import type { CompilerKind, PerformanceMark } from "../../../shared/domain";
+import type { PerformanceMark } from "../../../shared/domain";
 
 interface CommandBarProps {
-  compiler: CompilerKind;
   metrics: PerformanceMark[];
-  onCompilerChange(compiler: CompilerKind): void;
   onRefreshMetrics(): void;
   showSidebar: boolean;
   onToggleSidebar(): void;
@@ -16,9 +14,7 @@ interface CommandBarProps {
 }
 
 export function CommandBar({
-  compiler,
   metrics,
-  onCompilerChange,
   onRefreshMetrics,
   showSidebar,
   onToggleSidebar,
@@ -39,37 +35,11 @@ export function CommandBar({
       {/* Left traffic-light safety spacing */}
       <div className="w-20 shrink-0" />
 
-      {/* Center/Left: Compiler selectors and metrics */}
+      {/* Center/Left: metrics */}
       <div
         className="flex items-center gap-3"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
-        {/* Compiler toggle */}
-        <div className="flex gap-0.5 rounded-md bg-zinc-900 p-0.5">
-          <button
-            type="button"
-            className={`rounded-[5px] border-0 px-3 py-1 text-xs font-medium transition-colors duration-100 ${
-              compiler === "latexmk"
-                ? "bg-accent text-zinc-950"
-                : "bg-transparent text-text-muted hover:text-text-secondary"
-            }`}
-            onClick={() => onCompilerChange("latexmk")}
-          >
-            latexmk
-          </button>
-          <button
-            type="button"
-            className={`rounded-[5px] border-0 px-3 py-1 text-xs font-medium transition-colors duration-100 ${
-              compiler === "tectonic"
-                ? "bg-accent text-zinc-950"
-                : "bg-transparent text-text-muted hover:text-text-secondary"
-            }`}
-            onClick={() => onCompilerChange("tectonic")}
-          >
-            tectonic
-          </button>
-        </div>
-
         <button
           type="button"
           className="rounded-md border border-border bg-transparent px-3 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:border-accent/40 hover:text-text-secondary"

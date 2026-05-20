@@ -76,5 +76,5 @@ Pre-commit runs Biome lint + format on staged files (`pnpm install` registers ho
 
 - Do not run `pnpm run dev`.
 - Cleanup: use `latexmk -C` scoped to the sample or active project.
-- macOS TeX installs may require PATH helper restart for latexmk/tectonic.
+- macOS TeX installs may require PATH helper restart for latexmk.
 - `out/` is build output; avoid editing by hand.

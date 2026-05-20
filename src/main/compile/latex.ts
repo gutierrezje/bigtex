@@ -1,12 +1,7 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { basename } from "node:path";
-import type {
-  CompileDiagnostic,
-  CompileRequest,
-  CompileResult,
-  CompilerKind,
-} from "../../shared/domain";
+import type { CompileDiagnostic, CompileRequest, CompileResult } from "../../shared/domain";
 import { assertInsideRoot, outputPdfPath } from "../files/project";
 import { measure } from "../performance/marks";
 
@@ -49,13 +44,6 @@ function parseDiagnostics(output: string): CompileDiagnostic[] {
 function compilerCommand(request: CompileRequest): { command: string; args: string[] } {
   const mainFile = assertInsideRoot(request.rootPath, request.mainFile);
 
-  if (request.compiler === "tectonic") {
-    return {
-      command: "tectonic",
-      args: ["--keep-logs", "--synctex", mainFile],
-    };
-  }
-
   return {
     command: "latexmk",
     args: ["-pdf", "-interaction=nonstopmode", "-file-line-error", "-synctex=1", mainFile],
@@ -93,7 +81,6 @@ function compileWithProcess(
       const durationMs = Math.round(performance.now() - startedAt);
       resolve({
         success: false,
-        compiler: request.compiler,
         command: `${command} ${args.join(" ")}`,
         durationMs,
         output: `${output}\n${error.message}`,
@@ -103,7 +90,7 @@ function compileWithProcess(
             file: null,
             line: null,
             severity: "error",
-            message: `${command} could not be started. Install ${command} or choose another compiler.`,
+            message: `${command} could not be started. Install latexmk or add it to your PATH.`,
           },
         ],
       });
@@ -116,7 +103,6 @@ function compileWithProcess(
 
       resolve({
         success: exitCode === 0 && existsSync(pdfPath),
-        compiler: request.compiler,
         command: `${command} ${args.join(" ")}`,
         durationMs,
         output,
@@ -142,7 +128,5 @@ function compileWithProcess(
 export async function compileLatex(request: CompileRequest): Promise<CompileResult> {
   assertInsideRoot(request.rootPath, request.mainFile);
   const { command, args } = compilerCommand(request);
-  return measure(`compile:${request.compiler as CompilerKind}`, () =>
-    compileWithProcess(request, command, args),
-  );
+  return measure("compile:latexmk", () => compileWithProcess(request, command, args));
 }

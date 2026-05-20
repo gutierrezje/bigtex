@@ -24,8 +24,6 @@ export interface OpenFile {
   loadedAt: number;
 }
 
-export type CompilerKind = "latexmk" | "tectonic";
-
 export interface CompileDiagnostic {
   file: string | null;
   line: number | null;
@@ -36,12 +34,10 @@ export interface CompileDiagnostic {
 export interface CompileRequest {
   rootPath: string;
   mainFile: string;
-  compiler: CompilerKind;
 }
 
 export interface CompileResult {
   success: boolean;
-  compiler: CompilerKind;
   command: string;
   durationMs: number;
   output: string;
