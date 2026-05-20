@@ -17,7 +17,7 @@ import type {
 export const IPC_CHANNELS = {
   appMetrics: "app:metrics",
   projectOpenDialog: "project:open-dialog",
-  projectOpenSample: "project:open-sample",
+  projectOpened: "project:opened",
   projectLoad: "project:load",
   fileRead: "file:read",
   fileWrite: "file:write",
@@ -75,7 +75,8 @@ export interface BigTexApi {
   };
   project: {
     openDialog(): Promise<ProjectSnapshot | null>;
-    openSample(): Promise<ProjectSnapshot>;
+    /** Main process notifies when a folder is opened from the app menu (e.g. File → Open Folder). */
+    onOpened(listener: (snapshot: ProjectSnapshot) => void): () => void;
     load(rootPath: string): Promise<ProjectSnapshot>;
   };
   files: {

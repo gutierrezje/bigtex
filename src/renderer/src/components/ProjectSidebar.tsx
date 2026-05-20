@@ -9,8 +9,6 @@ import {
 interface ProjectSidebarProps {
   project: ProjectSnapshot | null;
   activePath: string | null;
-  onOpenProject(): void;
-  onOpenSample(): void;
   onOpenFile(file: ProjectFile): void;
   onCreateFile(parentPath: string, name: string): Promise<void>;
   onRenamePath(path: string, newName: string): Promise<void>;
@@ -306,8 +304,6 @@ function FileRow({
 export function ProjectSidebar({
   project,
   activePath,
-  onOpenProject,
-  onOpenSample,
   onOpenFile,
   onCreateFile,
   onRenamePath,
@@ -464,23 +460,6 @@ export function ProjectSidebar({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-1.5 px-4 pb-4 xl:grid-cols-2">
-        <button
-          type="button"
-          className="rounded-md border border-border bg-transparent px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors duration-100 hover:border-accent/40 hover:text-text-primary"
-          onClick={onOpenProject}
-        >
-          Open Project
-        </button>
-        <button
-          type="button"
-          className="rounded-md border border-border bg-transparent px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors duration-100 hover:border-accent/40 hover:text-text-primary"
-          onClick={onOpenSample}
-        >
-          Sample
-        </button>
-      </div>
-
       <section
         className="flex items-start justify-between gap-2 px-4 pb-2"
         onContextMenu={handleWorkspaceContextMenu}
@@ -537,8 +516,8 @@ export function ProjectSidebar({
         </div>
       ) : (
         <div className="px-4 text-xs leading-relaxed text-text-muted">
-          Open a folder with a <code className="font-mono text-text-secondary">.tex</code> file, or
-          load the bundled sample to explore the MVP.
+          Use <span className="font-medium text-text-secondary">File → Open Folder…</span> in the
+          menu bar (⌘O on macOS, Ctrl+O on Windows and Linux).
         </div>
       )}
 

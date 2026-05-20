@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import type { AgentRunInput, CompileRequest, PatchApplyRequest } from "../shared/domain";
 import {
   type AgentCheckRequest,
@@ -22,13 +22,13 @@ import { applyUnifiedPatch } from "./agents/patch";
 import { compileLatex } from "./compile/latex";
 import {
   createProjectFile,
-  defaultSampleProjectPath,
   deleteProjectPath,
   loadProject,
   readProjectFile,
   renameProjectPath,
   writeProjectFile,
 } from "./files/project";
+import { openProjectFolderDialog, setApplicationMenu } from "./menu";
 import { getMarks, measure, recordMark } from "./performance/marks";
 
 const appStartedAt = performance.now();
@@ -88,18 +88,8 @@ function createWindow(): void {
 function registerIpc(): void {
   ipcMain.handle(IPC_CHANNELS.appMetrics, () => getMarks());
 
-  ipcMain.handle(IPC_CHANNELS.projectOpenDialog, async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ["openDirectory"],
-      title: "Open LaTeX Project",
-    });
-
-    if (result.canceled || !result.filePaths[0]) return null;
-    return measure("project:load", () => loadProject(result.filePaths[0]));
-  });
-
-  ipcMain.handle(IPC_CHANNELS.projectOpenSample, () =>
-    measure("project:sample", () => loadProject(defaultSampleProjectPath(app.getAppPath()))),
+  ipcMain.handle(IPC_CHANNELS.projectOpenDialog, async () =>
+    openProjectFolderDialog(BrowserWindow.getFocusedWindow() ?? mainWindow),
   );
 
   ipcMain.handle(IPC_CHANNELS.projectLoad, (_event, rootPath: string) =>
@@ -173,6 +163,7 @@ function registerIpc(): void {
 app.whenReady().then(() => {
   registerIpc();
   createWindow();
+  setApplicationMenu(() => mainWindow);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

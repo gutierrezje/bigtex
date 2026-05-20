@@ -168,13 +168,14 @@ export function App() {
     }
   }
 
-  async function openProjectFromDialog(): Promise<void> {
-    await loadProject(await window.bigTex.project.openDialog());
-  }
+  const loadProjectRef = useRef(loadProject);
+  loadProjectRef.current = loadProject;
 
-  async function loadSample(): Promise<void> {
-    await loadProject(await window.bigTex.project.openSample());
-  }
+  useEffect(() => {
+    return window.bigTex.project.onOpened((snapshot) => {
+      void loadProjectRef.current(snapshot);
+    });
+  }, []);
 
   async function openProjectFile(file: ProjectFile): Promise<void> {
     if (!project || !selectable(file)) return;
@@ -353,8 +354,6 @@ export function App() {
             <ProjectSidebar
               project={project}
               activePath={openFile?.path ?? null}
-              onOpenProject={() => void openProjectFromDialog()}
-              onOpenSample={() => void loadSample()}
               onOpenFile={(file) => void openProjectFile(file)}
               onCreateFile={createProjectFile}
               onRenamePath={renameProjectPath}

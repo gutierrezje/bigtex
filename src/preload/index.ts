@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { AgentEvent } from "../shared/domain";
+import type { AgentEvent, ProjectSnapshot } from "../shared/domain";
 import { type BigTexApi, IPC_CHANNELS } from "../shared/ipc";
 
 const api: BigTexApi = {
@@ -8,7 +8,13 @@ const api: BigTexApi = {
   },
   project: {
     openDialog: () => ipcRenderer.invoke(IPC_CHANNELS.projectOpenDialog),
-    openSample: () => ipcRenderer.invoke(IPC_CHANNELS.projectOpenSample),
+    onOpened: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, snapshot: ProjectSnapshot) => {
+        listener(snapshot);
+      };
+      ipcRenderer.on(IPC_CHANNELS.projectOpened, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.projectOpened, handler);
+    },
     load: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.projectLoad, rootPath),
   },
   files: {
