@@ -16,7 +16,6 @@ import type {
   PerformanceMark,
   ProjectSnapshot,
 } from "../../shared/domain";
-import { appendAgentHandoffToComposer } from "../../shared/problems";
 import { type AgentChatMessage, type AgentChatState, reduceAgentChat } from "./agent-chat-reducer";
 
 export type { AgentChatMessage, AgentChatState };
@@ -50,6 +49,7 @@ interface AppState {
   agentChat: AgentChatState;
   agentSettings: AgentSettingsState;
   agentComposerDraft: string;
+  pendingHandoffLine: string | null;
   agentHandoffFiles: string[];
   agentComposerFocusToken: number;
   outputLog: OutputEntry[];
@@ -72,6 +72,7 @@ interface AppState {
   refreshMetrics(): Promise<void>;
   appendAgentComposerHandoff(line: string, filePath: string | null): void;
   setAgentComposerDraft(draft: string): void;
+  clearPendingHandoffLine(): void;
   clearAgentHandoffFiles(): void;
   appendOutput(message: string, level?: OutputLevel): void;
   clearOutputLog(): void;
@@ -102,6 +103,7 @@ export const useAppStore = create<AppState>((set) => ({
     error: null,
   },
   agentComposerDraft: "",
+  pendingHandoffLine: null,
   agentHandoffFiles: [],
   agentComposerFocusToken: 0,
   outputLog: [],
@@ -282,7 +284,7 @@ export const useAppStore = create<AppState>((set) => ({
   },
   appendAgentComposerHandoff: (line, filePath) =>
     set((state) => ({
-      agentComposerDraft: appendAgentHandoffToComposer(state.agentComposerDraft, line),
+      pendingHandoffLine: line,
       agentHandoffFiles: filePath
         ? state.agentHandoffFiles.includes(filePath)
           ? state.agentHandoffFiles
@@ -291,6 +293,7 @@ export const useAppStore = create<AppState>((set) => ({
       agentComposerFocusToken: state.agentComposerFocusToken + 1,
     })),
   setAgentComposerDraft: (agentComposerDraft) => set({ agentComposerDraft }),
+  clearPendingHandoffLine: () => set({ pendingHandoffLine: null }),
   clearAgentHandoffFiles: () => set({ agentHandoffFiles: [] }),
   appendOutput: (message, level = "info") =>
     set((state) => {
