@@ -1,3 +1,4 @@
+import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist/legacy/build/pdf.mjs";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 import { useEffect, useRef, useState } from "react";
@@ -5,100 +6,273 @@ import type { PdfPayload } from "../../../shared/domain";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
+const RESIZE_DEBOUNCE_MS = 120;
+/** Keep canvas bitmaps bounded during large-pane resizes. */
+const MAX_CANVAS_PIXELS = 4_000_000;
+const MAX_OUTPUT_SCALE = 2;
+
 interface PdfPreviewProps {
   pdf: PdfPayload | null;
 }
 
+interface ViewportSize {
+  width: number;
+  height: number;
+}
+
+/** Scale so the page fits inside the container without changing aspect ratio. */
+export function pdfFitScale(
+  pageWidth: number,
+  pageHeight: number,
+  containerWidth: number,
+  containerHeight: number,
+): number {
+  if (pageWidth <= 0 || pageHeight <= 0 || containerWidth <= 0 || containerHeight <= 0) {
+    return 1;
+  }
+  return Math.min(containerWidth / pageWidth, containerHeight / pageHeight);
+}
+
+export function pdfFitScaleCapped(
+  pageWidth: number,
+  pageHeight: number,
+  containerWidth: number,
+  containerHeight: number,
+  maxPixels = MAX_CANVAS_PIXELS,
+): number {
+  let scale = pdfFitScale(pageWidth, pageHeight, containerWidth, containerHeight);
+  const pixels = pageWidth * scale * pageHeight * scale;
+  if (pixels > maxPixels) {
+    scale *= Math.sqrt(maxPixels / pixels);
+  }
+  return scale;
+}
+
+function isRenderingCancelled(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === "RenderingCancelledException" || error.message.includes("cancelled"))
+  );
+}
+
 export function PdfPreview({ pdf }: PdfPreviewProps) {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const documentRef = useRef<PDFDocumentProxy | null>(null);
+  const renderTaskRef = useRef<RenderTask | null>(null);
+  const renderEpochRef = useRef(0);
+  const viewportSizeRef = useRef<ViewportSize>({ width: 0, height: 0 });
+  const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pageNumberRef = useRef(1);
+  const scheduleRenderRef = useRef<(() => void) | null>(null);
+
   const [pageCount, setPageCount] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
+  pageNumberRef.current = pageNumber;
+
   useEffect(() => {
     setPageNumber(1);
     setPageCount(0);
+    setError(null);
   }, [pdf?.loadedAt, pdf?.path]);
 
   useEffect(() => {
-    let cancelled = false;
+    let disposed = false;
 
-    async function renderPdf(): Promise<void> {
-      if (!pdf || !canvasRef.current) return;
-      setError(null);
+    function cancelRenderTask(): void {
+      renderTaskRef.current?.cancel();
+      renderTaskRef.current = null;
+    }
+
+    async function loadDocument(): Promise<void> {
+      cancelRenderTask();
+      documentRef.current?.destroy();
+      documentRef.current = null;
+      setPageCount(0);
+
+      if (!pdf) return;
 
       try {
-        const document = await pdfjs.getDocument({ data: pdf.data.slice() }).promise;
-        if (cancelled) return;
-
-        setPageCount(document.numPages);
-        const page = await document.getPage(Math.min(pageNumber, document.numPages));
-        const viewport = page.getViewport({ scale: 1.35 });
-        const canvas = canvasRef.current;
-        const context = canvas.getContext("2d");
-        if (!context) return;
-
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvas, canvasContext: context, viewport }).promise;
-      } catch (renderError) {
-        if (!cancelled) {
-          setError(renderError instanceof Error ? renderError.message : "Unable to render PDF.");
+        const doc = await pdfjs.getDocument({ data: pdf.data }).promise;
+        if (disposed) {
+          void doc.destroy();
+          return;
+        }
+        documentRef.current = doc;
+        setPageCount(doc.numPages);
+        scheduleRenderRef.current?.();
+      } catch (loadError) {
+        if (!disposed) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load PDF.");
         }
       }
     }
 
-    void renderPdf();
+    void loadDocument();
 
     return () => {
-      cancelled = true;
+      disposed = true;
+      cancelRenderTask();
+      documentRef.current?.destroy();
+      documentRef.current = null;
     };
-  }, [pdf, pageNumber]);
+  }, [pdf?.loadedAt, pdf?.path, pdf]);
+
+  useEffect(() => {
+    let disposed = false;
+
+    function cancelRenderTask(): void {
+      renderTaskRef.current?.cancel();
+      renderTaskRef.current = null;
+    }
+
+    function clearResizeTimer(): void {
+      if (resizeTimerRef.current) {
+        clearTimeout(resizeTimerRef.current);
+        resizeTimerRef.current = null;
+      }
+    }
+
+    async function renderPage(): Promise<void> {
+      const epoch = ++renderEpochRef.current;
+      cancelRenderTask();
+
+      const doc = documentRef.current;
+      const canvas = canvasRef.current;
+      const { width, height } = viewportSizeRef.current;
+      if (!doc || !canvas || width <= 0 || height <= 0) return;
+
+      try {
+        const page = await doc.getPage(Math.min(pageNumberRef.current, doc.numPages));
+        if (disposed || epoch !== renderEpochRef.current) return;
+
+        const baseViewport = page.getViewport({ scale: 1 });
+        const scale = pdfFitScaleCapped(baseViewport.width, baseViewport.height, width, height);
+        const viewport = page.getViewport({ scale });
+        const context = canvas.getContext("2d");
+        if (!context) return;
+
+        const outputScale = Math.min(window.devicePixelRatio || 1, MAX_OUTPUT_SCALE);
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+
+        const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : undefined;
+
+        const task = page.render({
+          canvas,
+          canvasContext: context,
+          viewport,
+          transform,
+        });
+        renderTaskRef.current = task;
+        await task.promise;
+
+        if (disposed || epoch !== renderEpochRef.current) return;
+        setError(null);
+      } catch (renderError) {
+        if (disposed || epoch !== renderEpochRef.current || isRenderingCancelled(renderError)) {
+          return;
+        }
+        setError(renderError instanceof Error ? renderError.message : "Unable to render PDF.");
+      } finally {
+        if (renderTaskRef.current && epoch === renderEpochRef.current) {
+          renderTaskRef.current = null;
+        }
+      }
+    }
+
+    function scheduleRender(): void {
+      clearResizeTimer();
+      resizeTimerRef.current = setTimeout(() => {
+        resizeTimerRef.current = null;
+        void renderPage();
+      }, RESIZE_DEBOUNCE_MS);
+    }
+
+    function scheduleRenderSoon(): void {
+      clearResizeTimer();
+      void renderPage();
+    }
+
+    const element = viewportRef.current;
+    const observer =
+      element && pdf
+        ? new ResizeObserver((entries) => {
+            const rect = entries[0]?.contentRect;
+            if (!rect) return;
+
+            const next = {
+              width: Math.floor(rect.width),
+              height: Math.floor(rect.height),
+            };
+            const prev = viewportSizeRef.current;
+            if (prev.width === next.width && prev.height === next.height) return;
+
+            viewportSizeRef.current = next;
+            scheduleRender();
+          })
+        : null;
+
+    if (observer && element) observer.observe(element);
+
+    scheduleRenderRef.current = scheduleRenderSoon;
+    scheduleRenderSoon();
+
+    return () => {
+      disposed = true;
+      scheduleRenderRef.current = null;
+      observer?.disconnect();
+      clearResizeTimer();
+      cancelRenderTask();
+    };
+  }, [pdf?.loadedAt, pdf?.path, pdf, pageNumber]);
 
   return (
-    <section className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-surface-raised">
-      <header className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2">
-        <div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-            Preview
-          </span>
-          <h2 className="mt-0.5 truncate text-sm font-medium" title={pdf?.path}>
-            {pdf
-              ? `${pdf.path.split(/[/\\]/).pop() ?? "PDF"} · page ${pageNumber} of ${pageCount || "?"}`
-              : "No PDF"}
-          </h2>
-        </div>
-        <div className="flex gap-0.5 rounded-md bg-zinc-900 p-0.5">
-          <button
-            type="button"
-            className="rounded-[5px] border-0 bg-transparent px-2.5 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={!pdf || pageNumber <= 1}
-            onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
-          >
-            Prev
-          </button>
-          <button
-            type="button"
-            className="rounded-[5px] border-0 bg-transparent px-2.5 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={!pdf || (pageCount > 0 && pageNumber >= pageCount)}
-            onClick={() => setPageNumber((p) => Math.min(pageCount || p + 1, p + 1))}
-          >
-            Next
-          </button>
-        </div>
-      </header>
-
-      <div
-        className="grid place-items-start overflow-auto bg-surface-inset p-4"
-        style={{ justifyItems: "center" }}
-      >
+    <section className="grid h-full min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-surface-raised">
+      <div ref={viewportRef} className="min-h-0 overflow-hidden bg-surface-inset">
         {pdf ? (
-          <canvas ref={canvasRef} className="pdf-canvas" />
+          <div className="flex h-full min-h-0 w-full items-center justify-center">
+            <canvas ref={canvasRef} className="pdf-canvas block shrink-0" />
+          </div>
         ) : (
-          <p className="text-sm text-text-muted">Compile or open a PDF from the project tree.</p>
+          <div className="grid h-full min-h-[12rem] place-items-center px-3">
+            <p className="text-center text-sm text-text-muted">
+              Compile or open a PDF from the project tree.
+            </p>
+          </div>
         )}
-        {error ? <p className="mt-2 text-sm text-danger">{error}</p> : null}
+        {error ? <p className="px-2 py-1 text-center text-sm text-danger">{error}</p> : null}
       </div>
+
+      {pdf ? (
+        <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-border-subtle px-2 py-1">
+          <span className="text-xs font-medium text-text-muted">
+            Page {pageNumber} of {pageCount || "?"}
+          </span>
+          <div className="flex gap-0.5">
+            <button
+              type="button"
+              className="rounded-md px-2.5 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:bg-background/60 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={pageNumber <= 1}
+              onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+            >
+              Prev
+            </button>
+            <button
+              type="button"
+              className="rounded-md px-2.5 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:bg-background/60 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={pageCount > 0 && pageNumber >= pageCount}
+              onClick={() => setPageNumber((p) => Math.min(pageCount || p + 1, p + 1))}
+            >
+              Next
+            </button>
+          </div>
+        </footer>
+      ) : null}
     </section>
   );
 }

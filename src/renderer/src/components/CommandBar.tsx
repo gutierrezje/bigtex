@@ -89,7 +89,7 @@ export function CommandBar({
 
         <button
           type="button"
-          title="Toggle PDF Previewer"
+          title="Toggle PDF viewer"
           className={`p-1.5 rounded-md transition-all duration-100 cursor-pointer ${
             showPdf
               ? "bg-accent/15 text-accent shadow-sm border border-accent/20"

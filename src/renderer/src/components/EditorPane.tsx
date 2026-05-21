@@ -101,8 +101,13 @@ function LoadedEditorPane({
   const draftContentRef = useRef(file.content);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderCountRef = useRef(0);
-  const [dirty, setDirty] = useState(false);
+  const [dirty, setDirty] = useState(file.dirty);
   renderCountRef.current += 1;
+
+  useEffect(() => {
+    draftContentRef.current = file.content;
+    setDirty(file.dirty);
+  }, [file.content, file.dirty, file.loadedAt, file.path]);
 
   const markers = useMemo(
     () =>
@@ -159,28 +164,7 @@ function LoadedEditorPane({
   }
 
   return (
-    <section className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-surface-raised">
-      <header className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-block h-1.5 w-1.5 rounded-full ${dirty ? "bg-amber-400" : "bg-accent"}`}
-            />
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-              {dirty ? "Unsaved" : "Saved"}
-            </span>
-          </div>
-          <h2 className="mt-0.5 truncate text-sm font-medium">{file.path}</h2>
-        </div>
-        <button
-          type="button"
-          className="shrink-0 rounded-md border border-border bg-transparent px-3 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:border-accent/40 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
-          onClick={saveNow}
-          disabled={!dirty}
-        >
-          Save
-        </button>
-      </header>
+    <section className="grid h-full min-h-0 min-w-0 overflow-hidden bg-surface-raised">
       <Editor
         key={`${file.path}:${file.loadedAt}`}
         height="100%"

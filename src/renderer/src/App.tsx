@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { Group, Panel, Separator } from "react-resizable-panels";
+import { getActiveEditor, listDirtyEditorPaths } from "../../shared/documentTabs";
 import type { CompileDiagnostic, ProjectFile, ProjectSnapshot } from "../../shared/domain";
 import {
   countDiagnosticsBySeverity,
@@ -14,8 +15,8 @@ import { isPdfPath, toProjectRelativePath } from "../../shared/projectFiles";
 import { AgentPanel } from "./components/AgentPanel";
 import { CommandBar } from "./components/CommandBar";
 import { EditorBottomPanel, type EditorBottomTab } from "./components/EditorBottomPanel";
-import { EditorPane } from "./components/EditorPane";
-import { PdfPreview } from "./components/PdfPreview";
+import { EditorWorkbench } from "./components/EditorWorkbench";
+import { PdfViewerWorkbench } from "./components/PdfViewerWorkbench";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { useAgentEvents } from "./hooks/useAgentEvents";
@@ -27,21 +28,37 @@ function selectable(file: ProjectFile): boolean {
   return file.kind !== "folder";
 }
 
+function tabLabel(path: string): string {
+  const parts = path.split(/[/\\]/);
+  return parts[parts.length - 1] || path;
+}
+
 export function App() {
   const {
     project,
-    openFile,
+    editorTabs,
+    pdfTabs,
     compileResult,
-    pdf,
     agentChat,
     setProject,
-    setOpenFile,
+    openEditorFile,
+    activateEditorTab,
+    closeEditorTabAt,
+    updateEditorTabContent,
+    replaceEditorTabFile,
+    clearEditorTabs,
+    openPdfTab,
+    activatePdfTab,
+    closePdfTabAt,
+    clearPdfTabs,
+    renameEditorTabPath,
+    renamePdfTabPath,
     setCompileResult,
-    setPdf,
     clearAgent,
     clearOutputLog,
     refreshMetrics,
   } = useAppStore();
+  const activeEditor = getActiveEditor(editorTabs);
   const [compiling, setCompiling] = useState(false);
   const [editorRevealLine, setEditorRevealLine] = useState<number | null>(null);
   const [editorBottomTab, setEditorBottomTab] = useState<EditorBottomTab>("problems");
@@ -49,92 +66,91 @@ export function App() {
   const agentHandoffFiles = useAppStore((state) => state.agentHandoffFiles);
   const appendOutput = useAppStore((state) => state.appendOutput);
 
-  // Layout collapsed states
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isDiagnosticsCollapsed, setIsDiagnosticsCollapsed] = useState(false);
   const [isPdfCollapsed, setIsPdfCollapsed] = useState(false);
-  const [viewingPdfPath, setViewingPdfPath] = useState<string | null>(null);
   const [isAgentCollapsed, setIsAgentCollapsed] = useState(false);
 
-  // Imperative refs for panel control
   const sidebarRef = useRef<PanelImperativeHandle>(null);
   const diagnosticsRef = useRef<PanelImperativeHandle>(null);
   const pdfRef = useRef<PanelImperativeHandle>(null);
   const agentRef = useRef<PanelImperativeHandle>(null);
 
-  useEffect(() => {
-    document.title = formatWindowChromeLabel(project?.name ?? null, openFile?.path ?? null);
-  }, [project?.name, openFile?.path]);
-
-  const activeDraftRef = useRef<{ path: string; content: string } | null>(null);
-  const openFileRef = useRef(openFile);
   const projectRef = useRef(project);
-  const viewingPdfPathRef = useRef(viewingPdfPath);
-  openFileRef.current = openFile;
   projectRef.current = project;
-  viewingPdfPathRef.current = viewingPdfPath;
 
-  // Toggle handlers calling imperative API
+  useEffect(() => {
+    document.title = formatWindowChromeLabel(project?.name ?? null, activeEditor?.path ?? null);
+  }, [project?.name, activeEditor?.path]);
+
   const handleToggleSidebar = () => {
     const panel = sidebarRef.current;
     if (panel) {
-      if (panel.isCollapsed()) {
-        panel.expand();
-      } else {
-        panel.collapse();
-      }
+      if (panel.isCollapsed()) panel.expand();
+      else panel.collapse();
     }
   };
 
   const handleToggleDiagnostics = () => {
     const panel = diagnosticsRef.current;
     if (panel) {
-      if (panel.isCollapsed()) {
-        panel.expand();
-      } else {
-        panel.collapse();
-      }
+      if (panel.isCollapsed()) panel.expand();
+      else panel.collapse();
     }
   };
 
   const expandPdfPanel = useCallback(() => {
     const panel = pdfRef.current;
-    if (panel?.isCollapsed()) {
-      panel.expand();
-    }
+    if (panel?.isCollapsed()) panel.expand();
     setIsPdfCollapsed(false);
   }, []);
 
   const handleTogglePdf = () => {
     const panel = pdfRef.current;
     if (panel) {
-      if (panel.isCollapsed()) {
-        panel.expand();
-      } else {
-        panel.collapse();
-      }
+      if (panel.isCollapsed()) panel.expand();
+      else panel.collapse();
     }
   };
 
-  const loadPdfPreview = useCallback(
+  const loadPdfTab = useCallback(
     async (absolutePath: string, relativePath: string) => {
-      setPdf(await window.bigTex.latex.readPdf(absolutePath));
-      setViewingPdfPath(relativePath);
+      const payload = await window.bigTex.latex.readPdf(absolutePath);
+      openPdfTab({ ...payload, path: relativePath });
       expandPdfPanel();
     },
-    [setPdf, expandPdfPanel],
+    [openPdfTab, expandPdfPanel],
   );
 
   const handleToggleAgent = () => {
     const panel = agentRef.current;
     if (panel) {
-      if (panel.isCollapsed()) {
-        panel.expand();
-      } else {
-        panel.collapse();
-      }
+      if (panel.isCollapsed()) panel.expand();
+      else panel.collapse();
     }
   };
+
+  const saveEditorTab = useCallback(
+    async (path: string, content: string) => {
+      const currentProject = projectRef.current;
+      if (!currentProject) return;
+      replaceEditorTabFile(
+        await window.bigTex.files.write({
+          rootPath: currentProject.rootPath,
+          path,
+          content,
+        }),
+      );
+    },
+    [replaceEditorTabFile],
+  );
+
+  const flushDirtyEditorTabs = useCallback(async () => {
+    for (const path of listDirtyEditorPaths(useAppStore.getState().editorTabs)) {
+      const file = useAppStore.getState().editorTabs.files.find((entry) => entry.path === path);
+      if (file) await saveEditorTab(path, file.content);
+    }
+  }, [saveEditorTab]);
 
   const refreshProjectFiles = useCallback(
     async (paths?: string[], toastMessage?: string) => {
@@ -144,35 +160,37 @@ export function App() {
       const refreshed = await window.bigTex.project.load(currentProject.rootPath);
       setProject(refreshed);
 
-      const activePath = openFileRef.current?.path;
-      const activePdfPath = viewingPdfPathRef.current;
-      const reloadPath =
-        activePath && paths?.some((path) => path === activePath || path.endsWith(`/${activePath}`))
-          ? activePath
-          : activePdfPath &&
-              paths?.some((path) => path === activePdfPath || path.endsWith(`/${activePdfPath}`))
-            ? activePdfPath
-            : paths?.[0];
-      if (reloadPath) {
-        if (isPdfPath(reloadPath)) {
-          const match = findProjectFileByPath(refreshed.files, reloadPath);
-          if (match) {
-            await loadPdfPreview(match.absolutePath, match.path);
-          }
-        } else {
-          const file = await window.bigTex.files.read({
+      const state = useAppStore.getState();
+      const touched = paths ?? [];
+
+      for (const file of state.editorTabs.files) {
+        if (
+          touched.length === 0 ||
+          touched.some((path) => path === file.path || path.endsWith(`/${file.path}`))
+        ) {
+          const updated = await window.bigTex.files.read({
             rootPath: currentProject.rootPath,
-            path: reloadPath,
+            path: file.path,
           });
-          setOpenFile(file);
-          setViewingPdfPath(null);
-          activeDraftRef.current = { path: file.path, content: file.content };
+          replaceEditorTabFile(updated);
+        }
+      }
+
+      for (const pdf of state.pdfTabs.pdfs) {
+        if (
+          touched.length === 0 ||
+          touched.some((path) => path === pdf.path || path.endsWith(`/${pdf.path}`))
+        ) {
+          const match = findProjectFileByPath(refreshed.files, pdf.path);
+          if (match) {
+            await loadPdfTab(match.absolutePath, match.path);
+          }
         }
       }
 
       if (toastMessage) appendOutput(toastMessage, "success");
     },
-    [setProject, setOpenFile, appendOutput, loadPdfPreview],
+    [setProject, replaceEditorTabFile, loadPdfTab, appendOutput],
   );
 
   useAgentEvents({
@@ -191,25 +209,25 @@ export function App() {
 
   useEffect(() => {
     void refreshMetrics();
-  }, []);
+  }, [refreshMetrics]);
 
   async function loadProject(snapshot: ProjectSnapshot | null): Promise<void> {
     if (!snapshot) return;
     setProject(snapshot);
     setCompileResult(null);
-    setPdf(null);
-    setViewingPdfPath(null);
+    clearEditorTabs();
+    clearPdfTabs();
     clearOutputLog();
     clearAgent();
     void useAppStore.getState().loadAgentConfig(snapshot.rootPath);
 
     if (snapshot.mainFile) {
-      const file = await window.bigTex.files.read({
-        rootPath: snapshot.rootPath,
-        path: snapshot.mainFile,
-      });
-      setOpenFile(file);
-      activeDraftRef.current = { path: file.path, content: file.content };
+      openEditorFile(
+        await window.bigTex.files.read({
+          rootPath: snapshot.rootPath,
+          path: snapshot.mainFile,
+        }),
+      );
     }
   }
 
@@ -222,56 +240,47 @@ export function App() {
     });
     const unsubClosed = window.bigTex.project.onClosed(() => {
       setProject(null);
-      setOpenFile(null);
+      clearEditorTabs();
+      clearPdfTabs();
       setCompileResult(null);
-      setPdf(null);
-      setViewingPdfPath(null);
       clearOutputLog();
     });
     return () => {
       unsubOpened();
       unsubClosed();
     };
-  }, [setProject, setOpenFile, setCompileResult, setPdf, clearOutputLog]);
+  }, [setProject, clearEditorTabs, clearPdfTabs, setCompileResult, clearOutputLog]);
 
   async function openProjectFile(file: ProjectFile): Promise<void> {
     if (!project || !selectable(file)) return;
     if (isPdfPath(file.path)) {
-      await loadPdfPreview(file.absolutePath, file.path);
+      await loadPdfTab(file.absolutePath, file.path);
       return;
     }
-    setViewingPdfPath(null);
-    const openedFile = await window.bigTex.files.read({
-      rootPath: project.rootPath,
-      path: file.path,
-    });
-    setOpenFile(openedFile);
-    activeDraftRef.current = { path: openedFile.path, content: openedFile.content };
-  }
-
-  async function saveOpenFile(
-    content = activeDraftRef.current?.content ?? openFile?.content ?? "",
-  ): Promise<void> {
-    if (!project || !openFile) return;
-    setOpenFile(
-      await window.bigTex.files.write({
+    openEditorFile(
+      await window.bigTex.files.read({
         rootPath: project.rootPath,
-        path: openFile.path,
-        content,
+        path: file.path,
       }),
     );
   }
 
+  function requestCloseEditorTab(path: string): void {
+    const file = editorTabs.files.find((entry) => entry.path === path);
+    if (file?.dirty && !window.confirm(`Discard unsaved changes to ${tabLabel(path)}?`)) {
+      return;
+    }
+    closeEditorTabAt(path);
+  }
+
   async function compile(): Promise<void> {
     if (!project) return;
-    const mainFile = project.mainFile ?? openFile?.path;
+    const mainFile = project.mainFile ?? activeEditor?.path;
     if (!mainFile) return;
 
     setCompiling(true);
     try {
-      if (openFile && activeDraftRef.current?.path === openFile.path) {
-        await saveOpenFile(activeDraftRef.current.content);
-      }
+      await flushDirtyEditorTabs();
 
       const result = await window.bigTex.latex.compile({
         rootPath: project.rootPath,
@@ -279,10 +288,7 @@ export function App() {
       });
       setCompileResult(result);
       if (result.pdfPath) {
-        await loadPdfPreview(
-          result.pdfPath,
-          toProjectRelativePath(project.rootPath, result.pdfPath),
-        );
+        await loadPdfTab(result.pdfPath, toProjectRelativePath(project.rootPath, result.pdfPath));
       }
       if (result.success) {
         appendOutput(`Compiled PDF (${result.durationMs}ms).`, "success");
@@ -332,14 +338,14 @@ export function App() {
     reasoningLevel: string | null,
   ): Promise<void> {
     if (!project) return;
-    const mainFile = project.mainFile ?? openFile?.path ?? null;
+    const mainFile = project.mainFile ?? activeEditor?.path ?? null;
     const compileSummary =
       compileResult && mainFile ? formatCompileSummary(compileResult, mainFile) : null;
 
     await window.bigTex.agent.run({
       rootPath: project.rootPath,
       prompt,
-      selectedFiles: mergeAgentSelectedFiles(openFile?.path ?? null, agentHandoffFiles),
+      selectedFiles: mergeAgentSelectedFiles(activeEditor?.path ?? null, agentHandoffFiles),
       compileSummary,
       modelId,
       reasoningLevel,
@@ -390,20 +396,24 @@ export function App() {
         newName,
       });
       setProject(snapshot);
-      const wasOpen = openFileRef.current?.path === path;
-      const wasViewingPdf = viewingPdfPathRef.current === path;
-      if (wasOpen) {
+
+      const hadEditorTab = useAppStore
+        .getState()
+        .editorTabs.files.some((file) => file.path === path);
+      const hadPdfTab = useAppStore.getState().pdfTabs.pdfs.some((pdf) => pdf.path === path);
+
+      if (hadEditorTab) {
         const file = await window.bigTex.files.read({
           rootPath: project.rootPath,
           path: newPath,
         });
-        setOpenFile(file);
-        activeDraftRef.current = { path: file.path, content: file.content };
+        renameEditorTabPath(path, newPath, file);
       }
-      if (wasViewingPdf) {
+      if (hadPdfTab) {
+        renamePdfTabPath(path, newPath);
         const match = findProjectFileByPath(snapshot.files, newPath);
         if (match) {
-          await loadPdfPreview(match.absolutePath, newPath);
+          await loadPdfTab(match.absolutePath, newPath);
         }
       }
       appendOutput(`Renamed to ${newName}.`, "success");
@@ -417,21 +427,13 @@ export function App() {
   async function deleteProjectPath(path: string): Promise<void> {
     if (!project) return;
     try {
-      const wasOpen = openFileRef.current?.path === path;
-      const wasViewingPdf = viewingPdfPathRef.current === path;
       const snapshot = await window.bigTex.files.delete({
         rootPath: project.rootPath,
         path,
       });
       setProject(snapshot);
-      if (wasOpen) {
-        setOpenFile(null);
-        activeDraftRef.current = null;
-      }
-      if (wasViewingPdf) {
-        setPdf(null);
-        setViewingPdfPath(null);
-      }
+      closeEditorTabAt(path);
+      closePdfTabAt(path);
       appendOutput("Deleted.", "success");
     } catch (error) {
       appendOutput(error instanceof Error ? error.message : "Delete failed", "error");
@@ -444,7 +446,7 @@ export function App() {
     <main className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-background">
       <CommandBar
         projectName={project?.name ?? null}
-        filePath={openFile?.path ?? viewingPdfPath ?? null}
+        filePath={activeEditor?.path ?? null}
         showSidebar={!isSidebarCollapsed}
         onToggleSidebar={handleToggleSidebar}
         showDiagnostics={!isDiagnosticsCollapsed}
@@ -476,7 +478,7 @@ export function App() {
             >
               <ProjectSidebar
                 project={project}
-                activePath={openFile?.path ?? viewingPdfPath ?? null}
+                activePath={activeEditor?.path ?? null}
                 onOpenFile={(file) => void openProjectFile(file)}
                 onCreateFile={createProjectFile}
                 onRenamePath={renameProjectPath}
@@ -508,15 +510,15 @@ export function App() {
                       orientation="vertical"
                     >
                       <Panel defaultSize="78%" minSize="40%" className="min-h-0 min-w-0">
-                        <EditorPane
-                          file={openFile}
+                        <EditorWorkbench
+                          tabs={editorTabs}
                           diagnostics={compileResult?.diagnostics ?? []}
                           revealLine={editorRevealLine}
                           onRevealHandled={() => setEditorRevealLine(null)}
-                          onDraftChange={(path, content) => {
-                            activeDraftRef.current = { path, content };
-                          }}
-                          onSave={(content) => void saveOpenFile(content)}
+                          onSelectTab={activateEditorTab}
+                          onCloseTab={requestCloseEditorTab}
+                          onDraftChange={updateEditorTabContent}
+                          onSave={saveEditorTab}
                         />
                       </Panel>
 
@@ -571,7 +573,11 @@ export function App() {
                     }}
                     className="min-h-0 min-w-0"
                   >
-                    <PdfPreview pdf={pdf} />
+                    <PdfViewerWorkbench
+                      tabs={pdfTabs}
+                      onSelectTab={activatePdfTab}
+                      onCloseTab={closePdfTabAt}
+                    />
                   </Panel>
 
                   <Separator
@@ -594,7 +600,7 @@ export function App() {
                   >
                     <AgentPanel
                       rootPath={project?.rootPath ?? null}
-                      activeFile={openFile?.path ?? null}
+                      activeFile={activeEditor?.path ?? null}
                       problemCounts={problemCounts}
                       chat={agentChat}
                       onRun={runAgent}

@@ -6,6 +6,22 @@ import {
   providerGroupFromModelId,
   withModelVariants,
 } from "../../shared/agent-models";
+import {
+  activateEditorTab,
+  activatePdfTab,
+  closeEditorTab,
+  closePdfTab,
+  type EditorTabsState,
+  focusOrOpenEditor,
+  focusOrOpenPdf,
+  initialEditorTabs,
+  initialPdfTabs,
+  type PdfTabsState,
+  renameEditorPath,
+  renamePdfPath,
+  replaceEditorFile,
+  updateEditorContent,
+} from "../../shared/documentTabs";
 import type {
   AgentEvent,
   AgentProviderGroup,
@@ -43,9 +59,9 @@ export interface AgentSettingsState {
 
 interface AppState {
   project: ProjectSnapshot | null;
-  openFile: OpenFile | null;
+  editorTabs: EditorTabsState;
+  pdfTabs: PdfTabsState;
   compileResult: CompileResult | null;
-  pdf: PdfPayload | null;
   agentChat: AgentChatState;
   agentSettings: AgentSettingsState;
   agentComposerDraft: string;
@@ -55,10 +71,19 @@ interface AppState {
   outputLog: OutputEntry[];
   metrics: PerformanceMark[];
   setProject(project: ProjectSnapshot | null): void;
-  setOpenFile(file: OpenFile | null): void;
-  updateOpenFileContent(content: string): void;
+  openEditorFile(file: OpenFile): void;
+  activateEditorTab(path: string): void;
+  closeEditorTabAt(path: string): void;
+  updateEditorTabContent(path: string, content: string): void;
+  replaceEditorTabFile(file: OpenFile): void;
+  clearEditorTabs(): void;
+  openPdfTab(pdf: PdfPayload): void;
+  activatePdfTab(path: string): void;
+  closePdfTabAt(path: string): void;
+  clearPdfTabs(): void;
+  renameEditorTabPath(oldPath: string, newPath: string, file?: OpenFile): void;
+  renamePdfTabPath(oldPath: string, newPath: string): void;
   setCompileResult(result: CompileResult | null): void;
-  setPdf(pdf: PdfPayload | null): void;
   addAgentUserMessage(content: string): void;
   createPendingAgentMessage(): string;
   appendAgentEvent(event: AgentEvent): void;
@@ -84,9 +109,9 @@ function createMessageId(prefix: string): string {
 
 export const useAppStore = create<AppState>((set) => ({
   project: null,
-  openFile: null,
+  editorTabs: initialEditorTabs(),
+  pdfTabs: initialPdfTabs(),
   compileResult: null,
-  pdf: null,
   agentChat: {
     runId: "",
     running: false,
@@ -109,13 +134,28 @@ export const useAppStore = create<AppState>((set) => ({
   outputLog: [],
   metrics: [],
   setProject: (project) => set({ project }),
-  setOpenFile: (openFile) => set({ openFile }),
-  updateOpenFileContent: (content) =>
+  openEditorFile: (file) =>
+    set((state) => ({ editorTabs: focusOrOpenEditor(state.editorTabs, file) })),
+  activateEditorTab: (path) =>
+    set((state) => ({ editorTabs: activateEditorTab(state.editorTabs, path) })),
+  closeEditorTabAt: (path) =>
+    set((state) => ({ editorTabs: closeEditorTab(state.editorTabs, path) })),
+  updateEditorTabContent: (path, content) =>
     set((state) => ({
-      openFile: state.openFile ? { ...state.openFile, content, dirty: true } : null,
+      editorTabs: updateEditorContent(state.editorTabs, path, content, true),
     })),
+  replaceEditorTabFile: (file) =>
+    set((state) => ({ editorTabs: replaceEditorFile(state.editorTabs, file) })),
+  clearEditorTabs: () => set({ editorTabs: initialEditorTabs() }),
+  openPdfTab: (pdf) => set((state) => ({ pdfTabs: focusOrOpenPdf(state.pdfTabs, pdf) })),
+  activatePdfTab: (path) => set((state) => ({ pdfTabs: activatePdfTab(state.pdfTabs, path) })),
+  closePdfTabAt: (path) => set((state) => ({ pdfTabs: closePdfTab(state.pdfTabs, path) })),
+  clearPdfTabs: () => set({ pdfTabs: initialPdfTabs() }),
+  renameEditorTabPath: (oldPath, newPath, file) =>
+    set((state) => ({ editorTabs: renameEditorPath(state.editorTabs, oldPath, newPath, file) })),
+  renamePdfTabPath: (oldPath, newPath) =>
+    set((state) => ({ pdfTabs: renamePdfPath(state.pdfTabs, oldPath, newPath) })),
   setCompileResult: (compileResult) => set({ compileResult }),
-  setPdf: (pdf) => set({ pdf }),
   addAgentUserMessage: (content) =>
     set((state) => ({
       agentChat: {
