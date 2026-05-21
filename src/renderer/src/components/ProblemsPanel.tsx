@@ -1,3 +1,4 @@
+import type React from "react";
 import { useMemo, useState } from "react";
 import type { CompileDiagnostic, CompileResult } from "../../../shared/domain";
 import {
@@ -25,6 +26,43 @@ function tabCount(tab: ProblemsTab, counts: { errors: number; warnings: number }
   if (tab === "error") return counts.errors;
   if (tab === "warning") return counts.warnings;
   return total;
+}
+
+function ProblemActionButton({
+  hint,
+  disabled,
+  onClick,
+  children,
+  accentOnHover = false,
+}: {
+  hint: string;
+  disabled?: boolean;
+  onClick(event: React.MouseEvent<HTMLButtonElement>): void;
+  children: React.ReactNode;
+  accentOnHover?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={hint}
+      title={hint}
+      disabled={disabled}
+      className={`group/action relative rounded p-1 text-text-muted transition-colors duration-100 disabled:cursor-not-allowed disabled:opacity-30 ${
+        accentOnHover
+          ? "hover:bg-accent-muted hover:text-accent"
+          : "hover:bg-zinc-800 hover:text-text-secondary"
+      }`}
+      onClick={onClick}
+    >
+      {children}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full right-0 z-20 mb-1.5 hidden whitespace-nowrap rounded-md border border-border bg-zinc-900 px-2 py-1 text-[10px] font-medium text-text-secondary shadow-lg group-hover/action:block group-focus-visible/action:block"
+      >
+        {hint}
+      </span>
+    </button>
+  );
 }
 
 function ProblemRow({
@@ -59,10 +97,12 @@ function ProblemRow({
         <p className="m-0 mt-0.5 font-mono text-[10px] text-text-muted">{location || "project"}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1 pt-0.5">
-        <button
-          type="button"
-          title={canNavigate ? "Go to source" : "No source location"}
-          className="rounded p-1 text-text-muted transition-colors duration-100 hover:bg-zinc-800 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-30"
+        <ProblemActionButton
+          hint={
+            canNavigate
+              ? "Go to source — open file at this line"
+              : "Go to source — no file or line for this problem"
+          }
           disabled={!canNavigate}
           onClick={(event) => {
             event.stopPropagation();
@@ -82,11 +122,10 @@ function ProblemRow({
             <circle cx="12" cy="12" r="3" />
             <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
           </svg>
-        </button>
-        <button
-          type="button"
-          title="Hand off to agent"
-          className="rounded p-1 text-text-muted transition-colors duration-100 hover:bg-accent-muted hover:text-accent"
+        </ProblemActionButton>
+        <ProblemActionButton
+          hint="Hand off to agent — prefill composer with this problem"
+          accentOnHover
           onClick={(event) => {
             event.stopPropagation();
             onAgentHandoff(diagnostic);
@@ -104,7 +143,7 @@ function ProblemRow({
             <title>Hand off to agent</title>
             <path d="M9.5 6.5l1.5 1.5M14.5 6.5l-1.5 1.5M12 3v2M5 10a7 7 0 1014 0" />
           </svg>
-        </button>
+        </ProblemActionButton>
       </div>
     </>
   );
