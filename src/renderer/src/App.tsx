@@ -379,7 +379,11 @@ export function App() {
         name,
       });
       setProject(snapshot);
-      await refreshProjectFiles([createdPath], `Created ${createdPath}.`);
+      const created = findProjectFileByPath(snapshot.files, createdPath);
+      if (created && !isPdfPath(created.path)) {
+        await openProjectFile(created);
+      }
+      appendOutput(`Created ${createdPath}.`, "success");
     } catch (error) {
       appendOutput(error instanceof Error ? error.message : "Could not create file", "error");
       setEditorBottomTab("output");

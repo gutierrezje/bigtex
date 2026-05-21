@@ -1,12 +1,8 @@
 import { type MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectFile, ProjectSnapshot } from "../../../shared/domain";
-import {
-  CREATABLE_FILE_EXTENSIONS,
-  DEFAULT_NEW_FILE_NAME,
-  isPdfPath,
-  parentDirectoryPath,
-} from "../../../shared/projectFiles";
+import { isPdfPath, parentDirectoryPath } from "../../../shared/projectFiles";
 import { PdfFileIcon } from "./icons/PdfFileIcon";
+import { NewFileDialog } from "./NewFileDialog";
 
 interface ProjectSidebarProps {
   project: ProjectSnapshot | null;
@@ -320,6 +316,7 @@ export function ProjectSidebar({
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [newFileDialog, setNewFileDialog] = useState<{ parentPath: string } | null>(null);
   const treeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -432,12 +429,19 @@ export function ProjectSidebar({
     }
   };
 
-  const handleNewFile = async () => {
+  const openNewFileDialog = () => {
     setContextMenu(null);
+    setNewFileDialog({ parentPath: parentPathForSelection() });
+  };
+
+  const handleCreateNewFile = async (fileName: string) => {
+    if (!newFileDialog) return;
     try {
-      await onCreateFile(parentPathForSelection(), DEFAULT_NEW_FILE_NAME);
+      await onCreateFile(newFileDialog.parentPath, fileName);
+      setNewFileDialog(null);
     } catch (error) {
       onError(error instanceof Error ? error.message : "Could not create file");
+      throw error;
     }
   };
 
@@ -484,9 +488,9 @@ export function ProjectSidebar({
         {project ? (
           <button
             type="button"
-            title={`New file (${CREATABLE_FILE_EXTENSIONS.join(", ")})`}
+            title="Add new file"
             className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-text-muted transition-colors hover:border-accent/40 hover:text-text-primary"
-            onClick={() => void handleNewFile()}
+            onClick={openNewFileDialog}
           >
             New
           </button>
@@ -541,9 +545,9 @@ export function ProjectSidebar({
             type="button"
             role="menuitem"
             className="w-full px-3 py-1.5 text-left text-xs text-text-secondary hover:bg-zinc-800/60 hover:text-text-primary"
-            onClick={() => void handleNewFile()}
+            onClick={openNewFileDialog}
           >
-            New File
+            New File…
           </button>
           {contextPath ? (
             <>
@@ -566,11 +570,15 @@ export function ProjectSidebar({
               </button>
             </>
           ) : null}
-          <p className="mt-1 border-t border-border/50 px-3 py-1.5 text-[10px] text-text-muted">
-            New files: {CREATABLE_FILE_EXTENSIONS.join(", ")}
-          </p>
         </div>
       ) : null}
+
+      <NewFileDialog
+        open={newFileDialog !== null}
+        parentLabel={newFileDialog?.parentPath ?? ""}
+        onCancel={() => setNewFileDialog(null)}
+        onCreate={handleCreateNewFile}
+      />
     </aside>
   );
 }

@@ -101,7 +101,7 @@ function LoadedEditorPane({
   const draftContentRef = useRef(file.content);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const renderCountRef = useRef(0);
-  const [dirty, setDirty] = useState(file.dirty);
+  const [, setDirty] = useState(file.dirty);
   renderCountRef.current += 1;
 
   useEffect(() => {
