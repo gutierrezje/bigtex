@@ -419,12 +419,14 @@ export function ProjectSidebar({
   };
 
   const handleDelete = async (path: string) => {
+    setContextMenu(null);
     const file = findFile(path);
     if (!file) return;
     const label = file.kind === "folder" ? "folder" : "file";
     if (!window.confirm(`Delete ${label} "${file.name}"?`)) return;
     try {
       await onDeletePath(path);
+      setSelectedPath((current) => (current === path ? null : current));
     } catch (error) {
       onError(error instanceof Error ? error.message : "Delete failed");
     }
