@@ -32,8 +32,8 @@ A single issue reported from the latest LaTeX compile (file, optional line, seve
 _Avoid_: Log line, problem (unless referring to the UI panel name).
 
 **Problems panel**:
-The collapsible list under the editor showing compile diagnostics from the last run, filterable by All / Errors / Warnings. Header is Problems-first; **Compile** stays in this header.
-_Avoid_: Diagnostics panel (internal component name may stay; user-facing label is Problems).
+One collapsible Problems / Output strip spanning the **editor pane** and **PDF viewer pane** together (not under the agent column). Shows compile diagnostics from the last run, filterable by All / Errors / Warnings. Header is Problems-first; **Compile** stays in this header.
+_Avoid_: Diagnostics panel (internal component name may stay; user-facing label is Problems); duplicating the strip under each document column.
 
 **Agent handoff**:
 Pre-filling the assistant composer with a minimal line (`path:line — message`); appends if the composer already has text. The user edits and sends.
@@ -69,7 +69,7 @@ _Avoid_: Go to definition (semantic TeX feature — not in scope).
 
 ## Flagged ambiguities
 
-- Screenshot showed a full-width bottom strip; resolved: **Problems panel** stays under the editor column only.
+- Screenshot showed a full-width bottom strip; resolved: **Problems panel** spans editor + PDF width only (agent stays full-height beside).
 - Screenshot **Info** tab (overfull/underfull hbox); resolved: **Problems panel** lists **errors and warnings only** — no `info` severity in v1.
 - Screenshot row chevrons; resolved: **Problems panel** rows are **not expandable** in v1.
 - List truncation at 8 items; resolved: show **all** compile diagnostics up to the parser cap (100).
