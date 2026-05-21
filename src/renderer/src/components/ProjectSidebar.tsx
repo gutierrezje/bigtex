@@ -3,8 +3,10 @@ import type { ProjectFile, ProjectSnapshot } from "../../../shared/domain";
 import {
   CREATABLE_FILE_EXTENSIONS,
   DEFAULT_NEW_FILE_NAME,
+  isPdfPath,
   parentDirectoryPath,
 } from "../../../shared/projectFiles";
+import { PdfFileIcon } from "./icons/PdfFileIcon";
 
 interface ProjectSidebarProps {
   project: ProjectSnapshot | null;
@@ -60,7 +62,11 @@ function FolderIcon({ expanded }: { expanded: boolean }) {
   );
 }
 
-function FileIcon({ kind }: { kind: string }) {
+function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
+  if (kind === "pdf" || isPdfPath(fileName)) {
+    return <PdfFileIcon />;
+  }
+
   if (kind === "tex") {
     return (
       <svg
@@ -112,20 +118,6 @@ function FileIcon({ kind }: { kind: string }) {
         <path d="M12 2L2 7l10 5 10-5-10-5z" />
         <path d="M2 17l10 5 10-5" />
         <path d="M2 12l10 5 10-5" />
-      </svg>
-    );
-  }
-
-  if (kind === "pdf") {
-    return (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        className="h-4 w-4 shrink-0 text-rose-400"
-      >
-        <title>PDF Document</title>
-        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 2 5 5h-5V4zM8 12h8v2H8v-2zm0 4h5v2H8v-2z" />
       </svg>
     );
   }
@@ -276,7 +268,7 @@ function FileRow({
         ) : (
           <>
             <span className="w-3 shrink-0" />
-            <FileIcon kind={file.kind} />
+            <FileIcon kind={file.kind} fileName={file.name} />
           </>
         )}
         {isRenaming ? (

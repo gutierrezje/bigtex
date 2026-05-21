@@ -83,7 +83,7 @@ Single-context: one root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`
 
 ## UNIQUE STYLES
 
-- Project tree filters build/aux dirs (out, dist, build, .latex-cache) + LaTeX aux extensions.
+- Project tree hides `.tex-build/` (latexmk outdir) plus build/aux dirs and LaTeX artifact extensions.
 - ACP messages are parsed for fenced diff blocks; extracted patches emit via IPC.
 - Compiler diagnostics parsed from stdout/stderr; capped at 100 entries.
 - Performance marks recorded in main via measure()/recordMark; renderer shows latest.

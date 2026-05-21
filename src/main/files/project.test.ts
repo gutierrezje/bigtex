@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -26,11 +26,16 @@ describe("loadProject", () => {
     try {
       await writeFile(join(root, "main.tex"), "\\documentclass{article}\n", "utf8");
       await writeFile(join(root, "notes.aux"), "aux", "utf8");
+      await writeFile(join(root, "main.out"), "out", "utf8");
+      await mkdir(join(root, ".tex-build"), { recursive: true });
+      await writeFile(join(root, ".tex-build", "main.pdf"), "%PDF", "utf8");
 
       const snapshot = await loadProject(root);
       expect(snapshot.mainFile).toBe("main.tex");
       expect(snapshot.files.some((file) => file.name === "main.tex")).toBe(true);
       expect(snapshot.files.some((file) => file.name === "notes.aux")).toBe(false);
+      expect(snapshot.files.some((file) => file.name === "main.out")).toBe(false);
+      expect(snapshot.files.some((file) => file.name === ".tex-build")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

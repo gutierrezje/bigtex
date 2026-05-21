@@ -1,34 +1,7 @@
 import { type FSWatcher, watch } from "node:fs";
-import { extname, relative, resolve, sep } from "node:path";
+import { relative, resolve, sep } from "node:path";
 import type { AgentEvent } from "../../shared/domain";
-
-const IGNORED_DIRECTORIES = new Set([
-  ".git",
-  ".idea",
-  ".vscode",
-  "node_modules",
-  "dist",
-  "build",
-  "out",
-  ".latex-cache",
-]);
-
-const IGNORED_EXTENSIONS = new Set([
-  ".aux",
-  ".bbl",
-  ".blg",
-  ".fls",
-  ".fdb_latexmk",
-  ".log",
-  ".synctex.gz",
-]);
-
-function isIgnoredProjectPath(relativePath: string): boolean {
-  const normalized = relativePath.split(sep).join("/");
-  const segments = normalized.split("/");
-  if (segments.some((segment) => IGNORED_DIRECTORIES.has(segment))) return true;
-  return IGNORED_EXTENSIONS.has(extname(normalized).toLowerCase());
-}
+import { isIgnoredProjectRelativePath } from "../../shared/latexArtifacts";
 
 export function startProjectWatch(
   rootPath: string,
@@ -49,7 +22,7 @@ export function startProjectWatch(
   };
 
   const schedule = (relativePath: string): void => {
-    if (isIgnoredProjectPath(relativePath)) return;
+    if (isIgnoredProjectRelativePath(relativePath)) return;
     pending.add(relativePath);
     if (timer) clearTimeout(timer);
     timer = setTimeout(flush, 200);

@@ -1,7 +1,9 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { basename } from "node:path";
+import { mkdir } from "node:fs/promises";
+import { basename, join } from "node:path";
 import type { CompileRequest, CompileResult } from "../../shared/domain";
+import { LATEX_BUILD_DIR } from "../../shared/latexArtifacts";
 import { assertInsideRoot, outputPdfPath } from "../files/project";
 import { measure } from "../performance/marks";
 import { parseDiagnostics } from "./diagnostics";
@@ -11,7 +13,15 @@ function compilerCommand(request: CompileRequest): { command: string; args: stri
 
   return {
     command: "latexmk",
-    args: ["-pdf", "-interaction=nonstopmode", "-file-line-error", "-synctex=1", mainFile],
+    args: [
+      "-pdf",
+      "-interaction=nonstopmode",
+      "-file-line-error",
+      "-synctex=1",
+      `-outdir=${LATEX_BUILD_DIR}`,
+      `-auxdir=${LATEX_BUILD_DIR}`,
+      mainFile,
+    ],
   };
 }
 
@@ -92,6 +102,7 @@ function compileWithProcess(
 
 export async function compileLatex(request: CompileRequest): Promise<CompileResult> {
   assertInsideRoot(request.rootPath, request.mainFile);
+  await mkdir(join(request.rootPath, LATEX_BUILD_DIR), { recursive: true });
   const { command, args } = compilerCommand(request);
   return measure("compile:latexmk", () => compileWithProcess(request, command, args));
 }
