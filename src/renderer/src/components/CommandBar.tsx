@@ -1,11 +1,8 @@
-import type { PerformanceMark } from "../../../shared/domain";
 import { TitleBar } from "./TitleBar";
 
 interface CommandBarProps {
   projectName: string | null;
   filePath: string | null;
-  metrics: PerformanceMark[];
-  onRefreshMetrics(): void;
   showSidebar: boolean;
   onToggleSidebar(): void;
   showDiagnostics: boolean;
@@ -19,8 +16,6 @@ interface CommandBarProps {
 export function CommandBar({
   projectName,
   filePath,
-  metrics,
-  onRefreshMetrics,
   showSidebar,
   onToggleSidebar,
   showDiagnostics,
@@ -30,30 +25,9 @@ export function CommandBar({
   showAgent,
   onToggleAgent,
 }: CommandBarProps) {
-  const latestMetric = metrics.at(-1);
-
   return (
     <div className="flex h-11 shrink-0 items-center justify-between border-b border-border/40 bg-zinc-950 select-none">
       <TitleBar projectName={projectName} filePath={filePath} />
-
-      <div
-        className="flex shrink-0 items-center gap-3 px-4"
-        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-      >
-        <button
-          type="button"
-          className="rounded-md border border-border bg-transparent px-3 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:border-accent/40 hover:text-text-secondary"
-          onClick={onRefreshMetrics}
-        >
-          Refresh metrics
-        </button>
-
-        <span className="font-mono text-xs text-text-muted select-none">
-          {latestMetric
-            ? `${latestMetric.name}: ${Math.round(latestMetric.durationMs)}ms`
-            : "No metrics yet"}
-        </span>
-      </div>
 
       <div
         className="flex shrink-0 items-center gap-1 rounded-md border border-border/40 bg-zinc-900/60 p-0.5 px-4"

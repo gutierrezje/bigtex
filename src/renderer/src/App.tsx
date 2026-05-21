@@ -12,9 +12,9 @@ import {
 } from "../../shared/problems";
 import { AgentPanel } from "./components/AgentPanel";
 import { CommandBar } from "./components/CommandBar";
+import { EditorBottomPanel, type EditorBottomTab } from "./components/EditorBottomPanel";
 import { EditorPane } from "./components/EditorPane";
 import { PdfPreview } from "./components/PdfPreview";
-import { ProblemsPanel } from "./components/ProblemsPanel";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { useAgentEvents } from "./hooks/useAgentEvents";
@@ -33,19 +33,20 @@ export function App() {
     compileResult,
     pdf,
     agentChat,
-    metrics,
     setProject,
     setOpenFile,
     setCompileResult,
     setPdf,
     clearAgent,
-    setMetrics,
+    clearOutputLog,
+    refreshMetrics,
   } = useAppStore();
   const [compiling, setCompiling] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [editorRevealLine, setEditorRevealLine] = useState<number | null>(null);
+  const [editorBottomTab, setEditorBottomTab] = useState<EditorBottomTab>("problems");
   const appendAgentComposerHandoff = useAppStore((state) => state.appendAgentComposerHandoff);
   const agentHandoffFiles = useAppStore((state) => state.agentHandoffFiles);
+  const appendOutput = useAppStore((state) => state.appendOutput);
 
   // Layout collapsed states
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -136,9 +137,9 @@ export function App() {
         activeDraftRef.current = { path: file.path, content: file.content };
       }
 
-      if (toastMessage) setToast(toastMessage);
+      if (toastMessage) appendOutput(toastMessage, "success");
     },
-    [setProject, setOpenFile],
+    [setProject, setOpenFile, appendOutput],
   );
 
   useAgentEvents({
@@ -159,15 +160,12 @@ export function App() {
     void refreshMetrics();
   }, []);
 
-  async function refreshMetrics(): Promise<void> {
-    setMetrics(await window.bigTex.app.metrics());
-  }
-
   async function loadProject(snapshot: ProjectSnapshot | null): Promise<void> {
     if (!snapshot) return;
     setProject(snapshot);
     setCompileResult(null);
     setPdf(null);
+    clearOutputLog();
     clearAgent();
     void useAppStore.getState().loadAgentConfig(snapshot.rootPath);
 
@@ -193,12 +191,13 @@ export function App() {
       setOpenFile(null);
       setCompileResult(null);
       setPdf(null);
+      clearOutputLog();
     });
     return () => {
       unsubOpened();
       unsubClosed();
     };
-  }, [setProject, setOpenFile, setCompileResult, setPdf]);
+  }, [setProject, setOpenFile, setCompileResult, setPdf, clearOutputLog]);
 
   async function openProjectFile(file: ProjectFile): Promise<void> {
     if (!project || !selectable(file)) return;
@@ -242,7 +241,18 @@ export function App() {
       if (result.pdfPath) {
         setPdf(await window.bigTex.latex.readPdf(result.pdfPath));
       }
-      setToast(result.success ? "Compiled PDF." : "Compiler reported diagnostics.");
+      if (result.success) {
+        appendOutput(`Compiled PDF (${result.durationMs}ms).`, "success");
+      } else {
+        const { errors, warnings } = countDiagnosticsBySeverity(result.diagnostics);
+        appendOutput(
+          `Compile finished with ${errors} error(s) and ${warnings} warning(s) (${result.durationMs}ms).`,
+          "warning",
+        );
+        setEditorBottomTab("problems");
+        const panel = diagnosticsRef.current;
+        if (panel?.isCollapsed()) panel.expand();
+      }
     } finally {
       setCompiling(false);
       await refreshMetrics();
@@ -256,7 +266,8 @@ export function App() {
 
     const projectFile = findProjectFileByPath(project.files, path);
     if (!projectFile) {
-      setToast(`Could not find ${path} in the project.`);
+      appendOutput(`Could not find ${path} in the project.`, "error");
+      setEditorBottomTab("output");
       return;
     }
 
@@ -306,7 +317,8 @@ export function App() {
       );
       return;
     }
-    setToast(result.message ? `Patch failed: ${result.message}` : "Patch failed.");
+    appendOutput(result.message ? `Patch failed: ${result.message}` : "Patch failed.", "error");
+    setEditorBottomTab("output");
   }
 
   async function createProjectFile(parentPath: string, name: string): Promise<void> {
@@ -320,7 +332,8 @@ export function App() {
       setProject(snapshot);
       await refreshProjectFiles([createdPath], `Created ${createdPath}.`);
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "Could not create file");
+      appendOutput(error instanceof Error ? error.message : "Could not create file", "error");
+      setEditorBottomTab("output");
       throw error;
     }
   }
@@ -343,9 +356,10 @@ export function App() {
         setOpenFile(file);
         activeDraftRef.current = { path: file.path, content: file.content };
       }
-      setToast(`Renamed to ${newName}.`);
+      appendOutput(`Renamed to ${newName}.`, "success");
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "Rename failed");
+      appendOutput(error instanceof Error ? error.message : "Rename failed", "error");
+      setEditorBottomTab("output");
       throw error;
     }
   }
@@ -363,9 +377,10 @@ export function App() {
         setOpenFile(null);
         activeDraftRef.current = null;
       }
-      setToast("Deleted.");
+      appendOutput("Deleted.", "success");
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "Delete failed");
+      appendOutput(error instanceof Error ? error.message : "Delete failed", "error");
+      setEditorBottomTab("output");
       throw error;
     }
   }
@@ -375,8 +390,6 @@ export function App() {
       <CommandBar
         projectName={project?.name ?? null}
         filePath={openFile?.path ?? null}
-        metrics={metrics}
-        onRefreshMetrics={() => void refreshMetrics()}
         showSidebar={!isSidebarCollapsed}
         onToggleSidebar={handleToggleSidebar}
         showDiagnostics={!isDiagnosticsCollapsed}
@@ -413,7 +426,10 @@ export function App() {
                 onCreateFile={createProjectFile}
                 onRenamePath={renameProjectPath}
                 onDeletePath={deleteProjectPath}
-                onError={(message) => setToast(message)}
+                onError={(message) => {
+                  appendOutput(message, "error");
+                  setEditorBottomTab("output");
+                }}
               />
             </Panel>
 
@@ -468,7 +484,10 @@ export function App() {
                         }}
                         className="min-h-0 min-w-0"
                       >
-                        <ProblemsPanel
+                        <EditorBottomPanel
+                          activeTab={editorBottomTab}
+                          onTabChange={setEditorBottomTab}
+                          onOutputTabSelect={() => void refreshMetrics()}
                           result={compileResult}
                           compiling={compiling}
                           onCompile={() => void compile()}
@@ -536,16 +555,6 @@ export function App() {
           <WelcomeScreen onLoadProject={(snapshot) => void loadProject(snapshot)} />
         )}
       </div>
-
-      {toast ? (
-        <button
-          type="button"
-          className="fixed right-5 bottom-5 z-50 max-w-sm rounded-lg border border-border bg-surface-raised/95 px-4 py-2.5 font-mono text-sm text-text-secondary shadow-xl backdrop-blur-sm transition-colors duration-150 hover:border-accent/40 hover:text-text-primary"
-          onClick={() => setToast(null)}
-        >
-          {toast}
-        </button>
-      ) : null}
     </main>
   );
 }

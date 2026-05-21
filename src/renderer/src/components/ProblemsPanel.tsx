@@ -10,8 +10,6 @@ import {
 
 interface ProblemsPanelProps {
   result: CompileResult | null;
-  onCompile(): void;
-  compiling: boolean;
   onGoToSource(diagnostic: CompileDiagnostic): void;
   onAgentHandoff(diagnostic: CompileDiagnostic): void;
 }
@@ -159,13 +157,7 @@ function ProblemRow({
   return <div className={rowClassName}>{content}</div>;
 }
 
-export function ProblemsPanel({
-  result,
-  onCompile,
-  compiling,
-  onGoToSource,
-  onAgentHandoff,
-}: ProblemsPanelProps) {
+export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: ProblemsPanelProps) {
   const [activeTab, setActiveTab] = useState<ProblemsTab>("all");
   const diagnostics = result?.diagnostics ?? [];
   const counts = useMemo(() => countDiagnosticsBySeverity(diagnostics), [diagnostics]);
@@ -175,28 +167,7 @@ export function ProblemsPanel({
   );
 
   return (
-    <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
-      <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2">
-        <div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-            Problems
-          </span>
-          <strong className="mt-0.5 block text-sm font-medium">
-            {result
-              ? `${result.success ? "Clean" : "Needs attention"} · ${result.durationMs}ms`
-              : "Not run"}
-          </strong>
-        </div>
-        <button
-          type="button"
-          className="shrink-0 rounded-md border border-border bg-transparent px-3 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:border-accent/40 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
-          onClick={onCompile}
-          disabled={compiling}
-        >
-          {compiling ? "Compiling..." : "Compile"}
-        </button>
-      </div>
-
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
       <div className="flex gap-1 border-b border-border-subtle px-2 py-1.5">
         {TABS.map((tab) => {
           const count = tabCount(tab.id, counts, diagnostics.length);
@@ -254,6 +225,6 @@ export function ProblemsPanel({
           </p>
         )}
       </div>
-    </section>
+    </div>
   );
 }

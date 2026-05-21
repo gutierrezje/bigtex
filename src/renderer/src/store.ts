@@ -21,6 +21,17 @@ import { type AgentChatMessage, type AgentChatState, reduceAgentChat } from "./a
 
 export type { AgentChatMessage, AgentChatState };
 
+export type OutputLevel = "info" | "success" | "warning" | "error";
+
+export interface OutputEntry {
+  id: string;
+  at: number;
+  level: OutputLevel;
+  message: string;
+}
+
+const MAX_OUTPUT_ENTRIES = 200;
+
 export interface AgentSettingsState {
   config: AgentSessionConfig | null;
   providerGroup: AgentProviderGroup;
@@ -41,6 +52,7 @@ interface AppState {
   agentComposerDraft: string;
   agentHandoffFiles: string[];
   agentComposerFocusToken: number;
+  outputLog: OutputEntry[];
   metrics: PerformanceMark[];
   setProject(project: ProjectSnapshot | null): void;
   setOpenFile(file: OpenFile | null): void;
@@ -57,9 +69,12 @@ interface AppState {
   refreshAgentModelVariants(rootPath: string, modelId: string): Promise<void>;
   setAgentReasoningLevel(level: string | null): void;
   setMetrics(metrics: PerformanceMark[]): void;
+  refreshMetrics(): Promise<void>;
   appendAgentComposerHandoff(line: string, filePath: string | null): void;
   setAgentComposerDraft(draft: string): void;
   clearAgentHandoffFiles(): void;
+  appendOutput(message: string, level?: OutputLevel): void;
+  clearOutputLog(): void;
 }
 
 function createMessageId(prefix: string): string {
@@ -89,6 +104,7 @@ export const useAppStore = create<AppState>((set) => ({
   agentComposerDraft: "",
   agentHandoffFiles: [],
   agentComposerFocusToken: 0,
+  outputLog: [],
   metrics: [],
   setProject: (project) => set({ project }),
   setOpenFile: (openFile) => set({ openFile }),
@@ -260,6 +276,10 @@ export const useAppStore = create<AppState>((set) => ({
       agentSettings: { ...state.agentSettings, reasoningLevel },
     })),
   setMetrics: (metrics) => set({ metrics }),
+  refreshMetrics: async () => {
+    const metrics = await window.bigTex.app.metrics();
+    set({ metrics });
+  },
   appendAgentComposerHandoff: (line, filePath) =>
     set((state) => ({
       agentComposerDraft: appendAgentHandoffToComposer(state.agentComposerDraft, line),
@@ -272,4 +292,18 @@ export const useAppStore = create<AppState>((set) => ({
     })),
   setAgentComposerDraft: (agentComposerDraft) => set({ agentComposerDraft }),
   clearAgentHandoffFiles: () => set({ agentHandoffFiles: [] }),
+  appendOutput: (message, level = "info") =>
+    set((state) => {
+      const entry: OutputEntry = {
+        id: createMessageId("output"),
+        at: Date.now(),
+        level,
+        message,
+      };
+      const next = [...state.outputLog, entry];
+      return {
+        outputLog: next.length > MAX_OUTPUT_ENTRIES ? next.slice(-MAX_OUTPUT_ENTRIES) : next,
+      };
+    }),
+  clearOutputLog: () => set({ outputLog: [] }),
 }));
