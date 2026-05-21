@@ -8,6 +8,7 @@ import {
   sortReasoningVariants,
   withModelVariants,
 } from "../../shared/agent-models";
+import { buildAgentSystemPrompt } from "../../shared/agent-prompt";
 import type {
   AgentAvailability,
   AgentEvent,
@@ -70,32 +71,17 @@ function splitCommand(commandLine: string): string[] {
   return tokens.map((token) => token.replace(/^"|"$/g, ""));
 }
 
-function agentSystemPrompt(input: AgentRunInput): string {
-  const diagnostics = input.diagnostics
-    .slice(0, 12)
-    .map((diagnostic) => {
-      const location = [diagnostic.file, diagnostic.line].filter(Boolean).join(":");
-      return `- ${diagnostic.severity.toUpperCase()} ${location || "project"}: ${diagnostic.message}`;
-    })
-    .join("\n");
-
-  return [
-    "You are editing a local LaTeX project from inside BigTeX.",
-    "Prefer precise, small patches. Do not rewrite unrelated files.",
-    "When changing files, respond with one or more fenced diff blocks using unified diff format.",
-    "Do not apply changes yourself unless the user explicitly asks through the host app.",
-    input.selectedFiles.length > 0
-      ? `Selected files:\n${input.selectedFiles.map((file) => `- ${file}`).join("\n")}`
-      : "No files are selected.",
-    diagnostics
-      ? `Current compile diagnostics:\n${diagnostics}`
-      : "No compile diagnostics are loaded.",
-    `User request:\n${input.prompt}`,
-  ].join("\n\n");
-}
-
 function acpPrompt(input: AgentRunInput): Array<{ type: "text"; text: string }> {
-  return [{ type: "text", text: agentSystemPrompt(input) }];
+  return [
+    {
+      type: "text",
+      text: buildAgentSystemPrompt({
+        selectedFiles: input.selectedFiles,
+        compileSummary: input.compileSummary,
+        prompt: input.prompt,
+      }),
+    },
+  ];
 }
 
 class AcpConnection {

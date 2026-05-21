@@ -72,6 +72,8 @@ export function BigTexAssistantRuntime({
   const runId = useAppStore((state) => state.agentChat.runId);
   const addAgentUserMessage = useAppStore((state) => state.addAgentUserMessage);
   const createPendingAgentMessage = useAppStore((state) => state.createPendingAgentMessage);
+  const clearAgentHandoffFiles = useAppStore((state) => state.clearAgentHandoffFiles);
+  const setAgentComposerDraft = useAppStore((state) => state.setAgentComposerDraft);
 
   const modelId = useAppStore((state) => state.agentSettings.modelId);
   const reasoningLevel = useAppStore((state) => state.agentSettings.reasoningLevel);
@@ -87,6 +89,8 @@ export function BigTexAssistantRuntime({
 
       addAgentUserMessage(prompt);
       createPendingAgentMessage();
+      clearAgentHandoffFiles();
+      setAgentComposerDraft("");
       await onRun(prompt, modelId, reasoningLevel);
     },
     onCancel: async () => {

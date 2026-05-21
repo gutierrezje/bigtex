@@ -87,7 +87,7 @@ export function CommandBar({
 
         <button
           type="button"
-          title="Toggle Console (Diagnostics)"
+          title="Toggle Problems"
           className={`p-1.5 rounded-md transition-all duration-100 cursor-pointer ${
             showDiagnostics
               ? "bg-accent/15 text-accent shadow-sm border border-accent/20"
@@ -105,7 +105,7 @@ export function CommandBar({
             strokeLinejoin="round"
             className="h-3.5 w-3.5"
           >
-            <title>Toggle Diagnostics</title>
+            <title>Toggle Problems</title>
             <rect width="18" height="18" x="3" y="3" rx="2" />
             <path d="M3 15h18" />
             <path d="m8 9 2 2-2 2" />

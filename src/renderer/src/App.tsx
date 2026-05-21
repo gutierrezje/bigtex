@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import type { ProjectFile, ProjectSnapshot } from "../../shared/domain";
+import type { CompileDiagnostic, ProjectFile, ProjectSnapshot } from "../../shared/domain";
+import {
+  countDiagnosticsBySeverity,
+  findProjectFileByPath,
+  formatAgentHandoffLine,
+  formatCompileSummary,
+  mergeAgentSelectedFiles,
+  normalizeDiagnosticPath,
+} from "../../shared/problems";
 import { AgentPanel } from "./components/AgentPanel";
 import { CommandBar } from "./components/CommandBar";
-import { DiagnosticsPanel } from "./components/DiagnosticsPanel";
 import { EditorPane } from "./components/EditorPane";
 import { PdfPreview } from "./components/PdfPreview";
+import { ProblemsPanel } from "./components/ProblemsPanel";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { useAgentEvents } from "./hooks/useAgentEvents";
@@ -35,6 +43,9 @@ export function App() {
   } = useAppStore();
   const [compiling, setCompiling] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [editorRevealLine, setEditorRevealLine] = useState<number | null>(null);
+  const appendAgentComposerHandoff = useAppStore((state) => state.appendAgentComposerHandoff);
+  const agentHandoffFiles = useAppStore((state) => state.agentHandoffFiles);
 
   // Layout collapsed states
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -238,21 +249,52 @@ export function App() {
     }
   }
 
+  async function goToDiagnosticSource(diagnostic: CompileDiagnostic): Promise<void> {
+    if (!project) return;
+    const path = normalizeDiagnosticPath(diagnostic.file);
+    if (!path || !diagnostic.line) return;
+
+    const projectFile = findProjectFileByPath(project.files, path);
+    if (!projectFile) {
+      setToast(`Could not find ${path} in the project.`);
+      return;
+    }
+
+    await openProjectFile(projectFile);
+    setEditorRevealLine(diagnostic.line);
+  }
+
+  function handoffDiagnosticToAgent(diagnostic: CompileDiagnostic): void {
+    const path = normalizeDiagnosticPath(diagnostic.file);
+    appendAgentComposerHandoff(formatAgentHandoffLine(diagnostic), path);
+
+    const panel = agentRef.current;
+    if (panel?.isCollapsed()) panel.expand();
+  }
+
   async function runAgent(
     prompt: string,
     modelId: string,
     reasoningLevel: string | null,
   ): Promise<void> {
     if (!project) return;
+    const mainFile = project.mainFile ?? openFile?.path ?? null;
+    const compileSummary =
+      compileResult && mainFile ? formatCompileSummary(compileResult, mainFile) : null;
+
     await window.bigTex.agent.run({
       rootPath: project.rootPath,
       prompt,
-      selectedFiles: openFile ? [openFile.path] : [],
-      diagnostics: compileResult?.diagnostics ?? [],
+      selectedFiles: mergeAgentSelectedFiles(openFile?.path ?? null, agentHandoffFiles),
+      compileSummary,
       modelId,
       reasoningLevel,
     });
   }
+
+  const problemCounts = compileResult
+    ? countDiagnosticsBySeverity(compileResult.diagnostics)
+    : null;
 
   async function applyPatch(patch: string): Promise<void> {
     if (!project) return;
@@ -398,6 +440,8 @@ export function App() {
                         <EditorPane
                           file={openFile}
                           diagnostics={compileResult?.diagnostics ?? []}
+                          revealLine={editorRevealLine}
+                          onRevealHandled={() => setEditorRevealLine(null)}
                           onDraftChange={(path, content) => {
                             activeDraftRef.current = { path, content };
                           }}
@@ -424,10 +468,12 @@ export function App() {
                         }}
                         className="min-h-0 min-w-0"
                       >
-                        <DiagnosticsPanel
+                        <ProblemsPanel
                           result={compileResult}
                           compiling={compiling}
                           onCompile={() => void compile()}
+                          onGoToSource={(diagnostic) => void goToDiagnosticSource(diagnostic)}
+                          onAgentHandoff={handoffDiagnosticToAgent}
                         />
                       </Panel>
                     </Group>
@@ -475,7 +521,7 @@ export function App() {
                     <AgentPanel
                       rootPath={project?.rootPath ?? null}
                       activeFile={openFile?.path ?? null}
-                      diagnostics={compileResult?.diagnostics ?? []}
+                      problemCounts={problemCounts}
                       chat={agentChat}
                       onRun={runAgent}
                       onCancel={(runId) => window.bigTex.agent.cancel({ runId })}

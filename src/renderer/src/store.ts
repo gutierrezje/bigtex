@@ -16,6 +16,7 @@ import type {
   PerformanceMark,
   ProjectSnapshot,
 } from "../../shared/domain";
+import { appendAgentHandoffToComposer } from "../../shared/problems";
 import { type AgentChatMessage, type AgentChatState, reduceAgentChat } from "./agent-chat-reducer";
 
 export type { AgentChatMessage, AgentChatState };
@@ -37,6 +38,9 @@ interface AppState {
   pdf: PdfPayload | null;
   agentChat: AgentChatState;
   agentSettings: AgentSettingsState;
+  agentComposerDraft: string;
+  agentHandoffFiles: string[];
+  agentComposerFocusToken: number;
   metrics: PerformanceMark[];
   setProject(project: ProjectSnapshot | null): void;
   setOpenFile(file: OpenFile | null): void;
@@ -53,6 +57,9 @@ interface AppState {
   refreshAgentModelVariants(rootPath: string, modelId: string): Promise<void>;
   setAgentReasoningLevel(level: string | null): void;
   setMetrics(metrics: PerformanceMark[]): void;
+  appendAgentComposerHandoff(line: string, filePath: string | null): void;
+  setAgentComposerDraft(draft: string): void;
+  clearAgentHandoffFiles(): void;
 }
 
 function createMessageId(prefix: string): string {
@@ -79,6 +86,9 @@ export const useAppStore = create<AppState>((set) => ({
     loading: false,
     error: null,
   },
+  agentComposerDraft: "",
+  agentHandoffFiles: [],
+  agentComposerFocusToken: 0,
   metrics: [],
   setProject: (project) => set({ project }),
   setOpenFile: (openFile) => set({ openFile }),
@@ -250,4 +260,16 @@ export const useAppStore = create<AppState>((set) => ({
       agentSettings: { ...state.agentSettings, reasoningLevel },
     })),
   setMetrics: (metrics) => set({ metrics }),
+  appendAgentComposerHandoff: (line, filePath) =>
+    set((state) => ({
+      agentComposerDraft: appendAgentHandoffToComposer(state.agentComposerDraft, line),
+      agentHandoffFiles: filePath
+        ? state.agentHandoffFiles.includes(filePath)
+          ? state.agentHandoffFiles
+          : [...state.agentHandoffFiles, filePath]
+        : state.agentHandoffFiles,
+      agentComposerFocusToken: state.agentComposerFocusToken + 1,
+    })),
+  setAgentComposerDraft: (agentComposerDraft) => set({ agentComposerDraft }),
+  clearAgentHandoffFiles: () => set({ agentHandoffFiles: [] }),
 }));

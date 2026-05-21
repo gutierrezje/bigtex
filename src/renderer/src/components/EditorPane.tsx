@@ -4,6 +4,7 @@ import * as monacoLocal from "monaco-editor";
 import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CompileDiagnostic, OpenFile } from "../../../shared/domain";
+import { normalizeDiagnosticPath } from "../../../shared/problems";
 
 globalThis.MonacoEnvironment = {
   getWorker() {
@@ -16,6 +17,8 @@ loader.config({ monaco: monacoLocal });
 interface EditorPaneProps {
   file: OpenFile | null;
   diagnostics: CompileDiagnostic[];
+  revealLine: number | null;
+  onRevealHandled(): void;
   onDraftChange(path: string, content: string): void;
   onSave(content: string): void | Promise<void>;
 }
@@ -23,6 +26,8 @@ interface EditorPaneProps {
 interface LoadedEditorPaneProps {
   file: OpenFile;
   diagnostics: CompileDiagnostic[];
+  revealLine: number | null;
+  onRevealHandled(): void;
   onDraftChange(path: string, content: string): void;
   onSave(content: string): void | Promise<void>;
 }
@@ -83,7 +88,14 @@ function EmptyEditorPane() {
   );
 }
 
-function LoadedEditorPane({ file, diagnostics, onDraftChange, onSave }: LoadedEditorPaneProps) {
+function LoadedEditorPane({
+  file,
+  diagnostics,
+  revealLine,
+  onRevealHandled,
+  onDraftChange,
+  onSave,
+}: LoadedEditorPaneProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const draftContentRef = useRef(file.content);
@@ -95,7 +107,10 @@ function LoadedEditorPane({ file, diagnostics, onDraftChange, onSave }: LoadedEd
   const markers = useMemo(
     () =>
       diagnostics
-        .filter((d) => d.line && (!d.file || d.file === file?.path))
+        .filter((d) => {
+          const path = normalizeDiagnosticPath(d.file);
+          return d.line && (!path || path === file?.path);
+        })
         .map(
           (d): editor.IMarkerData => ({
             severity: d.severity === "error" ? 8 : 4,
@@ -113,6 +128,12 @@ function LoadedEditorPane({ file, diagnostics, onDraftChange, onSave }: LoadedEd
     const model = editorRef.current?.getModel();
     if (model) monacoRef.current?.editor.setModelMarkers(model, "latex-compiler", markers);
   }, [markers]);
+
+  useEffect(() => {
+    if (!revealLine || !editorRef.current) return;
+    editorRef.current.revealLineInCenter(revealLine);
+    onRevealHandled();
+  }, [revealLine, file.path, file.loadedAt, onRevealHandled]);
 
   useEffect(
     () => () => {
@@ -195,13 +216,22 @@ function LoadedEditorPane({ file, diagnostics, onDraftChange, onSave }: LoadedEd
   );
 }
 
-export function EditorPane({ file, diagnostics, onDraftChange, onSave }: EditorPaneProps) {
+export function EditorPane({
+  file,
+  diagnostics,
+  revealLine,
+  onRevealHandled,
+  onDraftChange,
+  onSave,
+}: EditorPaneProps) {
   if (!file) return <EmptyEditorPane />;
   return (
     <LoadedEditorPane
       key={`${file.path}:${file.loadedAt}`}
       file={file}
       diagnostics={diagnostics}
+      revealLine={revealLine}
+      onRevealHandled={onRevealHandled}
       onDraftChange={onDraftChange}
       onSave={onSave}
     />

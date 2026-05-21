@@ -5,8 +5,8 @@ import {
   ThreadPrimitive,
   useAuiState,
 } from "@assistant-ui/react";
-import type { CompileDiagnostic } from "../../../shared/domain";
 import type { AgentChatState } from "../store";
+import { AgentComposer } from "./agent/AgentComposer";
 import { AgentMessageReasoningPart } from "./agent/AgentMessageReasoningPart";
 import { AgentMessageTextPart } from "./agent/AgentMessageTextPart";
 import { AgentModelToolbar } from "./agent/AgentModelToolbar";
@@ -15,7 +15,7 @@ import { BigTexAssistantRuntime } from "./agent/BigTexAssistantRuntime";
 interface AgentPanelProps {
   rootPath: string | null;
   activeFile: string | null;
-  diagnostics: CompileDiagnostic[];
+  problemCounts: { errors: number; warnings: number } | null;
   chat: AgentChatState;
   onRun(prompt: string, modelId: string, reasoningLevel: string | null): Promise<void>;
   onCancel(runId: string): Promise<void>;
@@ -117,19 +117,7 @@ function ChatThread({ onApplyPatch }: ChatThreadProps) {
         {/* Model & Thinking Toolbar */}
         <AgentModelToolbar />
 
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border border-border bg-surface-inset p-2">
-          <ComposerPrimitive.Input
-            className="max-h-32 min-h-10 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-relaxed text-text-primary outline-none placeholder:text-text-muted"
-            placeholder="Ask BigTeX to revise, explain, or fix this LaTeX..."
-            rows={2}
-            submitMode="enter"
-          />
-          <div className="flex items-end">
-            <ComposerPrimitive.Send className="rounded-md border-0 bg-accent px-3 py-2 text-xs font-semibold text-zinc-950 transition-opacity duration-100 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">
-              Send
-            </ComposerPrimitive.Send>
-          </div>
-        </div>
+        <AgentComposer />
       </ComposerPrimitive.Root>
     </ThreadPrimitive.Root>
   );
@@ -138,7 +126,7 @@ function ChatThread({ onApplyPatch }: ChatThreadProps) {
 export function AgentPanel({
   rootPath,
   activeFile,
-  diagnostics,
+  problemCounts,
   chat,
   onRun,
   onCancel,
@@ -166,7 +154,11 @@ export function AgentPanel({
 
       <div className="shrink-0 flex justify-between gap-2 px-3 py-2 text-[11px] text-text-muted">
         <span>{activeFile ? `Selected: ${activeFile}` : "No active file"}</span>
-        <span>{diagnostics.length} diagnostic(s)</span>
+        <span>
+          {problemCounts
+            ? `${problemCounts.errors} error(s), ${problemCounts.warnings} warning(s)`
+            : "No compile yet"}
+        </span>
       </div>
 
       <BigTexAssistantRuntime disabled={!rootPath} onRun={onRun} onCancel={onCancel}>

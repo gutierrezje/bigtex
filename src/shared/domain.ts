@@ -87,7 +87,7 @@ export interface AgentRunInput {
   rootPath: string;
   prompt: string;
   selectedFiles: string[];
-  diagnostics: CompileDiagnostic[];
+  compileSummary: string | null;
   modelId: string;
   reasoningLevel: string | null;
 }
