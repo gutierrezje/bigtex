@@ -9,7 +9,7 @@ export function AgentMessageTextPart() {
 
   return (
     <div
-      className={`agent-output-markdown min-w-0 max-w-full${streaming ? " agent-output-markdown--streaming" : ""}`}
+      className={`agent-output-markdown min-w-0 w-full max-w-full${streaming ? " agent-output-markdown--streaming" : ""}`}
     >
       <AgentMarkdown text={prepareAgentMarkdown(part.text, streaming)} streaming={streaming} />
     </div>

@@ -4,9 +4,23 @@ function closeOpenMarkdownFence(text: string): string {
   return text;
 }
 
+function looksLikeStreamingDiff(text: string): boolean {
+  return (
+    /^diff --git /m.test(text) ||
+    /^---\s/m.test(text) ||
+    /^\+\+\+\s/m.test(text) ||
+    /^@@\s/m.test(text) ||
+    /^[-+]{3}\s/m.test(text)
+  );
+}
+
 /** Wrap bare agent output in fenced blocks so Shiki can highlight LaTeX and diffs. */
 export function prepareAgentMarkdown(text: string, streaming = false): string {
-  const normalized = streaming ? closeOpenMarkdownFence(text) : text;
+  let normalized = streaming ? closeOpenMarkdownFence(text) : text;
+
+  if (streaming && !normalized.includes("```") && looksLikeStreamingDiff(normalized)) {
+    normalized = `\`\`\`diff\n${normalized}\n\`\`\``;
+  }
 
   if (!normalized.trim() || normalized.includes("```")) return normalized;
 

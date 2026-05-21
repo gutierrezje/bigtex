@@ -65,9 +65,11 @@ function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<vo
         }`}
       >
         {activity ? (
-          <pre className="agent-activity mb-2 max-h-32 min-w-0 max-w-full overflow-x-auto overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-border-subtle bg-zinc-950/60 px-2.5 py-2 font-mono text-[10px] leading-relaxed text-text-muted">
-            {activity}
-          </pre>
+          <div className="agent-code-block-wrap mb-2 max-h-32 overflow-y-auto">
+            <pre className="agent-activity-block agent-code-block agent-code-block--streaming text-[10px] text-text-muted">
+              {activity}
+            </pre>
+          </div>
         ) : null}
         <MessagePrimitive.Parts components={agentMessagePartComponents} />
       </div>

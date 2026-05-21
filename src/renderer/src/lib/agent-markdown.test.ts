@@ -15,5 +15,10 @@ describe("prepareAgentMarkdown", () => {
 
     const fenced = "```diff\n--- a\n+++ b\n```";
     expect(prepareAgentMarkdown(fenced)).toBe(fenced);
+
+    const partialDiff = "--- a/main.tex\n+++ b/main.tex\n@@ -1";
+    expect(prepareAgentMarkdown(partialDiff, true)).toBe(
+      "```diff\n--- a/main.tex\n+++ b/main.tex\n@@ -1\n```",
+    );
   });
 });

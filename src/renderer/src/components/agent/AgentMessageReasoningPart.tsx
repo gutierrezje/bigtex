@@ -25,9 +25,11 @@ export function AgentMessageReasoningPart() {
       <summary className="cursor-pointer select-none px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-wide text-text-muted">
         {isRunning ? "Thinking…" : "Thought process"}
       </summary>
-      <pre className="max-h-48 min-w-0 max-w-full overflow-x-auto overflow-y-auto whitespace-pre-wrap break-words border-t border-border-subtle px-2.5 py-2 font-mono text-[11px] leading-relaxed text-text-muted">
-        {text}
-      </pre>
+      <div className="agent-code-block-wrap max-h-48 overflow-y-auto border-t border-border-subtle">
+        <pre className="agent-code-block agent-code-block--streaming px-2.5 py-2 text-[11px] text-text-muted">
+          {text}
+        </pre>
+      </div>
     </details>
   );
 }
