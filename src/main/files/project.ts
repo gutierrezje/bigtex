@@ -58,6 +58,8 @@ function fileKind(name: string, directory: boolean): FileKind {
     case ".yaml":
     case ".toml":
       return "config";
+    case ".pdf":
+      return "pdf";
     default:
       return "other";
   }

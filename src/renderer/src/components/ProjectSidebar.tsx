@@ -116,6 +116,20 @@ function FileIcon({ kind }: { kind: string }) {
     );
   }
 
+  if (kind === "pdf") {
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        className="h-4 w-4 shrink-0 text-rose-400"
+      >
+        <title>PDF Document</title>
+        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 2 5 5h-5V4zM8 12h8v2H8v-2zm0 4h5v2H8v-2z" />
+      </svg>
+    );
+  }
+
   if (kind === "config") {
     return (
       <svg

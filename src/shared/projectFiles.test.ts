@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isCreatableFileName, parentDirectoryPath } from "./projectFiles";
+import {
+  isCreatableFileName,
+  isPdfPath,
+  parentDirectoryPath,
+  toProjectRelativePath,
+} from "./projectFiles";
 
 describe("projectFiles", () => {
   it("gates new-file extensions and exposes parent folders", () => {
@@ -11,5 +16,12 @@ describe("projectFiles", () => {
 
     expect(parentDirectoryPath("chapters/intro.tex")).toBe("chapters");
     expect(parentDirectoryPath("main.tex")).toBe("");
+  });
+
+  it("detects PDF paths and normalizes project-relative paths", () => {
+    expect(isPdfPath("out/main.PDF")).toBe(true);
+    expect(isPdfPath("main.tex")).toBe(false);
+
+    expect(toProjectRelativePath("/proj", "/proj/chapters/out.pdf")).toBe("chapters/out.pdf");
   });
 });

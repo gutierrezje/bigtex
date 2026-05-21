@@ -16,6 +16,11 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setPageNumber(1);
+    setPageCount(0);
+  }, [pdf?.loadedAt, pdf?.path]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function renderPdf(): Promise<void> {
@@ -57,8 +62,10 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
           <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
             Preview
           </span>
-          <h2 className="mt-0.5 text-sm font-medium">
-            {pdf ? `Page ${pageNumber} of ${pageCount || "?"}` : "No PDF"}
+          <h2 className="mt-0.5 truncate text-sm font-medium" title={pdf?.path}>
+            {pdf
+              ? `${pdf.path.split(/[/\\]/).pop() ?? "PDF"} · page ${pageNumber} of ${pageCount || "?"}`
+              : "No PDF"}
           </h2>
         </div>
         <div className="flex gap-0.5 rounded-md bg-zinc-900 p-0.5">
@@ -88,7 +95,7 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
         {pdf ? (
           <canvas ref={canvasRef} className="pdf-canvas" />
         ) : (
-          <p className="text-sm text-text-muted">Compile to load a PDF.</p>
+          <p className="text-sm text-text-muted">Compile or open a PDF from the project tree.</p>
         )}
         {error ? <p className="mt-2 text-sm text-danger">{error}</p> : null}
       </div>

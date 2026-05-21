@@ -14,3 +14,15 @@ export function parentDirectoryPath(filePath: string): string {
   const slash = filePath.lastIndexOf("/");
   return slash === -1 ? "" : filePath.slice(0, slash);
 }
+
+export function isPdfPath(filePath: string): boolean {
+  return filePath.toLowerCase().endsWith(".pdf");
+}
+
+/** Project-relative path (forward slashes) from an absolute path under the project root. */
+export function toProjectRelativePath(rootPath: string, absolutePath: string): string {
+  const root = rootPath.replace(/\\/g, "/").replace(/\/$/, "");
+  const abs = absolutePath.replace(/\\/g, "/");
+  if (!abs.startsWith(`${root}/`)) return absolutePath;
+  return abs.slice(root.length + 1);
+}

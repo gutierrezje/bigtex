@@ -1,4 +1,4 @@
-export type FileKind = "tex" | "bib" | "style" | "config" | "folder" | "other";
+export type FileKind = "tex" | "bib" | "style" | "config" | "pdf" | "folder" | "other";
 
 export interface ProjectFile {
   name: string;

@@ -10,6 +10,7 @@ import {
   mergeAgentSelectedFiles,
   normalizeDiagnosticPath,
 } from "../../shared/problems";
+import { isPdfPath, toProjectRelativePath } from "../../shared/projectFiles";
 import { AgentPanel } from "./components/AgentPanel";
 import { CommandBar } from "./components/CommandBar";
 import { EditorBottomPanel, type EditorBottomTab } from "./components/EditorBottomPanel";
@@ -52,6 +53,7 @@ export function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isDiagnosticsCollapsed, setIsDiagnosticsCollapsed] = useState(false);
   const [isPdfCollapsed, setIsPdfCollapsed] = useState(false);
+  const [viewingPdfPath, setViewingPdfPath] = useState<string | null>(null);
   const [isAgentCollapsed, setIsAgentCollapsed] = useState(false);
 
   // Imperative refs for panel control
@@ -67,8 +69,10 @@ export function App() {
   const activeDraftRef = useRef<{ path: string; content: string } | null>(null);
   const openFileRef = useRef(openFile);
   const projectRef = useRef(project);
+  const viewingPdfPathRef = useRef(viewingPdfPath);
   openFileRef.current = openFile;
   projectRef.current = project;
+  viewingPdfPathRef.current = viewingPdfPath;
 
   // Toggle handlers calling imperative API
   const handleToggleSidebar = () => {
@@ -93,6 +97,14 @@ export function App() {
     }
   };
 
+  const expandPdfPanel = useCallback(() => {
+    const panel = pdfRef.current;
+    if (panel?.isCollapsed()) {
+      panel.expand();
+    }
+    setIsPdfCollapsed(false);
+  }, []);
+
   const handleTogglePdf = () => {
     const panel = pdfRef.current;
     if (panel) {
@@ -103,6 +115,15 @@ export function App() {
       }
     }
   };
+
+  const loadPdfPreview = useCallback(
+    async (absolutePath: string, relativePath: string) => {
+      setPdf(await window.bigTex.latex.readPdf(absolutePath));
+      setViewingPdfPath(relativePath);
+      expandPdfPanel();
+    },
+    [setPdf, expandPdfPanel],
+  );
 
   const handleToggleAgent = () => {
     const panel = agentRef.current;
@@ -124,22 +145,34 @@ export function App() {
       setProject(refreshed);
 
       const activePath = openFileRef.current?.path;
+      const activePdfPath = viewingPdfPathRef.current;
       const reloadPath =
         activePath && paths?.some((path) => path === activePath || path.endsWith(`/${activePath}`))
           ? activePath
-          : paths?.[0];
+          : activePdfPath &&
+              paths?.some((path) => path === activePdfPath || path.endsWith(`/${activePdfPath}`))
+            ? activePdfPath
+            : paths?.[0];
       if (reloadPath) {
-        const file = await window.bigTex.files.read({
-          rootPath: currentProject.rootPath,
-          path: reloadPath,
-        });
-        setOpenFile(file);
-        activeDraftRef.current = { path: file.path, content: file.content };
+        if (isPdfPath(reloadPath)) {
+          const match = findProjectFileByPath(refreshed.files, reloadPath);
+          if (match) {
+            await loadPdfPreview(match.absolutePath, match.path);
+          }
+        } else {
+          const file = await window.bigTex.files.read({
+            rootPath: currentProject.rootPath,
+            path: reloadPath,
+          });
+          setOpenFile(file);
+          setViewingPdfPath(null);
+          activeDraftRef.current = { path: file.path, content: file.content };
+        }
       }
 
       if (toastMessage) appendOutput(toastMessage, "success");
     },
-    [setProject, setOpenFile, appendOutput],
+    [setProject, setOpenFile, appendOutput, loadPdfPreview],
   );
 
   useAgentEvents({
@@ -165,6 +198,7 @@ export function App() {
     setProject(snapshot);
     setCompileResult(null);
     setPdf(null);
+    setViewingPdfPath(null);
     clearOutputLog();
     clearAgent();
     void useAppStore.getState().loadAgentConfig(snapshot.rootPath);
@@ -191,6 +225,7 @@ export function App() {
       setOpenFile(null);
       setCompileResult(null);
       setPdf(null);
+      setViewingPdfPath(null);
       clearOutputLog();
     });
     return () => {
@@ -201,6 +236,11 @@ export function App() {
 
   async function openProjectFile(file: ProjectFile): Promise<void> {
     if (!project || !selectable(file)) return;
+    if (isPdfPath(file.path)) {
+      await loadPdfPreview(file.absolutePath, file.path);
+      return;
+    }
+    setViewingPdfPath(null);
     const openedFile = await window.bigTex.files.read({
       rootPath: project.rootPath,
       path: file.path,
@@ -239,7 +279,10 @@ export function App() {
       });
       setCompileResult(result);
       if (result.pdfPath) {
-        setPdf(await window.bigTex.latex.readPdf(result.pdfPath));
+        await loadPdfPreview(
+          result.pdfPath,
+          toProjectRelativePath(project.rootPath, result.pdfPath),
+        );
       }
       if (result.success) {
         appendOutput(`Compiled PDF (${result.durationMs}ms).`, "success");
@@ -348,6 +391,7 @@ export function App() {
       });
       setProject(snapshot);
       const wasOpen = openFileRef.current?.path === path;
+      const wasViewingPdf = viewingPdfPathRef.current === path;
       if (wasOpen) {
         const file = await window.bigTex.files.read({
           rootPath: project.rootPath,
@@ -355,6 +399,12 @@ export function App() {
         });
         setOpenFile(file);
         activeDraftRef.current = { path: file.path, content: file.content };
+      }
+      if (wasViewingPdf) {
+        const match = findProjectFileByPath(snapshot.files, newPath);
+        if (match) {
+          await loadPdfPreview(match.absolutePath, newPath);
+        }
       }
       appendOutput(`Renamed to ${newName}.`, "success");
     } catch (error) {
@@ -368,6 +418,7 @@ export function App() {
     if (!project) return;
     try {
       const wasOpen = openFileRef.current?.path === path;
+      const wasViewingPdf = viewingPdfPathRef.current === path;
       const snapshot = await window.bigTex.files.delete({
         rootPath: project.rootPath,
         path,
@@ -376,6 +427,10 @@ export function App() {
       if (wasOpen) {
         setOpenFile(null);
         activeDraftRef.current = null;
+      }
+      if (wasViewingPdf) {
+        setPdf(null);
+        setViewingPdfPath(null);
       }
       appendOutput("Deleted.", "success");
     } catch (error) {
@@ -389,7 +444,7 @@ export function App() {
     <main className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-background">
       <CommandBar
         projectName={project?.name ?? null}
-        filePath={openFile?.path ?? null}
+        filePath={openFile?.path ?? viewingPdfPath ?? null}
         showSidebar={!isSidebarCollapsed}
         onToggleSidebar={handleToggleSidebar}
         showDiagnostics={!isDiagnosticsCollapsed}
@@ -421,7 +476,7 @@ export function App() {
             >
               <ProjectSidebar
                 project={project}
-                activePath={openFile?.path ?? null}
+                activePath={openFile?.path ?? viewingPdfPath ?? null}
                 onOpenFile={(file) => void openProjectFile(file)}
                 onCreateFile={createProjectFile}
                 onRenamePath={renameProjectPath}
