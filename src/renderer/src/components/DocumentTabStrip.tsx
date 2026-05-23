@@ -28,8 +28,8 @@ export function DocumentTabStrip({ tabs, activePath, onSelect, onClose }: Docume
         return (
           <div
             key={tab.path}
-            className={`group flex max-w-[14rem] min-w-0 shrink-0 items-center gap-1 border-r border-border-subtle px-2 py-1.5 ${
-              active ? "bg-background text-text-primary" : "text-text-muted hover:bg-background/60"
+            className={`group flex max-w-[14rem] min-w-0 shrink-0 items-center gap-1 border-r border-border/40 px-2 py-1.5 ${
+              active ? "bg-surface text-text-primary" : "text-text-muted hover:bg-surface/60"
             }`}
           >
             <button

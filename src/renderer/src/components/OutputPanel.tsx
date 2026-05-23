@@ -55,7 +55,7 @@ export function OutputPanel() {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-end gap-2 border-b border-border-subtle px-2 py-1">
+      <div className="flex shrink-0 items-center justify-end gap-2 border-b border-border/40 px-2 py-1">
         <button
           type="button"
           className="rounded px-2 py-0.5 text-[10px] font-medium text-text-muted transition-colors duration-100 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"

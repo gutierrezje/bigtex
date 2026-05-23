@@ -29,7 +29,7 @@ export function EditorBottomPanel({
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-2 py-1 select-none">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border/40 px-2 py-1 select-none">
         <div className="flex min-w-0 flex-1 items-center gap-0.5">
           <BottomTabButton
             active={activeTab === "problems"}

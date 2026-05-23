@@ -115,7 +115,7 @@ function ChatThread({ onApplyPatch }: ChatThreadProps) {
         <ThreadPrimitive.ViewportFooter />
       </ThreadPrimitive.Viewport>
 
-      <ComposerPrimitive.Root className="border-t border-border-subtle bg-surface-raised p-2">
+      <ComposerPrimitive.Root className="border-t border-border/40 bg-surface-raised p-2">
         {/* Model & Thinking Toolbar */}
         <AgentModelToolbar />
 
@@ -136,7 +136,7 @@ export function AgentPanel({
 }: AgentPanelProps) {
   return (
     <aside className="grid h-full min-h-0 min-w-0 grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden bg-surface-raised">
-      <header className="shrink-0 flex items-center justify-between gap-3 border-b border-border-subtle px-3 py-2 select-none bg-surface-raised/40">
+      <header className="shrink-0 flex items-center justify-between gap-3 border-b border-border/40 px-3 py-2 select-none">
         <div>
           <span className="text-[9px] font-semibold uppercase tracking-wider text-text-muted/70">
             agent
@@ -156,7 +156,7 @@ export function AgentPanel({
         ) : null}
       </header>
 
-      <div className="shrink-0 flex justify-between gap-2 px-3 py-1.5 text-[10px] text-text-muted/80 select-none border-b border-border-subtle/50 bg-surface/30">
+      <div className="shrink-0 flex justify-between gap-2 border-b border-border/40 px-3 py-1.5 text-[10px] text-text-muted/80 select-none">
         <span>{activeFile ? `selected: ${activeFile}` : "no active file"}</span>
         <span>
           {problemCounts

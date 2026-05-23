@@ -249,7 +249,7 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
       </div>
 
       {pdf ? (
-        <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-border-subtle px-2 py-1">
+        <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-border/40 px-2 py-1">
           <span className="text-xs font-medium text-text-muted">
             Page {pageNumber} of {pageCount || "?"}
           </span>

@@ -461,7 +461,7 @@ export function App() {
   return (
     <main
       data-testid="editor-root"
-      className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-background"
+      className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-surface-raised"
     >
       {project ? (
         <AppChromeBar

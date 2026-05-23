@@ -57,6 +57,7 @@
   --color-surface-inset: #060607;
   --color-border: #1d1d20;
   --color-border-subtle: #141416;
+  --color-divider: color-mix(in srgb, var(--color-border) 40%, transparent);
   --color-text-primary: #f4f4f6;
   --color-text-secondary: #96969e;
   --color-text-muted: #55555c;
@@ -123,7 +124,7 @@ ul {
 /* ── Monaco Editor Overrides ── */
 .monaco-editor,
 .monaco-editor .overflow-guard {
-  border-radius: 0 0 8px 8px;
+  border-radius: 0;
 }
 
 /* ── Agent Markdown Overrides ── */
@@ -225,67 +226,55 @@ ul {
   margin-bottom: 0;
 }
 
-/* ── Resizable Panels ── */
+/* ── Resizable Panels (1px divider, flush tiles) ── */
 .resize-handle-horizontal {
   position: relative;
-  flex: 0 0 6px;
-  width: 6px;
-  background: transparent;
+  flex: 0 0 1px;
+  width: 1px;
+  min-width: 1px;
+  background: var(--color-divider);
   cursor: col-resize;
   z-index: 10;
+  transition: background 150ms ease;
 }
 
 .resize-handle-vertical {
   position: relative;
-  flex: 0 0 6px;
-  height: 6px;
-  background: transparent;
+  flex: 0 0 1px;
+  height: 1px;
+  min-height: 1px;
+  background: var(--color-divider);
   cursor: row-resize;
   z-index: 10;
+  transition: background 150ms ease;
 }
 
-.resize-handle-horizontal::after {
+.resize-handle-horizontal::before {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 2.5px;
-  width: 1px;
+  left: -4px;
+  width: 9px;
   content: "";
-  background: var(--color-border);
-  opacity: 0.4;
-  transition:
-    background 150ms ease,
-    opacity 150ms ease,
-    transform 150ms ease;
 }
 
-.resize-handle-vertical::after {
+.resize-handle-vertical::before {
   position: absolute;
   left: 0;
   right: 0;
-  top: 2.5px;
-  height: 1px;
+  top: -4px;
+  height: 9px;
   content: "";
-  background: var(--color-border);
-  opacity: 0.4;
-  transition:
-    background 150ms ease,
-    opacity 150ms ease,
-    transform 150ms ease;
 }
 
-.resize-handle-horizontal[data-resize-handle-active]::after,
-.resize-handle-horizontal:hover::after {
+.resize-handle-horizontal[data-resize-handle-active],
+.resize-handle-horizontal:hover {
   background: var(--color-accent);
-  opacity: 1;
-  transform: scaleX(2);
 }
 
-.resize-handle-vertical[data-resize-handle-active]::after,
-.resize-handle-vertical:hover::after {
+.resize-handle-vertical[data-resize-handle-active],
+.resize-handle-vertical:hover {
   background: var(--color-accent);
-  opacity: 1;
-  transform: scaleY(2);
 }
 
 /* ── PDF Canvas ── */

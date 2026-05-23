@@ -170,7 +170,7 @@ export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: Problems
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
-      <div className="flex gap-1 border-b border-border-subtle px-2 py-1.5">
+      <div className="flex gap-1 border-b border-border/40 px-2 py-1.5">
         {TABS.map((tab) => {
           const count = tabCount(tab.id, counts, diagnostics.length);
           const active = activeTab === tab.id;
