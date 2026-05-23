@@ -123,6 +123,58 @@ ul {
   background: #3f3f46;
 }
 
+/* ── Project tree rows (Explorer-like list density) ── */
+.tree-row {
+  display: grid;
+  width: 100%;
+  min-height: 22px;
+  height: 22px;
+  align-items: center;
+  grid-template-columns: 16px 16px minmax(0, 1fr);
+  column-gap: 4px;
+  border: 0;
+  border-radius: 0;
+  padding: 0 4px;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 100ms ease,
+    color 100ms ease;
+}
+
+.tree-row-chevron,
+.tree-row-icon {
+  display: flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.tree-row-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-row:hover {
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  color: var(--color-text-primary);
+}
+
+.tree-row--selected {
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  color: var(--color-text-primary);
+}
+
+.tree-row--active {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
 /* ── Monaco Editor Overrides ── */
 .monaco-editor,
 .monaco-editor .overflow-guard {

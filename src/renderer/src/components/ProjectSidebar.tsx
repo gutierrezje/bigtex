@@ -1,9 +1,10 @@
 import { type MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectFile, ProjectSnapshot } from "../../../shared/domain";
 import { isPdfPath, parentDirectoryPath } from "../../../shared/projectFiles";
-import { TREE_LABEL_CLASS, TREE_ROOT_LABEL_CLASS } from "../lib/treeTypography";
+import { TREE_LABEL_CLASS } from "../lib/treeTypography";
 import { PdfFileIcon } from "./icons/PdfFileIcon";
 import { NewFileDialog } from "./NewFileDialog";
+import { ProjectSidebarHeader } from "./ProjectSidebarHeader";
 
 interface ProjectSidebarProps {
   project: ProjectSnapshot | null;
@@ -12,6 +13,7 @@ interface ProjectSidebarProps {
   onCreateFile(parentPath: string, name: string): Promise<void>;
   onRenamePath(path: string, newName: string): Promise<void>;
   onDeletePath(path: string): Promise<void>;
+  onRefresh(): void | Promise<void>;
   onError(message: string): void;
 }
 
@@ -31,7 +33,7 @@ function ChevronIcon({ expanded }: { expanded: boolean }) {
       strokeWidth="2.5"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`h-3 w-3 shrink-0 text-text-muted transition-transform duration-150 ${
+      className={`h-4 w-4 shrink-0 text-text-muted transition-transform duration-150 ${
         expanded ? "rotate-90" : ""
       }`}
     >
@@ -47,7 +49,7 @@ function FolderIcon({ expanded }: { expanded: boolean }) {
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill="currentColor"
-      className="h-3.5 w-3.5 shrink-0 text-text-muted/70"
+      className="h-4 w-4 shrink-0 text-text-muted/70"
     >
       <title>{expanded ? "Expanded Folder" : "Collapsed Folder"}</title>
       {expanded ? (
@@ -61,7 +63,7 @@ function FolderIcon({ expanded }: { expanded: boolean }) {
 
 function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
   if (kind === "pdf" || isPdfPath(fileName)) {
-    return <PdfFileIcon className="h-3.5 w-3.5 shrink-0" />;
+    return <PdfFileIcon className="h-4 w-4 shrink-0" />;
   }
 
   if (kind === "tex") {
@@ -70,7 +72,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
         fill="currentColor"
-        className="h-3.5 w-3.5 shrink-0 text-text-secondary"
+        className="h-4 w-4 shrink-0 text-text-secondary"
       >
         <title>LaTeX Source File</title>
         <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
@@ -89,7 +91,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-3.5 w-3.5 shrink-0 text-text-muted"
+        className="h-4 w-4 shrink-0 text-text-muted"
       >
         <title>Bibliography Database File</title>
         <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -109,7 +111,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-3.5 w-3.5 shrink-0 text-text-muted"
+        className="h-4 w-4 shrink-0 text-text-muted"
       >
         <title>Style or Class File</title>
         <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -129,7 +131,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-3.5 w-3.5 shrink-0 text-text-muted"
+        className="h-4 w-4 shrink-0 text-text-muted"
       >
         <title>Configuration File</title>
         <circle cx="12" cy="12" r="3" />
@@ -147,7 +149,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="h-3.5 w-3.5 shrink-0 text-text-muted"
+      className="h-4 w-4 shrink-0 text-text-muted"
     >
       <title>Document File</title>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -156,6 +158,15 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
       <line x1="16" y1="17" x2="8" y2="17" />
     </svg>
   );
+}
+
+function treeRowButtonClass(isActive: boolean, isSelected: boolean): string {
+  const state = isActive
+    ? "tree-row--active"
+    : isSelected
+      ? "tree-row--selected"
+      : "text-text-secondary";
+  return `tree-row ${TREE_LABEL_CLASS} ${state}`;
 }
 
 function InlineNameEditor({
@@ -180,7 +191,7 @@ function InlineNameEditor({
       ref={inputRef}
       type="text"
       value={value}
-      className={`min-w-0 flex-1 rounded border border-accent/50 bg-zinc-900 px-1 py-0 ${TREE_LABEL_CLASS} text-text-primary outline-none`}
+      className={`min-w-0 flex-1 rounded-sm border border-accent/50 bg-zinc-900 px-1 py-0 text-[13px] leading-[22px] text-text-primary outline-none`}
       onChange={(event) => setValue(event.target.value)}
       onBlur={() => onCommit(value.trim())}
       onKeyDown={(event) => {
@@ -244,11 +255,7 @@ function FileRow({
   return (
     <li className="list-none">
       <button
-        className={`flex w-full items-center gap-1 rounded-sm border-0 bg-transparent px-1 py-0.5 text-left ${TREE_LABEL_CLASS} transition-colors duration-100 ${
-          isActive || isSelected
-            ? "bg-accent-muted text-text-primary"
-            : "text-text-secondary hover:bg-surface-inset hover:text-text-primary"
-        }`}
+        className={treeRowButtonClass(isActive, isSelected)}
         type="button"
         onClick={handleClick}
         onDoubleClick={(event) => {
@@ -257,17 +264,16 @@ function FileRow({
         }}
         onContextMenu={(event) => onContextMenu(event, file)}
       >
-        {isFolder ? (
-          <>
-            <ChevronIcon expanded={isExpanded} />
+        <span className="tree-row-chevron" aria-hidden={!isFolder}>
+          {isFolder ? <ChevronIcon expanded={isExpanded} /> : null}
+        </span>
+        <span className="tree-row-icon" aria-hidden={isFolder}>
+          {isFolder ? (
             <FolderIcon expanded={isExpanded} />
-          </>
-        ) : (
-          <>
-            <span className="w-2 shrink-0" />
+          ) : (
             <FileIcon kind={file.kind} fileName={file.name} />
-          </>
-        )}
+          )}
+        </span>
         {isRenaming ? (
           <InlineNameEditor
             initialValue={file.name}
@@ -275,9 +281,7 @@ function FileRow({
             onCancel={onCancelRename}
           />
         ) : (
-          <span className={`truncate ${TREE_LABEL_CLASS}`}>
-            {isFolder ? file.name.toUpperCase() : file.name}
-          </span>
+          <span className="tree-row-label">{file.name}</span>
         )}
       </button>
 
@@ -313,6 +317,7 @@ export function ProjectSidebar({
   onCreateFile,
   onRenamePath,
   onDeletePath,
+  onRefresh,
   onError,
 }: ProjectSidebarProps) {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set());
@@ -437,6 +442,10 @@ export function ProjectSidebar({
     setNewFileDialog({ parentPath: parentPathForSelection() });
   };
 
+  const collapseAllFolders = () => {
+    setExpandedPaths(new Set());
+  };
+
   const handleCreateNewFile = async (fileName: string) => {
     if (!newFileDialog) return;
     try {
@@ -466,62 +475,42 @@ export function ProjectSidebar({
   return (
     <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
       {project ? (
-        <div
-          ref={treeRef}
-          role="tree"
-          tabIndex={0}
-          className="flex-1 overflow-y-auto px-1 pb-3 pt-1 outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
-          onKeyDown={handleTreeKeyDown}
-          onContextMenu={handleWorkspaceContextMenu}
-        >
-          <ul className="m-0 p-0">
-            <li className="list-none">
-              <div className="flex w-full items-center gap-1 px-1 py-0.5">
-                <span className={`min-w-0 flex-1 truncate ${TREE_ROOT_LABEL_CLASS}`}>
-                  {project.name.toUpperCase()}
-                </span>
-                <button
-                  type="button"
-                  title="Add new file"
-                  className="shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-primary cursor-pointer"
-                  onClick={openNewFileDialog}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-3 w-3"
-                  >
-                    <title>Add new file</title>
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                </button>
-              </div>
-            </li>
-            {project.files.map((file) => (
-              <FileRow
-                key={file.path}
-                file={file}
-                activePath={activePath}
-                selectedPath={selectedPath}
-                renamingPath={renamingPath}
-                onOpenFile={onOpenFile}
-                onSelect={(entry) => setSelectedPath(entry.path)}
-                onStartRename={startRename}
-                onCommitRename={(path, newName) => void commitRename(path, newName)}
-                onCancelRename={() => setRenamingPath(null)}
-                expandedPaths={expandedPaths}
-                onToggleExpand={handleToggleExpand}
-                onContextMenu={handleContextMenu}
-              />
-            ))}
-          </ul>
-        </div>
+        <>
+          <ProjectSidebarHeader
+            projectName={project.name}
+            onNewFile={openNewFileDialog}
+            onCollapseAll={collapseAllFolders}
+            onRefresh={() => void onRefresh()}
+          />
+          <div
+            ref={treeRef}
+            role="tree"
+            tabIndex={0}
+            className="flex-1 overflow-y-auto px-0 pb-3 pt-1 outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+            onKeyDown={handleTreeKeyDown}
+            onContextMenu={handleWorkspaceContextMenu}
+          >
+            <ul className="m-0 p-0">
+              {project.files.map((file) => (
+                <FileRow
+                  key={file.path}
+                  file={file}
+                  activePath={activePath}
+                  selectedPath={selectedPath}
+                  renamingPath={renamingPath}
+                  onOpenFile={onOpenFile}
+                  onSelect={(entry) => setSelectedPath(entry.path)}
+                  onStartRename={startRename}
+                  onCommitRename={(path, newName) => void commitRename(path, newName)}
+                  onCancelRename={() => setRenamingPath(null)}
+                  expandedPaths={expandedPaths}
+                  onToggleExpand={handleToggleExpand}
+                  onContextMenu={handleContextMenu}
+                />
+              ))}
+            </ul>
+          </div>
+        </>
       ) : (
         <div className="px-4 text-xs leading-relaxed text-text-muted">
           Use <span className="font-medium text-text-secondary">File → Open Folder…</span> in the

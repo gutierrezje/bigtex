@@ -508,6 +508,7 @@ export function App() {
                 onCreateFile={createProjectFile}
                 onRenamePath={renameProjectPath}
                 onDeletePath={deleteProjectPath}
+                onRefresh={() => void refreshProjectFiles()}
                 onError={(message) => {
                   appendOutput(message, "error");
                   setEditorBottomTab("output");
