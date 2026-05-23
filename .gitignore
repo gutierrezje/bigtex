@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Perf automation artifacts
+perf-traces/
+
 # Build outputs
 out/
 dist/

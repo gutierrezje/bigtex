@@ -170,6 +170,7 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
 
             {/* Load Sample Project */}
             <button
+              data-testid="welcome-open-sample"
               onClick={handleOpenSample}
               className="welcome-card-flat text-left p-4 rounded-xl flex items-center gap-4 cursor-pointer group outline-none"
               type="button"

@@ -26,6 +26,7 @@ import {
   loadProject,
   readProjectFile,
   renameProjectPath,
+  resolveSampleProjectPath,
   writeProjectFile,
 } from "./files/project";
 import { addRecent, clearRecents, getRecents, removeRecent } from "./files/recents";
@@ -34,6 +35,11 @@ import { getMarks, measure, recordMark } from "./performance/marks";
 
 const appStartedAt = performance.now();
 let mainWindow: BrowserWindow | null = null;
+
+if (process.env.BIGTEX_PERF_CDP === "1") {
+  const port = process.env.BIGTEX_PERF_CDP_PORT ?? "9333";
+  app.commandLine.appendSwitch("remote-debugging-port", port);
+}
 
 app.setName("BigTeX");
 
@@ -106,7 +112,7 @@ function registerIpc(): void {
   });
 
   ipcMain.handle(IPC_CHANNELS.projectLoadSample, async () => {
-    const samplePath = join(app.getAppPath(), "samples/minimal");
+    const samplePath = await resolveSampleProjectPath(app.getAppPath());
     const snapshot = await measure("project:load", () => loadProject(samplePath));
     if (snapshot) {
       await addRecent(samplePath, "Sample Project");

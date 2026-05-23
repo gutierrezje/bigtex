@@ -134,6 +134,27 @@ export function defaultSampleProjectPath(appRoot: string): string {
   return resolve(appRoot, "samples/minimal");
 }
 
+/** Resolve bundled sample when app runs from repo root, `out/`, or asar. */
+export async function resolveSampleProjectPath(
+  appRoot: string,
+  cwd = process.cwd(),
+): Promise<string> {
+  const candidates = [
+    defaultSampleProjectPath(appRoot),
+    defaultSampleProjectPath(resolve(appRoot, "../..")),
+    defaultSampleProjectPath(cwd),
+  ];
+  for (const candidate of candidates) {
+    try {
+      const info = await stat(candidate);
+      if (info.isDirectory()) return candidate;
+    } catch {
+      // try next candidate
+    }
+  }
+  return candidates[0];
+}
+
 export function defaultMainFile(rootPath: string, preferred: string | null): string {
   return preferred ?? relative(rootPath, join(rootPath, "main.tex"));
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PanelImperativeHandle } from "react-resizable-panels";
+import type { OnPanelResize, PanelImperativeHandle } from "react-resizable-panels";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { getActiveEditor, listDirtyEditorPaths } from "../../shared/documentTabs";
 import type { CompileDiagnostic, ProjectFile, ProjectSnapshot } from "../../shared/domain";
@@ -31,6 +31,14 @@ function selectable(file: ProjectFile): boolean {
 function tabLabel(path: string): string {
   const parts = path.split(/[/\\]/);
   return parts[parts.length - 1] || path;
+}
+
+function collapsiblePanelOnResize(setCollapsed: (collapsed: boolean) => void): OnPanelResize {
+  return (size, _id, prev) => {
+    if (prev !== undefined) {
+      setCollapsed(size.asPercentage < 1);
+    }
+  };
 }
 
 export function App() {
@@ -447,7 +455,10 @@ export function App() {
   }
 
   return (
-    <main className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-background">
+    <main
+      data-testid="editor-root"
+      className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-background"
+    >
       <CommandBar
         projectName={project?.name ?? null}
         filePath={activeEditor?.path ?? null}
@@ -473,11 +484,7 @@ export function App() {
               defaultSize="16%"
               minSize="12%"
               maxSize="25%"
-              onResize={(size, _, prev) => {
-                if (prev !== undefined) {
-                  setIsSidebarCollapsed(size.asPercentage < 1);
-                }
-              }}
+              onResize={collapsiblePanelOnResize(setIsSidebarCollapsed)}
               className="h-full min-h-0 min-w-0"
             >
               <ProjectSidebar
@@ -536,11 +543,7 @@ export function App() {
                       collapsible={true}
                       defaultSize="48%"
                       minSize="20%"
-                      onResize={(size, _, prev) => {
-                        if (prev !== undefined) {
-                          setIsPdfCollapsed(size.asPercentage < 1);
-                        }
-                      }}
+                      onResize={collapsiblePanelOnResize(setIsPdfCollapsed)}
                       className="min-h-0 min-w-0"
                     >
                       <PdfViewerWorkbench
@@ -564,11 +567,7 @@ export function App() {
                   defaultSize="22%"
                   minSize="14%"
                   maxSize="45%"
-                  onResize={(size, _, prev) => {
-                    if (prev !== undefined) {
-                      setIsDiagnosticsCollapsed(size.asPercentage < 1);
-                    }
-                  }}
+                  onResize={collapsiblePanelOnResize(setIsDiagnosticsCollapsed)}
                   className="min-h-0 min-w-0"
                 >
                   <EditorBottomPanel
@@ -596,11 +595,7 @@ export function App() {
               collapsible={true}
               defaultSize="27%"
               minSize="20%"
-              onResize={(size, _, prev) => {
-                if (prev !== undefined) {
-                  setIsAgentCollapsed(size.asPercentage < 1);
-                }
-              }}
+              onResize={collapsiblePanelOnResize(setIsAgentCollapsed)}
               className="min-h-0 min-w-0"
             >
               <AgentPanel

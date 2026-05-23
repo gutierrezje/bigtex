@@ -9,13 +9,18 @@
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "tsc --noEmit && electron-vite build",
+    "build": "pnpm run typecheck && electron-vite build",
     "preview": "electron-vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "build:perf": "BIGTEX_PERF_PROFILE=1 electron-vite build",
+    "perf:trace": "tsx scripts/perf/trace-electron.ts",
+    "perf:trace:dev": "BIGTEX_PERF_DEV=1 tsx scripts/perf/trace-electron.ts",
+    "perf": "pnpm run build:perf && pnpm run perf:trace",
+    "perf:parse": "tsx scripts/perf/parse-trace-cli.ts",
     "postinstall": "node scripts/patch-electron-mac-name.mjs",
     "prepare": "simple-git-hooks"
   },
@@ -32,6 +37,8 @@
   "dependencies": {
     "@assistant-ui/react": "^0.12.28",
     "@monaco-editor/react": "latest",
+    "@shikijs/langs": "4.0.2",
+    "@shikijs/themes": "4.0.2",
     "@vitejs/plugin-react": "^5.2.0",
     "electron-updater": "latest",
     "geist": "^1.7.0",
@@ -43,6 +50,7 @@
     "react-resizable-panels": "^4.11.0",
     "react-shiki": "latest",
     "remark-gfm": "latest",
+    "shiki": "4.0.2",
     "zod": "latest",
     "zustand": "latest"
   },
@@ -54,8 +62,10 @@
     "@types/react-dom": "latest",
     "electron": "latest",
     "electron-vite": "latest",
+    "playwright": "latest",
     "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.2.4",
+    "tsx": "latest",
     "typescript": "latest",
     "vite": "^7.3.2",
     "vitest": "^4.1.6"

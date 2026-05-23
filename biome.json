@@ -22,6 +22,14 @@
     }
   },
   "files": {
-    "includes": ["src/**", "electron.vite.config.ts", "package.json", "tsconfig.json"]
+    "includes": [
+      "src/**",
+      "electron.vite.config.ts",
+      "package.json",
+      "tsconfig.json",
+      "tsconfig.base.json",
+      "tsconfig.node.json",
+      "tsconfig.web.json"
+    ]
   }
 }

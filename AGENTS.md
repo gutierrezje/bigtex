@@ -56,7 +56,10 @@ pnpm run lint
 pnpm run typecheck
 pnpm test
 pnpm run build
+pnpm run perf:trace    # Chromium timeline + llm-*.json in perf-traces/
 ```
+
+See `scripts/perf/README.md` for scenarios (`BIGTEX_PERF_SCENARIO`, `BIGTEX_PERF_DEV`).
 
 Pre-commit runs Biome lint + format on staged files, then `pnpm test` (`pnpm install` registers hooks).
 
@@ -78,7 +81,7 @@ Single-context: one root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`
 
 | Tool | Entry | Notes |
 |------|-------|-------|
-| TypeScript | tsconfig.json | Shared tsconfig for main/preload/renderer |
+| TypeScript | tsconfig.node.json, tsconfig.web.json | Main/preload vs renderer (root tsconfig is references only) |
 | Electron/Vite | electron.vite.config.ts | Build/serve wiring |
 
 ## UNIQUE STYLES

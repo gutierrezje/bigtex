@@ -3,6 +3,8 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 
+const perfProfile = process.env.BIGTEX_PERF_PROFILE === "1";
+
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
@@ -31,6 +33,9 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, "src/renderer"),
     plugins: [tailwindcss(), react()],
+    define: {
+      "import.meta.env.VITE_BIGTEX_PERF": JSON.stringify(perfProfile),
+    },
     build: {
       rollupOptions: {
         input: resolve(__dirname, "src/renderer/index.html"),
