@@ -1,36 +1,30 @@
-import { PdfFileIcon } from "./icons/PdfFileIcon";
-
 interface PanelToggleButtonsProps {
-  showDiagnostics: boolean;
-  onToggleDiagnostics(): void;
-  showPdf: boolean;
-  onTogglePdf(): void;
+  showOutput: boolean;
+  onToggleOutput(): void;
   showAgent: boolean;
   onToggleAgent(): void;
 }
 
 export function PanelToggleButtons({
-  showDiagnostics,
-  onToggleDiagnostics,
-  showPdf,
-  onTogglePdf,
+  showOutput,
+  onToggleOutput,
   showAgent,
   onToggleAgent,
 }: PanelToggleButtonsProps) {
   const toggleClass = (active: boolean) =>
-    `rounded border p-1.5 transition-all duration-100 cursor-pointer ${
+    `rounded border p-1.5 transition-all duration-200 cursor-pointer ${
       active
-        ? "border-accent/20 bg-accent/8 text-text-primary"
-        : "border-transparent text-text-muted hover:text-text-secondary"
+        ? "border-transparent bg-surface-raised text-text-primary"
+        : "border-transparent text-text-muted hover:text-text-secondary hover:bg-surface-raised/50"
     }`;
 
   return (
     <>
       <button
         type="button"
-        title="Toggle Problems"
-        className={toggleClass(showDiagnostics)}
-        onClick={onToggleDiagnostics}
+        title="Toggle Output Panel"
+        className={toggleClass(showOutput)}
+        onClick={onToggleOutput}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -42,22 +36,21 @@ export function PanelToggleButtons({
           strokeLinejoin="round"
           className="h-3.5 w-3.5"
         >
-          <title>Toggle Problems</title>
+          <title>Toggle Output Panel</title>
           <rect width="18" height="18" x="3" y="3" rx="2" />
-          <path d="M3 15h18" />
-          <path d="m8 9 2 2-2 2" />
+          <line
+            x1="3"
+            y1="15"
+            x2="21"
+            y2="15"
+            style={{
+              transform: showOutput ? "translateY(0px)" : "translateY(6px)",
+              opacity: showOutput ? 1 : 0,
+              transition:
+                "transform 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease-in-out",
+            }}
+          />
         </svg>
-      </button>
-
-      <button
-        type="button"
-        title="Toggle PDF viewer"
-        className={toggleClass(showPdf)}
-        onClick={onTogglePdf}
-      >
-        <PdfFileIcon
-          className={`h-3.5 w-3.5 ${showPdf ? "text-text-primary" : "text-text-muted"}`}
-        />
       </button>
 
       <button
@@ -77,8 +70,19 @@ export function PanelToggleButtons({
           className="h-3.5 w-3.5"
         >
           <title>Toggle AI Agent</title>
-          <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-          <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5Z" opacity="0.4" />
+          <rect width="18" height="18" x="3" y="3" rx="2" />
+          <line
+            x1="15"
+            y1="3"
+            x2="15"
+            y2="21"
+            style={{
+              transform: showAgent ? "translateX(0px)" : "translateX(6px)",
+              opacity: showAgent ? 1 : 0,
+              transition:
+                "transform 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease-in-out",
+            }}
+          />
         </svg>
       </button>
     </>

@@ -15,10 +15,8 @@ interface AppChromeBarProps {
   sidebarOpen: boolean;
   showWindowControls: boolean;
   onToggleSidebar(): void;
-  showDiagnostics: boolean;
-  onToggleDiagnostics(): void;
-  showPdf: boolean;
-  onTogglePdf(): void;
+  showOutput: boolean;
+  onToggleOutput(): void;
   showAgent: boolean;
   onToggleAgent(): void;
 }
@@ -33,10 +31,8 @@ export function AppChromeBar({
   sidebarOpen,
   showWindowControls,
   onToggleSidebar,
-  showDiagnostics,
-  onToggleDiagnostics,
-  showPdf,
-  onTogglePdf,
+  showOutput,
+  onToggleOutput,
   showAgent,
   onToggleAgent,
 }: AppChromeBarProps) {
@@ -73,10 +69,8 @@ export function AppChromeBar({
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         <PanelToggleButtons
-          showDiagnostics={showDiagnostics}
-          onToggleDiagnostics={onToggleDiagnostics}
-          showPdf={showPdf}
-          onTogglePdf={onTogglePdf}
+          showOutput={showOutput}
+          onToggleOutput={onToggleOutput}
           showAgent={showAgent}
           onToggleAgent={onToggleAgent}
         />

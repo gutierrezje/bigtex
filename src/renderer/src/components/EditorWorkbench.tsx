@@ -13,6 +13,8 @@ interface EditorWorkbenchProps {
   onCloseTab(path: string): void;
   onDraftChange(path: string, content: string): void;
   onSave(path: string, content: string): void | Promise<void>;
+  showPdf: boolean;
+  onTogglePdf(): void;
 }
 
 export function EditorWorkbench({
@@ -24,6 +26,8 @@ export function EditorWorkbench({
   onCloseTab,
   onDraftChange,
   onSave,
+  showPdf,
+  onTogglePdf,
 }: EditorWorkbenchProps) {
   const activeFile = getActiveEditor(tabs);
 
@@ -34,6 +38,8 @@ export function EditorWorkbench({
         activePath={tabs.activePath}
         onSelect={onSelectTab}
         onClose={onCloseTab}
+        showPdf={showPdf}
+        onTogglePdf={onTogglePdf}
       />
       <EditorPane
         file={activeFile}

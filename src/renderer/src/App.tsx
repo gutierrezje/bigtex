@@ -102,11 +102,17 @@ export function App() {
     }
   };
 
-  const handleToggleDiagnostics = () => {
+  const handleToggleOutput = () => {
     const panel = diagnosticsRef.current;
     if (panel) {
-      if (panel.isCollapsed()) panel.expand();
-      else panel.collapse();
+      if (panel.isCollapsed()) {
+        panel.expand();
+        setEditorBottomTab("output");
+      } else if (editorBottomTab === "output") {
+        panel.collapse();
+      } else {
+        setEditorBottomTab("output");
+      }
     }
   };
 
@@ -470,10 +476,8 @@ export function App() {
           sidebarOpen={!isSidebarCollapsed}
           showWindowControls={isFullscreen}
           onToggleSidebar={handleToggleSidebar}
-          showDiagnostics={!isDiagnosticsCollapsed}
-          onToggleDiagnostics={handleToggleDiagnostics}
-          showPdf={!isPdfCollapsed}
-          onTogglePdf={handleTogglePdf}
+          showOutput={!isDiagnosticsCollapsed && editorBottomTab === "output"}
+          onToggleOutput={handleToggleOutput}
           showAgent={!isAgentCollapsed}
           onToggleAgent={handleToggleAgent}
         />
@@ -536,6 +540,8 @@ export function App() {
                         onCloseTab={requestCloseEditorTab}
                         onDraftChange={updateEditorTabContent}
                         onSave={saveEditorTab}
+                        showPdf={!isPdfCollapsed}
+                        onTogglePdf={handleTogglePdf}
                       />
                     </Panel>
 
