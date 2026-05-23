@@ -380,10 +380,6 @@ export function App() {
     });
   }
 
-  const problemCounts = compileResult
-    ? countDiagnosticsBySeverity(compileResult.diagnostics)
-    : null;
-
   async function applyPatch(patch: string): Promise<void> {
     if (!project) return;
     const result = await window.bigTex.patch.apply({ rootPath: project.rootPath, patch });
@@ -603,7 +599,6 @@ export function App() {
               <AgentPanel
                 rootPath={project?.rootPath ?? null}
                 activeFile={activeEditor?.path ?? null}
-                problemCounts={problemCounts}
                 chat={agentChat}
                 onRun={runAgent}
                 onCancel={(runId) => window.bigTex.agent.cancel({ runId })}

@@ -22,7 +22,6 @@ import { BigTexAssistantRuntime } from "./agent/BigTexAssistantRuntime";
 interface AgentPanelProps {
   rootPath: string | null;
   activeFile: string | null;
-  problemCounts: { errors: number; warnings: number } | null;
   chat: AgentChatState;
   onRun(prompt: string, modelId: string, reasoningLevel: string | null): Promise<void>;
   onCancel(runId: string): Promise<void>;
@@ -106,10 +105,23 @@ function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<vo
 }
 
 interface ChatThreadProps {
+  activeFile: string | null;
   onApplyPatch(patch: string): Promise<void>;
 }
 
-function ChatThread({ onApplyPatch }: ChatThreadProps) {
+function AgentComposerContext({ activeFile }: { activeFile: string | null }) {
+  return (
+    <div
+      className={`min-w-0 truncate px-1 pt-0.5 pb-1 ${CHROME_META_CLASS} text-text-muted select-none`}
+      title={activeFile ?? undefined}
+    >
+      <span className="text-text-muted/80">context: </span>
+      <span className="font-mono text-text-secondary">{activeFile ?? "none"}</span>
+    </div>
+  );
+}
+
+function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
   return (
     <ThreadPrimitive.Root className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
       <ThreadPrimitive.Viewport
@@ -125,9 +137,8 @@ function ChatThread({ onApplyPatch }: ChatThreadProps) {
       </ThreadPrimitive.Viewport>
 
       <ComposerPrimitive.Root className="border-t border-border/40 bg-surface px-2 pb-2 pt-2">
-        {/* Model & Thinking Toolbar */}
+        <AgentComposerContext activeFile={activeFile} />
         <AgentModelToolbar />
-
         <AgentComposer />
       </ComposerPrimitive.Root>
     </ThreadPrimitive.Root>
@@ -137,14 +148,13 @@ function ChatThread({ onApplyPatch }: ChatThreadProps) {
 export function AgentPanel({
   rootPath,
   activeFile,
-  problemCounts,
   chat,
   onRun,
   onCancel,
   onApplyPatch,
 }: AgentPanelProps) {
   return (
-    <aside className="grid h-full min-h-0 min-w-0 grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden bg-surface-raised">
+    <aside className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-surface-raised">
       <header className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/40 px-2 select-none">
         <h2
           className={`min-w-0 flex-1 truncate text-text-secondary ${CHROME_TITLE_CLASS}`}
@@ -163,19 +173,8 @@ export function AgentPanel({
         ) : null}
       </header>
 
-      <div
-        className={`flex h-7 shrink-0 items-center justify-between gap-2 border-b border-border/40 px-2 ${CHROME_META_CLASS} text-text-muted select-none`}
-      >
-        <span>{activeFile ? `selected: ${activeFile}` : "no active file"}</span>
-        <span>
-          {problemCounts
-            ? `${problemCounts.errors} error(s), ${problemCounts.warnings} warning(s)`
-            : "no compile yet"}
-        </span>
-      </div>
-
       <BigTexAssistantRuntime disabled={!rootPath} onRun={onRun} onCancel={onCancel}>
-        <ChatThread onApplyPatch={onApplyPatch} />
+        <ChatThread activeFile={activeFile} onApplyPatch={onApplyPatch} />
       </BigTexAssistantRuntime>
     </aside>
   );
