@@ -226,41 +226,41 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
               <ul className="flex flex-col gap-2">
                 {recents.map((item) => (
                   <li key={item.path}>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPath(item.path)}
-                      className="welcome-recent-item w-full flex items-center justify-between p-3 rounded-lg border border-border/20 bg-zinc-900/20 text-left cursor-pointer outline-none"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
+                    <div className="welcome-recent-item flex w-full items-center justify-between gap-2 rounded-lg border border-border/20 bg-zinc-900/20 p-1">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPath(item.path)}
+                        className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 text-left cursor-pointer outline-none hover:bg-zinc-800/40"
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
                           fill="currentColor"
-                          className="h-4.5 w-4.5 text-accent/80 shrink-0"
+                          className="h-4.5 w-4.5 shrink-0 text-accent/80"
                         >
                           <title>Project Folder</title>
                           <path d="M19.5 21a3 3 0 0 0 3-3V9a3 3 0 0 0-3-3h-5.379a1.5 1.5 0 0 1-1.06-.44L11.44 3.938A3 3 0 0 0 9.318 3H4.5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h15Z" />
                         </svg>
                         <div className="min-w-0">
-                          <h4 className="font-semibold text-text-primary text-sm truncate leading-tight group-hover:text-accent">
+                          <h4 className="truncate text-sm font-semibold leading-tight text-text-primary">
                             {item.name}
                           </h4>
                           <p
-                            className="text-xs text-text-muted truncate mt-0.5 font-mono max-w-[420px]"
+                            className="mt-0.5 max-w-[420px] truncate font-mono text-xs text-text-muted"
                             title={item.path}
                           >
                             {item.path}
                           </p>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
+                      </button>
+                      <div className="flex shrink-0 items-center gap-2 pr-2">
                         <span className="text-[11px] text-text-muted">
                           {formatDate(item.lastOpened)}
                         </span>
                         <button
                           type="button"
                           onClick={(e) => handleRemoveRecent(e, item.path)}
-                          className="welcome-recent-delete-btn p-1 text-text-muted hover:text-rose-400 rounded transition-colors duration-150"
+                          className="welcome-recent-delete-btn rounded p-1 text-text-muted transition-colors duration-150 hover:text-rose-400"
                           title="Remove from history"
                         >
                           <svg
@@ -280,7 +280,7 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
                           </svg>
                         </button>
                       </div>
-                    </button>
+                    </div>
                   </li>
                 ))}
               </ul>
