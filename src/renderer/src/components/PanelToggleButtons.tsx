@@ -1,13 +1,13 @@
 interface PanelToggleButtonsProps {
-  showOutput: boolean;
-  onToggleOutput(): void;
+  bottomPanelOpen: boolean;
+  onToggleBottomPanel(): void;
   showAgent: boolean;
   onToggleAgent(): void;
 }
 
 export function PanelToggleButtons({
-  showOutput,
-  onToggleOutput,
+  bottomPanelOpen,
+  onToggleBottomPanel,
   showAgent,
   onToggleAgent,
 }: PanelToggleButtonsProps) {
@@ -22,9 +22,9 @@ export function PanelToggleButtons({
     <>
       <button
         type="button"
-        title="Toggle Output Panel"
-        className={toggleClass(showOutput)}
-        onClick={onToggleOutput}
+        title="Toggle Bottom Panel"
+        className={toggleClass(bottomPanelOpen)}
+        onClick={onToggleBottomPanel}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -36,7 +36,7 @@ export function PanelToggleButtons({
           strokeLinejoin="round"
           className="h-3.5 w-3.5"
         >
-          <title>Toggle Output Panel</title>
+          <title>Toggle Bottom Panel</title>
           <rect width="18" height="18" x="3" y="3" rx="2" />
           <line
             x1="3"
@@ -44,8 +44,8 @@ export function PanelToggleButtons({
             x2="21"
             y2="15"
             style={{
-              transform: showOutput ? "translateY(0px)" : "translateY(6px)",
-              opacity: showOutput ? 1 : 0,
+              transform: bottomPanelOpen ? "translateY(0px)" : "translateY(6px)",
+              opacity: bottomPanelOpen ? 1 : 0,
               transition:
                 "transform 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease-in-out",
             }}

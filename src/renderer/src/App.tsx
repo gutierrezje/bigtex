@@ -75,12 +75,12 @@ export function App() {
   const appendOutput = useAppStore((state) => state.appendOutput);
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isDiagnosticsCollapsed, setIsDiagnosticsCollapsed] = useState(false);
+  const [isBottomPanelCollapsed, setIsBottomPanelCollapsed] = useState(false);
   const [isPdfCollapsed, setIsPdfCollapsed] = useState(false);
   const [isAgentCollapsed, setIsAgentCollapsed] = useState(false);
 
   const sidebarRef = useRef<PanelImperativeHandle>(null);
-  const diagnosticsRef = useRef<PanelImperativeHandle>(null);
+  const bottomPanelRef = useRef<PanelImperativeHandle>(null);
   const pdfRef = useRef<PanelImperativeHandle>(null);
   const agentRef = useRef<PanelImperativeHandle>(null);
 
@@ -101,17 +101,15 @@ export function App() {
     }
   };
 
-  const handleToggleOutput = () => {
-    const panel = diagnosticsRef.current;
-    if (panel) {
-      if (panel.isCollapsed()) {
-        panel.expand();
-        setEditorBottomTab("output");
-      } else if (editorBottomTab === "output") {
-        panel.collapse();
-      } else {
-        setEditorBottomTab("output");
-      }
+  const handleToggleBottomPanel = () => {
+    const panel = bottomPanelRef.current;
+    if (!panel) return;
+    if (panel.isCollapsed()) {
+      panel.expand();
+      setIsBottomPanelCollapsed(false);
+    } else {
+      panel.collapse();
+      setIsBottomPanelCollapsed(true);
     }
   };
 
@@ -320,8 +318,11 @@ export function App() {
           "warning",
         );
         setEditorBottomTab("problems");
-        const panel = diagnosticsRef.current;
-        if (panel?.isCollapsed()) panel.expand();
+        const panel = bottomPanelRef.current;
+        if (panel?.isCollapsed()) {
+          panel.expand();
+          setIsBottomPanelCollapsed(false);
+        }
       }
     } finally {
       setCompiling(false);
@@ -479,8 +480,8 @@ export function App() {
           sidebarOpen={!isSidebarCollapsed}
           showWindowControls={isFullscreen}
           onToggleSidebar={handleToggleSidebar}
-          showOutput={!isDiagnosticsCollapsed && editorBottomTab === "output"}
-          onToggleOutput={handleToggleOutput}
+          bottomPanelOpen={!isBottomPanelCollapsed}
+          onToggleBottomPanel={handleToggleBottomPanel}
           showAgent={!isAgentCollapsed}
           onToggleAgent={handleToggleAgent}
         />
@@ -550,17 +551,17 @@ export function App() {
 
                 <Separator
                   className={`resize-handle-vertical ${
-                    isDiagnosticsCollapsed ? "hidden pointer-events-none" : ""
+                    isBottomPanelCollapsed ? "hidden pointer-events-none" : ""
                   }`}
                 />
 
                 <Panel
-                  panelRef={diagnosticsRef}
+                  panelRef={bottomPanelRef}
                   collapsible={true}
                   defaultSize="22%"
                   minSize="14%"
                   maxSize="45%"
-                  onResize={collapsiblePanelOnResize(setIsDiagnosticsCollapsed)}
+                  onResize={collapsiblePanelOnResize(setIsBottomPanelCollapsed)}
                   className="min-h-0 min-w-0"
                 >
                   <EditorBottomPanel
