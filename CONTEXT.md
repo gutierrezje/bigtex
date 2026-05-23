@@ -28,12 +28,24 @@ A tab shows a dirty indicator while its in-memory draft differs from what is on 
 The source file tab currently selected in the editor pane. Window title, command bar, and project tree selection follow this path only; the active PDF tab does not change that chrome. When no editor tabs are open, the editor pane shows an empty state; PDF tabs may still be open in the PDF viewer pane. When no PDF tabs are open, the PDF viewer pane shows an empty state; editor tabs may still be open. Collapsing the PDF viewer column via the command bar is separate from closing tabs.
 
 **Compile diagnostic**:
-A single issue reported from the latest LaTeX compile (file, optional line, severity, message).
+A single issue reported from the latest LaTeX compile (file, optional line, severity, message). Authoritative for build failures and anything latexmk reports.
 _Avoid_: Log line, problem (unless referring to the UI panel name).
 
+**Language-server diagnostic**:
+A single issue reported by the LaTeX language server (Texlab) from static analysis of project sources — e.g. undefined reference/citation before compile. Shown in the editor; may also surface in **Problems** when we unify lists. Does not replace **Compile diagnostic** for “did the last build succeed?”
+_Avoid_: Calling these “compile errors” when no compile has run.
+
+**Language-server assist**:
+Edit-time features backed by the LaTeX language server: completion, hover, **Go to definition**, and find references (editor command). Applies to the same source kinds as the **editor pane**: `.tex`, `.bib`, `.sty`, and `.cls`. v1 does not include rename, format, code actions, a symbols outline panel, or PDF SyncTeX jumps from the language server.
+_Avoid_: LSP (user-facing label); assuming the agent provides these without the editor; bundling Texlab inside the app (v1 expects it on `PATH`).
+
+**Language-server unavailable**:
+Texlab is missing or failed to start. The **editor pane** keeps syntax highlighting and **Compile** / **Compile diagnostic** behavior; **Language-server assist** and **Language-server diagnostic** are off. The app shows a small non-blocking notice with install guidance, not a blocking dialog.
+_Avoid_: Treating the project as broken; hiding the fact that static assist is disabled.
+
 **Problems panel**:
-One collapsible Problems / Output strip spanning the **editor pane** and **PDF viewer pane** together (not under the agent column). Shows compile diagnostics from the last run, filterable by All / Errors / Warnings. Header is Problems-first; **Compile** stays in this header.
-_Avoid_: Diagnostics panel (internal component name may stay; user-facing label is Problems); duplicating the strip under each document column.
+One collapsible Problems / Output strip spanning the **editor pane** and **PDF viewer pane** together (not under the agent column). Lists **Compile diagnostic** and **Language-server diagnostic** rows in one place, filterable by All / Errors / Warnings. Each row shows a small source badge: **compile** or **static**. Header is Problems-first; **Compile** stays in this header.
+_Avoid_: Diagnostics panel (internal component name may stay; user-facing label is Problems); a second problems list elsewhere in the shell.
 
 **Agent handoff**:
 Pre-filling the assistant composer with a minimal line (`path:line — message`); appends if the composer already has text. The user edits and sends.
@@ -76,12 +88,22 @@ Attaching Chrome DevTools to the renderer (e.g. via remote debugging) to record 
 _Avoid_: Requiring DevTools for every change (not repeatable; no standard **LLM perf slice**).
 
 **Go to source**:
-**Focus or open** the diagnostic’s file as an **editor tab**, make it the **active editor tab**, and scroll to its line when the user activates a problem row or its navigation control.
-_Avoid_: Go to definition (semantic TeX feature — not in scope).
+**Focus or open** the diagnostic’s file as an **editor tab**, make it the **active editor tab**, and scroll to its line when the user activates a **Compile diagnostic** or **Language-server diagnostic** row in **Problems**, or its navigation control.
+_Avoid_: Conflating this with **Go to definition** (symbol navigation while editing).
+
+**Go to definition**:
+Editor command (e.g. Cmd-click) that jumps to the target of a LaTeX symbol — `\input`, `\ref`, `\cite`, macro, etc. — via the language server. Does not run compile and does not invoke the agent.
+_Avoid_: Go to source (Problems-driven navigation only).
 
 ## Relationships
 
-- A **Compile** produces zero or more **Compile diagnostics** shown in the **Problems panel**.
+- A **Compile** produces zero or more **Compile diagnostics** in **Problems**. **Language-server diagnostics** appear there too (and as editor squiggles). **Compile diagnostic** wins for build pass/fail and **Compile summary**; duplicate file/line issues from both sources may appear until the user fixes them.
+- Opening a project starts (or reuses) a per-workspace LaTeX language-server session in the main process, rooted at that project’s folder on disk.
+- Closing the project stops that session. The renderer never spawns Texlab directly.
+- **Language-server assist** applies to open **editor tab** buffers; **Go to definition** is independent of **Agent handoff**.
+- Every open **editor tab** pushes live buffer text to the language server (debounced), not only what is on disk after autosave.
+- When **Language-server unavailable**, none of the language-server relationships apply until Texlab becomes available.
+- The language server’s project root document is the same path as **Compile**’s main TeX file (`project.mainFile`); both use the same inference when unset.
 - Before **Compile**, every open **editor tab** with a pending draft is flushed to disk (not only the **active editor tab**).
 - Renaming a project path updates any **editor tab** or **PDF tab** for that path in place; deleting a path closes all tabs for that path.
 - Open tab lists are **not** restored across app quit or project close in v1 (session-only).
