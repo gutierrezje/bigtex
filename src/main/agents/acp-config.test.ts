@@ -58,6 +58,33 @@ describe("acp-config", () => {
     expect(merged.variantsByModel).toEqual(base.variantsByModel);
   });
 
+  it("includes copilot providers and drops unknown providers", () => {
+    const config = parseAgentSessionConfig({
+      sessionId: "s1",
+      configOptions: [
+        {
+          id: "model",
+          currentValue: "opencode/deepseek-v4-flash-free",
+          options: [
+            { value: "opencode/deepseek-v4-flash-free", name: "DeepSeek" },
+            { value: "github-copilot/gpt-4o", name: "GitHub Copilot" },
+            { value: "gh-copilot/claude-sonnet", name: "GH Copilot" },
+            { value: "anthropic/claude-sonnet", name: "Anthropic" },
+          ],
+        },
+      ],
+    });
+
+    expect(config.models.map((model) => model.id).sort()).toEqual([
+      "gh-copilot/claude-sonnet",
+      "github-copilot/gpt-4o",
+      "opencode/deepseek-v4-flash-free",
+    ]);
+    expect(config.models.find((model) => model.id === "github-copilot/gpt-4o")?.providerGroup).toBe(
+      "copilot",
+    );
+  });
+
   it("builds concrete model ids for reasoning runs", () => {
     const config: AgentSessionConfig = {
       models: [

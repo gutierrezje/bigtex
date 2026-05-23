@@ -3,7 +3,7 @@ import {
   baseModelId,
   normalizeReasoningLevel,
   pickDefaultModel,
-  providerGroupFromModelId,
+  resolveAgentUiSelection,
   withModelVariants,
 } from "../../shared/agent-models";
 import {
@@ -221,9 +221,7 @@ export const useAppStore = create<AppState>((set) => ({
     }));
     try {
       const config = await window.bigTex.agent.loadConfig(rootPath);
-      const currentGroup = providerGroupFromModelId(config.currentModelId);
-      const providerGroup: AgentProviderGroup = currentGroup === "go" ? "go" : "free";
-      const modelId = baseModelId(config.currentModelId) || pickDefaultModel(config, providerGroup);
+      const { providerGroup, modelId } = resolveAgentUiSelection(config);
       set({
         agentSettings: {
           config,

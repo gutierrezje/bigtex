@@ -1,5 +1,6 @@
 import {
   baseModelId,
+  filterAgentModels,
   normalizeReasoningLevel,
   providerGroupFromModelId,
 } from "../../shared/agent-models";
@@ -48,13 +49,14 @@ function labelForModel(modelId: string, displayName: string): string {
   return parts.length >= 2 ? parts[parts.length - 1] : displayName;
 }
 
-function buildModelOption(modelId: string, name: string): AgentModelOption {
+function buildModelOption(modelId: string, name: string): AgentModelOption | null {
   const group = providerGroupFromModelId(modelId);
+  if (group === "other") return null;
   return {
     id: modelId,
     name: labelForModel(modelId, name),
     label: name,
-    providerGroup: group === "other" ? "free" : group,
+    providerGroup: group,
     variant: variantFromModelId(modelId),
   };
 }
@@ -65,17 +67,16 @@ function parseFromConfigOptions(
 ): AgentSessionConfig {
   const modelOption = configOptions?.find((option) => option.id === "model");
   const currentModelId = modelOption?.currentValue ?? "";
-  const models = (modelOption?.options ?? []).map((option) =>
-    buildModelOption(option.value, option.name),
-  );
-  const visibleModels = models.filter(
-    (model) => model.providerGroup === "free" || model.providerGroup === "go",
+  const models = filterAgentModels(
+    (modelOption?.options ?? [])
+      .map((option) => buildModelOption(option.value, option.name))
+      .filter((model): model is AgentModelOption => model !== null),
   );
   const meta = modelOption?._meta?.opencode ?? fallbackMeta?.opencode;
   const availableVariants = meta?.availableVariants ?? [];
 
   return {
-    models: visibleModels.length > 0 ? visibleModels : models,
+    models,
     currentModelId,
     availableVariants,
     currentVariant: meta?.variant ?? variantFromModelId(currentModelId),
@@ -90,15 +91,14 @@ export function parseAgentSessionConfig(result: AcpSessionNewResult): AgentSessi
 
   const legacy = result.models;
   const currentModelId = legacy?.currentModelId ?? "";
-  const models = (legacy?.availableModels ?? []).map((model) =>
-    buildModelOption(model.modelId, model.name),
-  );
-  const visibleModels = models.filter(
-    (model) => model.providerGroup === "free" || model.providerGroup === "go",
+  const models = filterAgentModels(
+    (legacy?.availableModels ?? [])
+      .map((model) => buildModelOption(model.modelId, model.name))
+      .filter((model): model is AgentModelOption => model !== null),
   );
 
   return {
-    models: visibleModels.length > 0 ? visibleModels : models,
+    models,
     currentModelId,
     availableVariants: result._meta?.opencode?.availableVariants ?? [],
     currentVariant: result._meta?.opencode?.variant ?? variantFromModelId(currentModelId),
@@ -113,14 +113,14 @@ export function mergeAgentSessionConfig(
   if (!update.configOptions) return base;
 
   const refreshed = parseFromConfigOptions(update.configOptions);
-  const modelsById = new Map(base.models.map((model) => [model.id, model]));
+  const modelsById = new Map(filterAgentModels(base.models).map((model) => [model.id, model]));
   for (const model of refreshed.models) {
     modelsById.set(model.id, model);
   }
 
   return {
     ...refreshed,
-    models: [...modelsById.values()],
+    models: filterAgentModels([...modelsById.values()]),
     availableVariants:
       refreshed.availableVariants.length > 0 ? refreshed.availableVariants : base.availableVariants,
     variantsByModel: base.variantsByModel,

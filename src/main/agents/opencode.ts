@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import {
   baseModelId,
-  pickDefaultModel,
   REASONING_VARIANT_PROBE_CANDIDATES,
+  resolveAgentUiSelection,
   sortReasoningVariants,
   withModelVariants,
 } from "../../shared/agent-models";
@@ -372,7 +372,7 @@ export async function probeOpencodeModelVariants(
 export async function loadOpencodeSessionConfig(rootPath: string): Promise<AgentSessionConfig> {
   return withOpencodeAcpSession(rootPath, async (connection, session) => {
     let config = parseAgentSessionConfig(session);
-    const probeModelId = baseModelId(config.currentModelId) || pickDefaultModel(config, "free");
+    const { modelId: probeModelId } = resolveAgentUiSelection(config);
     const refreshed = await applySessionModel(connection, session.sessionId, probeModelId);
     if (refreshed) {
       config = mergeAgentSessionConfig(config, refreshed);

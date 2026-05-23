@@ -64,7 +64,7 @@ export interface AgentAvailability {
   message: string;
 }
 
-export type AgentProviderGroup = "free" | "go";
+export type AgentProviderGroup = "free" | "go" | "copilot";
 
 export interface AgentModelOption {
   id: string;

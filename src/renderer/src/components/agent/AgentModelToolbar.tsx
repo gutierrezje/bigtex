@@ -1,5 +1,15 @@
-import { useState } from "react";
-import { modelSupportsReasoning, reasoningVariantsForModel } from "../../../../shared/agent-models";
+import { useCallback, useRef, useState } from "react";
+import {
+  formatAgentModelLabel,
+  formatProviderGroupLabel,
+  formatReasoningVariant,
+} from "../../../../shared/agent-display-labels";
+import {
+  AGENT_PROVIDER_GROUPS,
+  modelSupportsReasoning,
+  reasoningVariantsForModel,
+} from "../../../../shared/agent-models";
+import { useDismissOnPointerDown } from "../../hooks/useDismissOnPointerDown";
 import { TREE_LABEL_CLASS } from "../../lib/treeTypography";
 import { useAppStore } from "../../store";
 
@@ -30,6 +40,19 @@ export function AgentModelToolbar() {
   const [showProviderDropdown, setShowProviderDropdown] = useState(false);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [showReasoningDropdown, setShowReasoningDropdown] = useState(false);
+  const providerMenuRef = useRef<HTMLDivElement>(null);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
+  const reasoningMenuRef = useRef<HTMLDivElement>(null);
+
+  const closeAllDropdowns = useCallback(() => {
+    setShowProviderDropdown(false);
+    setShowModelDropdown(false);
+    setShowReasoningDropdown(false);
+  }, []);
+
+  useDismissOnPointerDown(showProviderDropdown, closeAllDropdowns, providerMenuRef);
+  useDismissOnPointerDown(showModelDropdown, closeAllDropdowns, modelMenuRef);
+  useDismissOnPointerDown(showReasoningDropdown, closeAllDropdowns, reasoningMenuRef);
 
   const { config, providerGroup, modelId, reasoningLevel, reasoningProbing, loading, error } =
     agentSettings;
@@ -47,31 +70,34 @@ export function AgentModelToolbar() {
     );
 
   const reasoningOptions: Array<{ value: string | null; label: string }> = [
-    { value: null, label: "off" },
-    ...reasoningVariants.map((variant) => ({ value: variant, label: variant })),
+    { value: null, label: "Off" },
+    ...reasoningVariants.map((variant) => ({
+      value: variant,
+      label: formatReasoningVariant(variant),
+    })),
   ];
 
   return (
     <div className="flex flex-col gap-1 px-1 pb-2">
       {error ? <p className={`m-0 ${TREE_LABEL_CLASS} text-danger`}>{error}</p> : null}
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-        <div className="relative">
+        <div className="relative" ref={providerMenuRef}>
           <button
             type="button"
             disabled={!config}
             className={`flex items-center gap-1 rounded-md border border-border/60 bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-secondary transition-all duration-100 hover:border-accent/30 hover:bg-surface-raised/40 hover:text-text-primary disabled:opacity-40 cursor-pointer`}
             onClick={() => {
-              setShowProviderDropdown(!showProviderDropdown);
               setShowModelDropdown(false);
               setShowReasoningDropdown(false);
+              setShowProviderDropdown((open) => !open);
             }}
           >
-            <span className="text-accent">{providerGroup === "go" ? "go" : "free"}</span>
+            <span className="text-accent">{formatProviderGroupLabel(providerGroup)}</span>
             <ChevronDown />
           </button>
           {showProviderDropdown ? (
-            <div className="absolute bottom-full left-0 z-50 mb-1.5 w-28 rounded border border-border bg-surface-raised p-1 shadow-xl">
-              {(["free", "go"] as const).map((group) => (
+            <div className="absolute bottom-full left-0 z-50 mb-1.5 min-w-[9.5rem] rounded border border-border bg-surface-raised p-1 shadow-xl">
+              {AGENT_PROVIDER_GROUPS.map((group) => (
                 <button
                   key={group}
                   type="button"
@@ -81,25 +107,25 @@ export function AgentModelToolbar() {
                     setShowProviderDropdown(false);
                   }}
                 >
-                  {group}
+                  {formatProviderGroupLabel(group)}
                 </button>
               ))}
             </div>
           ) : null}
         </div>
-        <div className="relative">
+        <div className="relative" ref={modelMenuRef}>
           <button
             type="button"
             disabled={!config || modelsForGroup.length === 0}
             className={`flex items-center gap-1 rounded-md border border-border/60 bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-secondary transition-all duration-100 hover:border-accent/30 hover:bg-surface-raised/40 hover:text-text-primary disabled:opacity-40 cursor-pointer`}
             onClick={() => {
-              setShowModelDropdown(!showModelDropdown);
               setShowProviderDropdown(false);
               setShowReasoningDropdown(false);
+              setShowModelDropdown((open) => !open);
             }}
           >
             <span className="max-w-[140px] truncate text-text-primary">
-              {selectedModel?.name ?? "model"}
+              {selectedModel ? formatAgentModelLabel(selectedModel) : "Model"}
             </span>
             <ChevronDown />
           </button>
@@ -115,14 +141,14 @@ export function AgentModelToolbar() {
                     setShowModelDropdown(false);
                   }}
                 >
-                  <span className="block truncate">{model.name}</span>
+                  <span className="block truncate">{formatAgentModelLabel(model)}</span>
                 </button>
               ))}
             </div>
           ) : null}
         </div>
         <div className="mx-0.5 h-3 w-px shrink-0 bg-border/60" />
-        <div className="relative">
+        <div className="relative" ref={reasoningMenuRef}>
           <button
             type="button"
             disabled={!reasoningAvailable || reasoningProbing}
@@ -135,12 +161,18 @@ export function AgentModelToolbar() {
             }
             className={`flex items-center gap-1 rounded-md border px-2 py-0.5 ${TREE_LABEL_CLASS} transition-all duration-100 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer ${reasoningLevel ? "border-accent/25 bg-accent/8 text-text-primary" : "border-border/60 bg-transparent text-text-muted hover:border-accent/30 hover:bg-surface-raised/40 hover:text-text-secondary"}`}
             onClick={() => {
-              setShowReasoningDropdown(!showReasoningDropdown);
               setShowProviderDropdown(false);
               setShowModelDropdown(false);
+              setShowReasoningDropdown((open) => !open);
             }}
           >
-            <span>{reasoningProbing ? "…" : (reasoningLevel ?? "off")}</span>
+            <span>
+              {reasoningProbing
+                ? "…"
+                : reasoningLevel
+                  ? formatReasoningVariant(reasoningLevel)
+                  : "Off"}
+            </span>
             <ChevronDown />
           </button>
           {showReasoningDropdown ? (

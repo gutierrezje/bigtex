@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   baseModelId,
+  isSupportedAgentModelId,
   normalizeReasoningLevel,
   pickDefaultModel,
   reasoningVariantsForModel,
+  resolveAgentUiSelection,
   sortReasoningVariants,
   withModelVariants,
 } from "./agent-models";
@@ -43,6 +45,36 @@ function sessionConfig(overrides: Partial<AgentSessionConfig> = {}): AgentSessio
 }
 
 describe("agent-models", () => {
+  it("recognizes supported providers and resolves UI selection", () => {
+    expect(isSupportedAgentModelId("opencode/deepseek-v4-flash-free")).toBe(true);
+    expect(isSupportedAgentModelId("github-copilot/gpt-4o")).toBe(true);
+    expect(isSupportedAgentModelId("anthropic/claude-sonnet")).toBe(false);
+
+    const withoutCopilot = sessionConfig({ currentModelId: "github-copilot/gpt-4o" });
+    expect(resolveAgentUiSelection(withoutCopilot)).toEqual({
+      providerGroup: "free",
+      modelId: "opencode/deepseek-v4-flash-free",
+    });
+
+    const withCopilot = sessionConfig({
+      currentModelId: "github-copilot/gpt-4o",
+      models: [
+        ...sessionConfig().models,
+        {
+          id: "github-copilot/gpt-4o",
+          name: "gpt-4o",
+          label: "GPT-4o",
+          providerGroup: "copilot",
+          variant: null,
+        },
+      ],
+    });
+    expect(resolveAgentUiSelection(withCopilot)).toEqual({
+      providerGroup: "copilot",
+      modelId: "github-copilot/gpt-4o",
+    });
+  });
+
   it("normalizes ids, sorts reasoning labels, and picks group defaults", () => {
     expect(baseModelId("opencode/foo/bar")).toBe("opencode/foo");
     expect(sortReasoningVariants(["low", "xhigh", "default", "high"])).toEqual([
