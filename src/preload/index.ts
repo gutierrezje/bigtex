@@ -59,6 +59,19 @@ const api: BigTexApi = {
     remove: (path) => ipcRenderer.invoke(IPC_CHANNELS.recentsRemove, path),
     clear: () => ipcRenderer.invoke(IPC_CHANNELS.recentsClear),
   },
+  window: {
+    close: () => ipcRenderer.invoke(IPC_CHANNELS.windowClose),
+    minimize: () => ipcRenderer.invoke(IPC_CHANNELS.windowMinimize),
+    toggleFullscreen: () => ipcRenderer.invoke(IPC_CHANNELS.windowToggleFullscreen),
+    isFullscreen: () => ipcRenderer.invoke(IPC_CHANNELS.windowIsFullscreen),
+    onFullscreenChanged: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, isFullscreen: boolean) => {
+        listener(isFullscreen);
+      };
+      ipcRenderer.on(IPC_CHANNELS.windowFullscreenChanged, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.windowFullscreenChanged, handler);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld("bigTex", api);

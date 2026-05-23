@@ -13,13 +13,14 @@ import {
 } from "../../shared/problems";
 import { isPdfPath, toProjectRelativePath } from "../../shared/projectFiles";
 import { AgentPanel } from "./components/AgentPanel";
-import { CommandBar } from "./components/CommandBar";
+import { AppChromeBar } from "./components/AppChromeBar";
 import { EditorBottomPanel, type EditorBottomTab } from "./components/EditorBottomPanel";
 import { EditorWorkbench } from "./components/EditorWorkbench";
 import { PdfViewerWorkbench } from "./components/PdfViewerWorkbench";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { useAgentEvents } from "./hooks/useAgentEvents";
+import { useWindowFullscreen } from "./hooks/useWindowFullscreen";
 
 import { formatWindowChromeLabel } from "./lib/windowChrome";
 import { useAppStore } from "./store";
@@ -86,6 +87,8 @@ export function App() {
 
   const projectRef = useRef(project);
   projectRef.current = project;
+
+  const isFullscreen = useWindowFullscreen();
 
   useEffect(() => {
     document.title = formatWindowChromeLabel(project?.name ?? null, activeEditor?.path ?? null);
@@ -460,18 +463,21 @@ export function App() {
       data-testid="editor-root"
       className="flex h-screen w-screen flex-col min-h-0 overflow-hidden bg-background"
     >
-      <CommandBar
-        projectName={project?.name ?? null}
-        filePath={activeEditor?.path ?? null}
-        showSidebar={!isSidebarCollapsed}
-        onToggleSidebar={handleToggleSidebar}
-        showDiagnostics={!isDiagnosticsCollapsed}
-        onToggleDiagnostics={handleToggleDiagnostics}
-        showPdf={!isPdfCollapsed}
-        onTogglePdf={handleTogglePdf}
-        showAgent={!isAgentCollapsed}
-        onToggleAgent={handleToggleAgent}
-      />
+      {project ? (
+        <AppChromeBar
+          projectName={project.name}
+          filePath={activeEditor?.path ?? null}
+          sidebarOpen={!isSidebarCollapsed}
+          showWindowControls={isFullscreen}
+          onToggleSidebar={handleToggleSidebar}
+          showDiagnostics={!isDiagnosticsCollapsed}
+          onToggleDiagnostics={handleToggleDiagnostics}
+          showPdf={!isPdfCollapsed}
+          onTogglePdf={handleTogglePdf}
+          showAgent={!isAgentCollapsed}
+          onToggleAgent={handleToggleAgent}
+        />
+      ) : null}
       <div className="flex-1 min-h-0 w-full overflow-hidden">
         {project ? (
           <Group
@@ -495,14 +501,6 @@ export function App() {
                 onCreateFile={createProjectFile}
                 onRenamePath={renameProjectPath}
                 onDeletePath={deleteProjectPath}
-                showSidebar={!isSidebarCollapsed}
-                onToggleSidebar={handleToggleSidebar}
-                showDiagnostics={!isDiagnosticsCollapsed}
-                onToggleDiagnostics={handleToggleDiagnostics}
-                showPdf={!isPdfCollapsed}
-                onTogglePdf={handleTogglePdf}
-                showAgent={!isAgentCollapsed}
-                onToggleAgent={handleToggleAgent}
                 onError={(message) => {
                   appendOutput(message, "error");
                   setEditorBottomTab("output");

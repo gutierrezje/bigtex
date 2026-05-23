@@ -11,14 +11,6 @@ interface ProjectSidebarProps {
   onCreateFile(parentPath: string, name: string): Promise<void>;
   onRenamePath(path: string, newName: string): Promise<void>;
   onDeletePath(path: string): Promise<void>;
-  showSidebar: boolean;
-  onToggleSidebar(): void;
-  showDiagnostics: boolean;
-  onToggleDiagnostics(): void;
-  showPdf: boolean;
-  onTogglePdf(): void;
-  showAgent: boolean;
-  onToggleAgent(): void;
   onError(message: string): void;
 }
 
@@ -318,14 +310,6 @@ export function ProjectSidebar({
   onCreateFile,
   onRenamePath,
   onDeletePath,
-  showSidebar,
-  onToggleSidebar,
-  showDiagnostics,
-  onToggleDiagnostics,
-  showPdf,
-  onTogglePdf,
-  showAgent,
-  onToggleAgent,
   onError,
 }: ProjectSidebarProps) {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set());
@@ -478,106 +462,8 @@ export function ProjectSidebar({
 
   return (
     <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
-      <div className="flex shrink-0 items-center justify-between h-11 border-b border-border/40 px-3 bg-surface-raised/40 select-none">
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            title="Toggle Sidebar (Files)"
-            className={`p-1.5 rounded transition-all duration-100 cursor-pointer ${
-              showSidebar
-                ? "bg-accent/8 text-text-primary border border-accent/20"
-                : "text-text-muted hover:text-text-secondary border border-transparent"
-            }`}
-            onClick={onToggleSidebar}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-3.5 w-3.5"
-            >
-              <title>Toggle Sidebar</title>
-              <rect width="18" height="18" x="3" y="3" rx="2" />
-              <path d="M9 3v18" />
-            </svg>
-          </button>
-
-          <button
-            type="button"
-            title="Toggle Problems"
-            className={`p-1.5 rounded transition-all duration-100 cursor-pointer ${
-              showDiagnostics
-                ? "bg-accent/8 text-text-primary border border-accent/20"
-                : "text-text-muted hover:text-text-secondary border border-transparent"
-            }`}
-            onClick={onToggleDiagnostics}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-3.5 w-3.5"
-            >
-              <title>Toggle Problems</title>
-              <rect width="18" height="18" x="3" y="3" rx="2" />
-              <path d="M3 15h18" />
-              <path d="m8 9 2 2-2 2" />
-            </svg>
-          </button>
-
-          <button
-            type="button"
-            title="Toggle PDF viewer"
-            className={`p-1.5 rounded transition-all duration-100 cursor-pointer ${
-              showPdf
-                ? "bg-accent/8 text-text-primary border border-accent/20"
-                : "text-text-muted hover:text-text-secondary border border-transparent"
-            }`}
-            onClick={onTogglePdf}
-          >
-            <PdfFileIcon
-              className={`h-3.5 w-3.5 ${showPdf ? "text-text-primary" : "text-text-muted"}`}
-            />
-          </button>
-
-          <button
-            type="button"
-            title="Toggle AI Agent Panel"
-            className={`p-1.5 rounded transition-all duration-100 cursor-pointer ${
-              showAgent
-                ? "bg-accent/8 text-text-primary border border-accent/20"
-                : "text-text-muted hover:text-text-secondary border border-transparent"
-            }`}
-            onClick={onToggleAgent}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-3.5 w-3.5"
-            >
-              <title>Toggle AI Agent</title>
-              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-              <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5Z" opacity="0.4" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
       <section
-        className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border-subtle/50 mb-1 mt-1"
+        className="flex items-center justify-between gap-2 border-b border-border/40 px-4 py-2"
         onContextMenu={handleWorkspaceContextMenu}
         aria-label="Workspace"
       >

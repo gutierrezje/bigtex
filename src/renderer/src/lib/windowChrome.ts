@@ -1,4 +1,4 @@
-/** Label for the custom title-bar strip (beside macOS traffic lights). */
+/** Native window / tab title (project name and active file). */
 export function formatWindowChromeLabel(
   projectName: string | null,
   filePath: string | null,

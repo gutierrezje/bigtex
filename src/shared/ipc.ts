@@ -39,6 +39,11 @@ export const IPC_CHANNELS = {
   recentsGet: "recents:get",
   recentsRemove: "recents:remove",
   recentsClear: "recents:clear",
+  windowClose: "window:close",
+  windowMinimize: "window:minimize",
+  windowToggleFullscreen: "window:toggle-fullscreen",
+  windowIsFullscreen: "window:is-fullscreen",
+  windowFullscreenChanged: "window:fullscreen-changed",
 } as const;
 
 export interface ReadFileRequest {
@@ -114,6 +119,13 @@ export interface BigTexApi {
     get(): Promise<RecentProject[]>;
     remove(path: string): Promise<RecentProject[]>;
     clear(): Promise<void>;
+  };
+  window: {
+    close(): Promise<void>;
+    minimize(): Promise<void>;
+    toggleFullscreen(): Promise<void>;
+    isFullscreen(): Promise<boolean>;
+    onFullscreenChanged(listener: (isFullscreen: boolean) => void): () => void;
   };
 }
 

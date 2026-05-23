@@ -20,7 +20,7 @@ export function DocumentTabStrip({ tabs, activePath, onSelect, onClose }: Docume
 
   return (
     <div
-      className="flex min-h-9 shrink-0 items-stretch gap-0 overflow-x-auto border-b border-border-subtle bg-surface-raised"
+      className="flex h-11 shrink-0 items-stretch gap-0 overflow-x-auto border-b border-border/40 bg-surface-raised"
       role="tablist"
     >
       {tabs.map((tab) => {

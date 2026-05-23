@@ -29,7 +29,7 @@ src/renderer/src/
 | PDF rendering + paging | components/PdfPreview.tsx |
 | Agent chat UI + patch actions | components/AgentPanel.tsx |
 | Assistant runtime adapter | components/agent/BigTexAssistantRuntime.tsx |
-| Compiler toggle + metrics bar | components/CommandBar.tsx |
+| App-wide top chrome (window controls, toggles) | components/AppChromeBar.tsx |
 
 ## CONVENTIONS
 

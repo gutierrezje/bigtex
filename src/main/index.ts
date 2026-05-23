@@ -91,6 +91,27 @@ function createWindow(): void {
   } else {
     void mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   }
+
+  attachFullscreenChrome(mainWindow);
+}
+
+function focusedWindow(): BrowserWindow | null {
+  return BrowserWindow.getFocusedWindow() ?? mainWindow;
+}
+
+function setNativeTrafficLightsVisible(visible: boolean): void {
+  if (process.platform !== "darwin" || !mainWindow) return;
+  mainWindow.setWindowButtonVisibility(visible);
+}
+
+function notifyFullscreenChanged(isFullscreen: boolean): void {
+  setNativeTrafficLightsVisible(!isFullscreen);
+  mainWindow?.webContents.send(IPC_CHANNELS.windowFullscreenChanged, isFullscreen);
+}
+
+function attachFullscreenChrome(window: BrowserWindow): void {
+  window.on("enter-full-screen", () => notifyFullscreenChanged(true));
+  window.on("leave-full-screen", () => notifyFullscreenChanged(false));
 }
 
 function registerIpc(): void {
@@ -187,6 +208,22 @@ function registerIpc(): void {
   ipcMain.handle(IPC_CHANNELS.patchApply, (_event, request: PatchApplyRequest) =>
     applyUnifiedPatch(request),
   );
+
+  ipcMain.handle(IPC_CHANNELS.windowClose, () => {
+    focusedWindow()?.close();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.windowMinimize, () => {
+    focusedWindow()?.minimize();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.windowToggleFullscreen, () => {
+    const window = focusedWindow();
+    if (!window) return;
+    window.setFullScreen(!window.isFullScreen());
+  });
+
+  ipcMain.handle(IPC_CHANNELS.windowIsFullscreen, () => mainWindow?.isFullScreen() ?? false);
 }
 
 app.whenReady().then(() => {
