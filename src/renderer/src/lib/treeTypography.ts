@@ -4,6 +4,10 @@ export const TREE_LABEL_CLASS = "text-[13px] font-normal leading-[22px]";
 /** Panel chrome titles (explorer header, agent header, window chrome label). */
 export const CHROME_TITLE_CLASS = "text-[13px] font-medium leading-[22px]";
 
+/** Explorer title, document tab strip, and agent header — one shared row height. */
+export const PANEL_CHROME_ROW_CLASS =
+  "flex h-9 shrink-0 items-center border-b border-border/40 bg-surface-raised select-none";
+
 /** Secondary chrome lines (agent status, empty states, PDF footer). */
 export const CHROME_META_CLASS = "text-[11px] font-normal leading-[16px]";
 

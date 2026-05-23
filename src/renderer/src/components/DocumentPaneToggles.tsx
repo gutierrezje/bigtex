@@ -22,7 +22,7 @@ export function DocumentPaneToggles({
 }: DocumentPaneTogglesProps) {
   return (
     <div
-      className={`flex h-12 shrink-0 items-stretch border-l border-border/20 ${className}`.trim()}
+      className={`flex h-9 shrink-0 items-stretch border-l border-border/20 ${className}`.trim()}
     >
       <div className="flex w-11 shrink-0 items-center justify-center border-r border-border/20">
         <button

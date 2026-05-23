@@ -58,20 +58,11 @@ export function TreeChevronIcon({ expanded }: { expanded: boolean }) {
   );
 }
 
-export function TreeFolderIcon({ expanded }: { expanded: boolean }) {
+export function TreeFolderIcon() {
   return (
-    <TreeGlyph
-      className={`${TREE_ICON_CLASS} text-text-muted`}
-      title={expanded ? "Open folder" : "Folder"}
-    >
-      {expanded ? (
-        <>
-          <path d="M4 20h16a1 1 0 0 0 1-1V9H3v10a1 1 0 0 0 1 1z" />
-          <path d="M4 9h16V6.5A1.5 1.5 0 0 0 18.5 5H11.7L10 3H4a1 1 0 0 0-1 1v5z" />
-        </>
-      ) : (
-        <path d="M4 9h16l-1.5-4.5A1 1 0 0 0 17.6 4H6.4a1 1 0 0 0-.9.6L4 9z" />
-      )}
+    <TreeGlyph className={`${TREE_ICON_CLASS} text-text-muted`} title="Folder">
+      <path d="M4 20h16a1 1 0 0 0 1-1V9H3v10a1 1 0 0 0 1 1z" />
+      <path d="M4 9h16V6.5A1.5 1.5 0 0 0 18.5 5H11.7L10 3H4a1 1 0 0 0-1 1v5z" />
     </TreeGlyph>
   );
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CHROME_TITLE_CLASS } from "../lib/treeTypography";
+import { CHROME_TITLE_CLASS, PANEL_CHROME_ROW_CLASS } from "../lib/treeTypography";
 
 interface ExplorerToolbarButtonProps {
   title: string;
@@ -34,7 +34,7 @@ export function ProjectSidebarHeader({
   onRefresh,
 }: ProjectSidebarHeaderProps) {
   return (
-    <header className="flex h-9 shrink-0 items-center gap-1 border-b border-border/40 bg-surface-raised px-2 select-none">
+    <header className={`${PANEL_CHROME_ROW_CLASS} gap-1 px-2`}>
       <h2
         className={`min-w-0 flex-1 truncate text-text-secondary ${CHROME_TITLE_CLASS}`}
         title={projectName}

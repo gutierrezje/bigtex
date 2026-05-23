@@ -137,11 +137,7 @@ function FileRow({
           {isFolder ? <TreeChevronIcon expanded={isExpanded} /> : null}
         </span>
         <span className="tree-row-icon" aria-hidden={isFolder}>
-          {isFolder ? (
-            <TreeFolderIcon expanded={isExpanded} />
-          ) : (
-            <FileTypeIcon kind={file.kind} fileName={file.name} />
-          )}
+          {isFolder ? <TreeFolderIcon /> : <FileTypeIcon kind={file.kind} fileName={file.name} />}
         </span>
         {isRenaming ? (
           <InlineNameEditor

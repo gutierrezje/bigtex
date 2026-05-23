@@ -129,7 +129,7 @@ export function PdfViewerToggle({
 
   return (
     <div
-      className={`flex h-12 w-11 shrink-0 items-center justify-center self-stretch border-l border-border/20 ${className}`.trim()}
+      className={`flex h-9 w-11 shrink-0 items-center justify-center self-stretch border-l border-border/20 ${className}`.trim()}
     >
       {button}
     </div>
@@ -157,7 +157,7 @@ export function DocumentTabStrip({
   if (tabs.length === 0 && showPdf === undefined) return null;
 
   return (
-    <div className="flex h-12 shrink-0 select-none items-center justify-between border-b border-border/40 bg-surface-raised">
+    <div className="flex h-9 shrink-0 select-none items-center justify-between border-b border-border/40 bg-surface-raised">
       <DocumentTabList tabs={tabs} activePath={activePath} onSelect={onSelect} onClose={onClose} />
       {showPdf !== undefined && onTogglePdf !== undefined ? (
         <PdfViewerToggle showPdf={showPdf} onToggle={onTogglePdf} />

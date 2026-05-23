@@ -10,6 +10,7 @@ import {
   CHROME_META_CLASS,
   CHROME_SECTION_CLASS,
   CHROME_TITLE_CLASS,
+  PANEL_CHROME_ROW_CLASS,
   TREE_LABEL_CLASS,
 } from "../lib/treeTypography";
 import type { AgentChatState } from "../store";
@@ -40,8 +41,7 @@ function EmptyThread() {
       <div className="mx-auto grid max-w-[260px] gap-1.5 px-4 py-12 text-center select-none">
         <span className={CHROME_SECTION_CLASS}>ready</span>
         <p className={`m-0 ${CHROME_META_CLASS} text-text-muted`}>
-          Ask BigTeX to edit, explain, or repair the selected LaTeX file. ACP output will stream
-          here as a chat.
+          Ask BigTeX to edit, explain, or repair the selected LaTeX file.
         </p>
       </div>
     </ThreadPrimitive.Empty>
@@ -155,7 +155,7 @@ export function AgentPanel({
 }: AgentPanelProps) {
   return (
     <aside className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-surface-raised">
-      <header className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/40 px-2 select-none">
+      <header className={`${PANEL_CHROME_ROW_CLASS} justify-between gap-2 px-2`}>
         <h2
           className={`min-w-0 flex-1 truncate text-text-secondary ${CHROME_TITLE_CLASS}`}
           title="LaTeX editing assistant"
