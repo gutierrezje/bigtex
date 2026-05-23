@@ -109,7 +109,7 @@ function ChatThread({ onApplyPatch }: ChatThreadProps) {
       <ThreadPrimitive.Viewport
         autoScroll
         turnAnchor="bottom"
-        className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain bg-surface-inset py-2"
+        className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain bg-surface py-2"
       >
         <EmptyThread />
         <ThreadPrimitive.Messages>

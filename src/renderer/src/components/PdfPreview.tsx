@@ -235,7 +235,7 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
     return (
       <div
         ref={viewportRef}
-        className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-surface-raised px-4"
+        className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-surface px-4"
       >
         <p className="max-w-sm text-center text-sm leading-relaxed text-text-secondary">
           Compile or open a PDF from the project tree.
@@ -246,10 +246,10 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
   }
 
   return (
-    <section className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-surface-raised">
+    <section className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-surface">
       <div
         ref={viewportRef}
-        className="flex min-h-0 h-full w-full items-center justify-center overflow-hidden"
+        className="flex min-h-0 h-full w-full items-center justify-center overflow-hidden bg-surface"
       >
         <canvas ref={canvasRef} className="pdf-canvas block shrink-0" />
         {error ? <p className="px-2 py-1 text-center text-sm text-danger">{error}</p> : null}

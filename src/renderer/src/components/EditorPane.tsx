@@ -5,6 +5,7 @@ import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CompileDiagnostic, OpenFile } from "../../../shared/domain";
 import { normalizeDiagnosticPath } from "../../../shared/problems";
+import { BIGTEX_MONACO_THEME, registerBigTexMonacoTheme } from "../lib/monacoTheme";
 
 globalThis.MonacoEnvironment = {
   getWorker() {
@@ -13,6 +14,7 @@ globalThis.MonacoEnvironment = {
 };
 
 loader.config({ monaco: monacoLocal });
+registerBigTexMonacoTheme(monacoLocal);
 
 interface EditorPaneProps {
   file: OpenFile | null;
@@ -41,6 +43,7 @@ function languageForPath(path: string): string {
 }
 
 function configureMonaco(monaco: Monaco): void {
+  registerBigTexMonacoTheme(monaco);
   if (monaco.languages.getLanguages().some((l: { id: string }) => l.id === "latex")) return;
 
   monaco.languages.register({ id: "latex", extensions: [".tex", ".sty", ".cls"] });
@@ -71,7 +74,7 @@ function configureMonaco(monaco: Monaco): void {
 
 function EmptyEditorPane() {
   return (
-    <section className="grid h-full min-h-0 min-w-0 place-items-center overflow-hidden bg-surface-raised">
+    <section className="grid h-full min-h-0 min-w-0 place-items-center overflow-hidden bg-surface">
       <div className="max-w-sm text-center">
         <span className="text-[10px] font-semibold uppercase tracking-widest text-accent">
           Ready
@@ -164,11 +167,11 @@ function LoadedEditorPane({
   }
 
   return (
-    <section className="grid h-full min-h-0 min-w-0 overflow-hidden bg-surface-raised">
+    <section className="grid h-full min-h-0 min-w-0 overflow-hidden bg-surface">
       <Editor
         key={`${file.path}:${file.loadedAt}`}
         height="100%"
-        theme="vs-dark"
+        theme={BIGTEX_MONACO_THEME}
         language={languageForPath(file.path)}
         value={file.content}
         beforeMount={configureMonaco}
@@ -178,6 +181,8 @@ function LoadedEditorPane({
           scheduleAutosave(draftContentRef.current);
         }}
         onMount={(ed, monaco) => {
+          registerBigTexMonacoTheme(monaco);
+          monaco.editor.setTheme(BIGTEX_MONACO_THEME);
           editorRef.current = ed;
           monacoRef.current = monaco;
           const model = ed.getModel();

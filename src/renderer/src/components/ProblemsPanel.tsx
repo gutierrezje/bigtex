@@ -77,10 +77,10 @@ function ProblemRow({
   onGoToSource(diagnostic: CompileDiagnostic): void;
   onAgentHandoff(diagnostic: CompileDiagnostic): void;
 }) {
-  const rowClassName = `group grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded border border-border/40 bg-surface px-2.5 py-1.5 text-left transition-colors duration-100 ${
+  const rowClassName = `group grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded border border-border/40 px-2.5 py-1.5 text-left transition-colors duration-100 ${
     canNavigate
-      ? "cursor-pointer hover:border-border/80 hover:bg-surface-raised/60"
-      : "bg-surface-inset/30"
+      ? "cursor-pointer bg-surface-raised hover:border-border/80 hover:bg-border-subtle"
+      : "bg-surface-raised/40"
   }`;
 
   const content = (
