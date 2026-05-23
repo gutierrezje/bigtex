@@ -4,13 +4,14 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import type { EditorTabsState, PdfTabsState } from "../../../shared/documentTabs";
 import { getActiveEditor, getActivePdf } from "../../../shared/documentTabs";
 import type { CompileDiagnostic } from "../../../shared/domain";
-import { DocumentTabList, PdfViewerToggle } from "./DocumentTabStrip";
+import { DocumentPaneToggles } from "./DocumentPaneToggles";
+import { DocumentTabList } from "./DocumentTabStrip";
 import { EditorPane } from "./EditorPane";
 import { PdfPreview } from "./PdfPreview";
 
 const DEFAULT_EDITOR_PANE_PERCENT = 52;
-/** Matches PdfViewerToggle width so tabs do not sit under the pinned control. */
-const PDF_TOGGLE_GUTTER_CLASS = "pr-11";
+/** Matches DocumentPaneToggles width (invert + split) so tabs do not sit under pinned controls. */
+const PDF_TOGGLE_GUTTER_CLASS = "pr-[5.5rem]";
 
 interface DocumentWorkbenchProps {
   editorTabs: EditorTabsState;
@@ -27,6 +28,8 @@ interface DocumentWorkbenchProps {
   onDraftChange(path: string, content: string): void;
   onSave(path: string, content: string): void | Promise<void>;
   onTogglePdf(): void;
+  pdfPreviewInverted: boolean;
+  onTogglePdfPreviewInvert(): void;
   onPdfPanelResize: OnPanelResize;
 }
 
@@ -64,6 +67,8 @@ export function DocumentWorkbench({
   onDraftChange,
   onSave,
   onTogglePdf,
+  pdfPreviewInverted,
+  onTogglePdfPreviewInvert,
   onPdfPanelResize,
 }: DocumentWorkbenchProps) {
   const activeFile = getActiveEditor(editorTabs);
@@ -141,15 +146,17 @@ export function DocumentWorkbench({
           className="min-h-0 min-w-0"
         >
           <DocumentPanelChrome tabRow={pdfTabRow}>
-            <PdfPreview pdf={activePdf} />
+            <PdfPreview pdf={activePdf} invert={pdfPreviewInverted} />
           </DocumentPanelChrome>
         </Panel>
       </Group>
 
       {/* Single mount so the divider stroke can animate across toggles. */}
-      <PdfViewerToggle
+      <DocumentPaneToggles
         showPdf={showPdf}
-        onToggle={onTogglePdf}
+        pdfPreviewInverted={pdfPreviewInverted}
+        onTogglePdf={onTogglePdf}
+        onTogglePdfPreviewInvert={onTogglePdfPreviewInvert}
         className="absolute top-0 right-0 z-20 border-b border-border/40 bg-surface-raised"
       />
     </div>

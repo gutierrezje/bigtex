@@ -33,6 +33,7 @@ import type {
   ProjectSnapshot,
 } from "../../shared/domain";
 import { type AgentChatMessage, type AgentChatState, reduceAgentChat } from "./agent-chat-reducer";
+import { readPdfPreviewInvert, writePdfPreviewInvert } from "./lib/pdfPreviewPrefs";
 
 export type { AgentChatMessage, AgentChatState };
 
@@ -70,6 +71,7 @@ interface AppState {
   agentComposerFocusToken: number;
   outputLog: OutputEntry[];
   metrics: PerformanceMark[];
+  pdfPreviewInverted: boolean;
   setProject(project: ProjectSnapshot | null): void;
   openEditorFile(file: OpenFile): void;
   activateEditorTab(path: string): void;
@@ -101,6 +103,7 @@ interface AppState {
   clearAgentHandoffFiles(): void;
   appendOutput(message: string, level?: OutputLevel): void;
   clearOutputLog(): void;
+  setPdfPreviewInverted(inverted: boolean): void;
 }
 
 function createMessageId(prefix: string): string {
@@ -133,6 +136,7 @@ export const useAppStore = create<AppState>((set) => ({
   agentComposerFocusToken: 0,
   outputLog: [],
   metrics: [],
+  pdfPreviewInverted: readPdfPreviewInvert(),
   setProject: (project) => set({ project }),
   openEditorFile: (file) =>
     set((state) => ({ editorTabs: focusOrOpenEditor(state.editorTabs, file) })),
@@ -349,4 +353,8 @@ export const useAppStore = create<AppState>((set) => ({
       };
     }),
   clearOutputLog: () => set({ outputLog: [] }),
+  setPdfPreviewInverted: (pdfPreviewInverted) => {
+    writePdfPreviewInvert(pdfPreviewInverted);
+    set({ pdfPreviewInverted });
+  },
 }));

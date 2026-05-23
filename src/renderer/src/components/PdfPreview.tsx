@@ -14,6 +14,7 @@ const MAX_OUTPUT_SCALE = 2;
 
 interface PdfPreviewProps {
   pdf: PdfPayload | null;
+  invert?: boolean;
 }
 
 interface ViewportSize {
@@ -56,7 +57,7 @@ function isRenderingCancelled(error: unknown): boolean {
   );
 }
 
-export function PdfPreview({ pdf }: PdfPreviewProps) {
+export function PdfPreview({ pdf, invert = true }: PdfPreviewProps) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const documentRef = useRef<PDFDocumentProxy | null>(null);
@@ -252,7 +253,10 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
         ref={viewportRef}
         className="flex min-h-0 h-full w-full items-center justify-center overflow-hidden bg-surface"
       >
-        <canvas ref={canvasRef} className="pdf-canvas block shrink-0" />
+        <canvas
+          ref={canvasRef}
+          className={`pdf-canvas block shrink-0${invert ? " pdf-canvas--invert" : ""}`}
+        />
         {error ? <p className="px-2 py-1 text-center text-sm text-danger">{error}</p> : null}
       </div>
 

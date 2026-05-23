@@ -65,6 +65,8 @@ export function App() {
     clearAgent,
     clearOutputLog,
     refreshMetrics,
+    pdfPreviewInverted,
+    setPdfPreviewInverted,
   } = useAppStore();
   const activeEditor = getActiveEditor(editorTabs);
   const [compiling, setCompiling] = useState(false);
@@ -129,6 +131,10 @@ export function App() {
       panel.collapse();
       setIsPdfCollapsed(true);
     }
+  };
+
+  const handleTogglePdfPreviewInvert = () => {
+    setPdfPreviewInverted(!pdfPreviewInverted);
   };
 
   const loadPdfTab = useCallback(
@@ -545,6 +551,8 @@ export function App() {
                     onDraftChange={updateEditorTabContent}
                     onSave={saveEditorTab}
                     onTogglePdf={handleTogglePdf}
+                    pdfPreviewInverted={pdfPreviewInverted}
+                    onTogglePdfPreviewInvert={handleTogglePdfPreviewInvert}
                     onPdfPanelResize={collapsiblePanelOnResize(setIsPdfCollapsed)}
                   />
                 </Panel>

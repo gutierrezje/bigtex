@@ -358,7 +358,12 @@ ul {
 /* ── PDF Canvas ── */
 .pdf-canvas {
   max-width: 100%;
-  background: white;
+  background: #fff;
+}
+
+.pdf-canvas--invert {
+  filter: invert(1);
+  background: transparent;
 }
 
 /* ── Welcome Screen & Transition Animations ── */
