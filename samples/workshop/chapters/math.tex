@@ -1,0 +1,14 @@
+\section{Mathematics}\label{sec:math}
+
+Subscripts outside math mode cause a hard error --- comment out the next line to get a
+warning-only build:
+
+The expression a_2 + b^2 should be wrapped as $a_2 + b^2$.
+
+When the error is fixed, this aligned environment is fine:
+\begin{align}
+  E &= mc^2 \\
+  F &= ma
+\end{align}
+
+Optional: use \verb|\eqref{sec:math}| after the label is stable: \eqref{sec:math}.

@@ -1,0 +1,41 @@
+% BigTeX workshop sample — intentional issues for compile, Problems panel, and agent demos.
+% Open this folder (samples/workshop) next to samples/minimal. Fix issues one section at a time.
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{refcheck}
+\usepackage{microtype}
+
+\title{BigTeX Workshop}
+\author{Demo project}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This project ships with common LaTeX mistakes: undefined references, bibliography gaps,
+layout warnings, and a hard error in \texttt{chapters/math.tex}. Compile to populate the
+Problems panel, then edit or ask the agent to fix items section by section.
+\end{abstract}
+
+\tableofcontents
+
+\input{chapters/intro}
+\input{chapters/layout}
+\input{chapters/references}
+\input{chapters/math}
+
+\section{Checklist}
+Use this list when demoing BigTeX:
+\begin{itemize}
+  \item Compile once with errors present; confirm Problems lists file:line items.
+  \item Fix the math error, recompile; PDF should build with warnings remaining.
+  \item Resolve undefined \verb|\ref| and \verb|\cite| warnings in \texttt{references.tex}.
+  \item Tweak figure width and the long word in \texttt{layout.tex} to clear overfull boxes.
+  \item Run agent handoff on a warning row; confirm composer prefill and patch flow.
+\end{itemize}
+
+\end{document}

@@ -14,6 +14,7 @@ Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with
 ├── src/renderer/        # Vite shell; UI in src/renderer/src (AGENTS.md)
 ├── src/shared/          # IPC contracts + domain types
 ├── samples/minimal/     # sample LaTeX project for smoke tests
+├── samples/workshop/  # demo project with intentional compile issues for UI/agent testing
 └── electron.vite.config.ts
 ```
 

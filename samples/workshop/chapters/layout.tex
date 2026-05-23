@@ -1,0 +1,26 @@
+\section{Layout and floats}\label{sec:layout}
+
+\subsection{Overfull and underfull boxes}
+
+{\hsize=4.5cm\relax
+\noindent This narrow column forces an overfull \texttt{hbox} when the next word cannot
+break: \mbox{SupercalifragilisticexpialidociousInOneLine}.\par}
+
+{\hsize=0.35\textwidth\relax
+\noindent Short.\par
+\noindent Also short.\par
+}
+The narrow parbox above often emits underfull \texttt{hbox} warnings.
+
+\subsection{Float placement}
+
+\begin{figure}[h]
+  \centering
+  \fbox{\parbox{0.95\linewidth}{\centering\vspace{2.2cm}
+    Placeholder figure --- widen the box or shorten caption to reduce float warnings.}}
+  \caption{A tall boxed figure with a restrictive \texttt{[h]} specifier; LaTeX often warns
+    that the float specifier changed.}
+  \label{fig:demo}
+\end{figure}
+
+Figure~\ref{fig:missing} points at a label that does not exist yet.
