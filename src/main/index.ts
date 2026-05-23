@@ -54,6 +54,7 @@ function createWindow(): void {
     title: "BigTeX",
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 16, y: 16 },
+    simpleFullscreen: true,
     show: false,
     backgroundColor: "#09090b",
     webPreferences: {
