@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CompileDiagnostic, OpenFile } from "../../../shared/domain";
 import { normalizeDiagnosticPath } from "../../../shared/problems";
 import { BIGTEX_MONACO_THEME, registerBigTexMonacoTheme } from "../lib/monacoTheme";
+import { CHROME_META_CLASS, CHROME_SECTION_CLASS } from "../lib/treeTypography";
 
 globalThis.MonacoEnvironment = {
   getWorker() {
@@ -76,13 +77,11 @@ function EmptyEditorPane() {
   return (
     <section className="grid h-full min-h-0 min-w-0 place-items-center overflow-hidden bg-surface">
       <div className="max-w-sm text-center">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-          Ready
-        </span>
+        <span className={`${CHROME_SECTION_CLASS} text-accent`}>Ready</span>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight">
           Open a LaTeX file to start editing.
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-text-muted">
+        <p className={`mt-2 ${CHROME_META_CLASS} text-text-muted`}>
           The editor stays isolated from compile and agent work so typing remains responsive under
           load.
         </p>

@@ -3,6 +3,7 @@ import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
 import { useEffect, useRef, useState } from "react";
 import type { PdfPayload } from "../../../shared/domain";
+import { CHROME_META_CLASS, TREE_LABEL_CLASS } from "../lib/treeTypography";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -237,7 +238,7 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
         ref={viewportRef}
         className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-surface px-4"
       >
-        <p className="max-w-sm text-center text-sm leading-relaxed text-text-secondary">
+        <p className={`max-w-sm text-center ${CHROME_META_CLASS} text-text-secondary`}>
           Compile or open a PDF from the project tree.
         </p>
         {error ? <p className="mt-2 text-center text-sm text-danger">{error}</p> : null}
@@ -256,13 +257,13 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
       </div>
 
       <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-border/40 px-2 py-1">
-        <span className="text-xs font-medium text-text-muted">
+        <span className={`${CHROME_META_CLASS} font-medium text-text-muted`}>
           Page {pageNumber} of {pageCount || "?"}
         </span>
         <div className="flex gap-0.5">
           <button
             type="button"
-            className="rounded-md px-2.5 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:bg-background/60 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
+            className={`rounded-md px-2.5 py-1 ${TREE_LABEL_CLASS} font-medium text-text-muted transition-colors duration-100 hover:bg-background/60 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40`}
             disabled={pageNumber <= 1}
             onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
           >
@@ -270,7 +271,7 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
           </button>
           <button
             type="button"
-            className="rounded-md px-2.5 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:bg-background/60 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
+            className={`rounded-md px-2.5 py-1 ${TREE_LABEL_CLASS} font-medium text-text-muted transition-colors duration-100 hover:bg-background/60 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40`}
             disabled={pageCount > 0 && pageNumber >= pageCount}
             onClick={() => setPageNumber((p) => Math.min(pageCount || p + 1, p + 1))}
           >

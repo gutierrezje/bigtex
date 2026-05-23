@@ -7,7 +7,7 @@ import {
   filterDiagnosticsByTab,
   type ProblemsTab,
 } from "../../../shared/problems";
-import { TREE_LABEL_CLASS } from "../lib/treeTypography";
+import { CHROME_META_CLASS, TREE_LABEL_CLASS } from "../lib/treeTypography";
 
 interface ProblemsPanelProps {
   result: CompileResult | null;
@@ -87,13 +87,13 @@ function ProblemRow({
     <>
       <div className="min-w-0">
         <p
-          className={`m-0 text-xs leading-relaxed ${
+          className={`m-0 ${CHROME_META_CLASS} ${
             diagnostic.severity === "error" ? "text-danger" : "text-text-secondary"
           }`}
         >
           {diagnostic.message}
         </p>
-        <p className="m-0 mt-0.5 font-mono text-[9px] text-text-muted/80">
+        <p className={`m-0 mt-0.5 font-mono ${CHROME_META_CLASS} text-text-muted/80`}>
           {location || "project"}
         </p>
       </div>
@@ -221,7 +221,7 @@ export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: Problems
             })}
           </ul>
         ) : (
-          <p className="px-1 text-xs text-text-muted">
+          <p className={`px-1 ${CHROME_META_CLASS} text-text-muted`}>
             {result?.success
               ? "No problems. The current PDF is ready."
               : result

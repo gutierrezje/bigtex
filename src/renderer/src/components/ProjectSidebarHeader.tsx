@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { TREE_LABEL_CLASS } from "../lib/treeTypography";
+import { CHROME_TITLE_CLASS } from "../lib/treeTypography";
 
 interface ExplorerToolbarButtonProps {
   title: string;
@@ -36,7 +36,7 @@ export function ProjectSidebarHeader({
   return (
     <header className="flex h-9 shrink-0 items-center gap-1 border-b border-border/40 bg-surface-raised px-2 select-none">
       <h2
-        className={`min-w-0 flex-1 truncate font-medium text-text-secondary ${TREE_LABEL_CLASS}`}
+        className={`min-w-0 flex-1 truncate text-text-secondary ${CHROME_TITLE_CLASS}`}
         title={projectName}
       >
         {projectName}

@@ -37,7 +37,7 @@ export function AgentComposer() {
   }, [focusToken, aui]);
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded border border-border bg-surface-inset p-2 focus-within:border-accent/30 transition-colors duration-150">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border border-border/60 bg-transparent p-2 focus-within:border-accent/40 transition-colors duration-150">
       <ComposerPrimitive.Input
         ref={inputRef}
         className={`max-h-32 min-h-10 resize-none border-0 bg-transparent px-1 py-1 ${TREE_LABEL_CLASS} text-text-primary outline-none placeholder:text-text-muted`}

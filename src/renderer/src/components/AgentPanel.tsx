@@ -5,7 +5,13 @@ import {
   ThreadPrimitive,
   useAuiState,
 } from "@assistant-ui/react";
-import { TREE_LABEL_CLASS } from "../lib/treeTypography";
+import {
+  AGENT_MESSAGE_CLASS,
+  CHROME_META_CLASS,
+  CHROME_SECTION_CLASS,
+  CHROME_TITLE_CLASS,
+  TREE_LABEL_CLASS,
+} from "../lib/treeTypography";
 import type { AgentChatState } from "../store";
 import { AgentComposer } from "./agent/AgentComposer";
 import { AgentMessageReasoningPart } from "./agent/AgentMessageReasoningPart";
@@ -33,10 +39,8 @@ function EmptyThread() {
   return (
     <ThreadPrimitive.Empty>
       <div className="mx-auto grid max-w-[260px] gap-1.5 px-4 py-12 text-center select-none">
-        <span className="text-[9px] font-semibold uppercase tracking-wider text-text-muted/70">
-          ready
-        </span>
-        <p className="m-0 text-xs leading-relaxed text-text-muted">
+        <span className={CHROME_SECTION_CLASS}>ready</span>
+        <p className={`m-0 ${CHROME_META_CLASS} text-text-muted`}>
           Ask BigTeX to edit, explain, or repair the selected LaTeX file. ACP output will stream
           here as a chat.
         </p>
@@ -57,17 +61,19 @@ function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<vo
       className={`grid w-full min-w-0 gap-1.5 px-3 py-2 ${message.role === "user" ? "justify-items-end" : "justify-items-start"}`}
     >
       <div
-        className={`min-w-0 w-fit max-w-full rounded border px-3 py-2 text-[13px] leading-relaxed sm:max-w-[92%] ${
+        className={`min-w-0 w-fit max-w-full rounded-md border px-3 py-2 sm:max-w-[92%] ${AGENT_MESSAGE_CLASS} ${
           message.role === "user"
-            ? "border-accent/25 bg-accent-muted text-text-primary"
+            ? "border-accent/30 bg-accent-muted text-text-primary"
             : message.role === "system"
-              ? "border-border-subtle bg-transparent text-text-muted"
-              : "border-border bg-surface-raised text-text-secondary"
+              ? "border-transparent bg-transparent px-0 text-text-muted"
+              : "border-border/50 bg-transparent text-text-primary"
         }`}
       >
         {activity ? (
           <div className="agent-code-block-wrap mb-2 max-h-32 overflow-y-auto">
-            <pre className="agent-activity-block agent-code-block agent-code-block--streaming text-[10px] text-text-muted">
+            <pre
+              className={`agent-activity-block agent-code-block agent-code-block--streaming font-mono ${CHROME_META_CLASS} text-text-muted`}
+            >
               {activity}
             </pre>
           </div>
@@ -79,7 +85,7 @@ function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<vo
         <div className="flex min-w-0 w-fit max-w-full flex-wrap items-center gap-1.5 sm:max-w-[92%]">
           <ActionBarPrimitive.Root hideWhenRunning={false} className="flex items-center gap-1">
             <ActionBarPrimitive.Copy
-              className={`rounded border border-border bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-muted transition-colors duration-100 hover:border-accent/30 hover:text-text-secondary cursor-pointer`}
+              className={`rounded border border-border/60 bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-muted transition-colors duration-100 hover:border-accent/30 hover:text-text-secondary cursor-pointer`}
             >
               Copy
             </ActionBarPrimitive.Copy>
@@ -118,7 +124,7 @@ function ChatThread({ onApplyPatch }: ChatThreadProps) {
         <ThreadPrimitive.ViewportFooter />
       </ThreadPrimitive.Viewport>
 
-      <ComposerPrimitive.Root className="border-t border-border/40 bg-surface-raised p-2">
+      <ComposerPrimitive.Root className="border-t border-border/40 bg-surface px-2 pb-2 pt-2">
         {/* Model & Thinking Toolbar */}
         <AgentModelToolbar />
 
@@ -139,15 +145,13 @@ export function AgentPanel({
 }: AgentPanelProps) {
   return (
     <aside className="grid h-full min-h-0 min-w-0 grid-rows-[auto_auto_minmax(0,1fr)] overflow-hidden bg-surface-raised">
-      <header className="shrink-0 flex items-center justify-between gap-3 border-b border-border/40 px-3 py-2 select-none">
-        <div>
-          <span className="text-[9px] font-semibold uppercase tracking-wider text-text-muted/70">
-            agent
-          </span>
-          <h2 className="mt-0.5 text-xs font-semibold text-text-secondary leading-none">
-            LaTeX editing assistant
-          </h2>
-        </div>
+      <header className="flex h-9 shrink-0 items-center justify-between gap-2 border-b border-border/40 px-2 select-none">
+        <h2
+          className={`min-w-0 flex-1 truncate text-text-secondary ${CHROME_TITLE_CLASS}`}
+          title="LaTeX editing assistant"
+        >
+          Assistant
+        </h2>
         {chat.running ? (
           <button
             type="button"
@@ -159,7 +163,9 @@ export function AgentPanel({
         ) : null}
       </header>
 
-      <div className="shrink-0 flex justify-between gap-2 border-b border-border/40 px-3 py-1.5 text-[10px] text-text-muted/80 select-none">
+      <div
+        className={`flex h-7 shrink-0 items-center justify-between gap-2 border-b border-border/40 px-2 ${CHROME_META_CLASS} text-text-muted select-none`}
+      >
         <span>{activeFile ? `selected: ${activeFile}` : "no active file"}</span>
         <span>
           {problemCounts

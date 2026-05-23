@@ -218,9 +218,9 @@ ul {
   margin: 0 0 10px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
   border-radius: 6px;
-  background: var(--color-surface);
+  background: var(--color-surface-raised);
 }
 
 .agent-code-block-label {
@@ -258,7 +258,7 @@ ul {
 
 .agent-output-markdown .agent-code-block--streaming,
 .agent-activity-block.agent-code-block--streaming {
-  background: color-mix(in oklab, var(--color-surface) 85%, var(--color-accent-muted) 15%);
+  background: color-mix(in oklab, var(--color-surface-raised) 88%, var(--color-accent-muted) 12%);
 }
 
 .agent-output-markdown--streaming {
@@ -272,10 +272,16 @@ ul {
   overflow-wrap: break-word;
 }
 
+.agent-output-markdown li {
+  font-size: 13px;
+  line-height: 22px;
+}
+
 .agent-output-markdown .agent-inline-code {
   border-radius: 4px;
   padding: 0.1em 0.35em;
-  background: var(--color-surface-inset);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
   font-family: var(--font-mono);
   font-size: 0.92em;
   white-space: pre-wrap;
@@ -289,7 +295,8 @@ ul {
 
 .agent-output-markdown p {
   margin: 0 0 8px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 22px;
   overflow-wrap: break-word;
 }
 

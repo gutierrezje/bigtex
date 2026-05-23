@@ -1,3 +1,4 @@
+import { CHROME_TITLE_CLASS } from "../lib/treeTypography";
 import { formatWindowChromeLabel } from "../lib/windowChrome";
 import { PanelToggleButtons } from "./PanelToggleButtons";
 import { SidebarToggleButton } from "./SidebarToggleButton";
@@ -58,7 +59,9 @@ export function AppChromeBar({
 
       {showWorkspaceLabel ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-36">
-          <span className="max-w-full truncate text-center text-[13px] font-medium leading-snug text-text-secondary">
+          <span
+            className={`max-w-full truncate text-center text-text-secondary ${CHROME_TITLE_CLASS}`}
+          >
             {label}
           </span>
         </div>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { PerformanceMark } from "../../../shared/domain";
-import { TREE_LABEL_CLASS } from "../lib/treeTypography";
+import { CHROME_META_CLASS, TREE_LABEL_CLASS } from "../lib/treeTypography";
 import type { OutputEntry, OutputLevel } from "../store";
 import { useAppStore } from "../store";
 
@@ -81,7 +81,7 @@ export function OutputPanel() {
             )}
           </ul>
         ) : (
-          <p className="m-0 px-1 text-xs text-text-muted">
+          <p className={`m-0 px-1 ${CHROME_META_CLASS} text-text-muted`}>
             Compile, agent, file messages, and timing marks appear here.
           </p>
         )}
