@@ -231,48 +231,53 @@ export function PdfPreview({ pdf }: PdfPreviewProps) {
     };
   }, [pdf?.loadedAt, pdf?.path, pdf, pageNumber]);
 
+  if (!pdf) {
+    return (
+      <div
+        ref={viewportRef}
+        className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-surface-raised px-4"
+      >
+        <p className="max-w-sm text-center text-sm leading-relaxed text-text-secondary">
+          Compile or open a PDF from the project tree.
+        </p>
+        {error ? <p className="mt-2 text-center text-sm text-danger">{error}</p> : null}
+      </div>
+    );
+  }
+
   return (
-    <section className="grid h-full min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-surface-raised">
-      <div ref={viewportRef} className="min-h-0 overflow-hidden bg-surface-inset">
-        {pdf ? (
-          <div className="flex h-full min-h-0 w-full items-center justify-center">
-            <canvas ref={canvasRef} className="pdf-canvas block shrink-0" />
-          </div>
-        ) : (
-          <div className="grid h-full min-h-[12rem] place-items-center px-3">
-            <p className="text-center text-sm text-text-muted">
-              Compile or open a PDF from the project tree.
-            </p>
-          </div>
-        )}
+    <section className="grid h-full min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)_auto] overflow-hidden bg-surface-raised">
+      <div
+        ref={viewportRef}
+        className="flex min-h-0 h-full w-full items-center justify-center overflow-hidden"
+      >
+        <canvas ref={canvasRef} className="pdf-canvas block shrink-0" />
         {error ? <p className="px-2 py-1 text-center text-sm text-danger">{error}</p> : null}
       </div>
 
-      {pdf ? (
-        <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-border/40 px-2 py-1">
-          <span className="text-xs font-medium text-text-muted">
-            Page {pageNumber} of {pageCount || "?"}
-          </span>
-          <div className="flex gap-0.5">
-            <button
-              type="button"
-              className="rounded-md px-2.5 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:bg-background/60 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={pageNumber <= 1}
-              onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
-            >
-              Prev
-            </button>
-            <button
-              type="button"
-              className="rounded-md px-2.5 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:bg-background/60 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={pageCount > 0 && pageNumber >= pageCount}
-              onClick={() => setPageNumber((p) => Math.min(pageCount || p + 1, p + 1))}
-            >
-              Next
-            </button>
-          </div>
-        </footer>
-      ) : null}
+      <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-border/40 px-2 py-1">
+        <span className="text-xs font-medium text-text-muted">
+          Page {pageNumber} of {pageCount || "?"}
+        </span>
+        <div className="flex gap-0.5">
+          <button
+            type="button"
+            className="rounded-md px-2.5 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:bg-background/60 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={pageNumber <= 1}
+            onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+          >
+            Prev
+          </button>
+          <button
+            type="button"
+            className="rounded-md px-2.5 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:bg-background/60 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={pageCount > 0 && pageNumber >= pageCount}
+            onClick={() => setPageNumber((p) => Math.min(pageCount || p + 1, p + 1))}
+          >
+            Next
+          </button>
+        </div>
+      </footer>
     </section>
   );
 }

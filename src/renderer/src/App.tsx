@@ -14,9 +14,8 @@ import {
 import { isPdfPath, toProjectRelativePath } from "../../shared/projectFiles";
 import { AgentPanel } from "./components/AgentPanel";
 import { AppChromeBar } from "./components/AppChromeBar";
+import { DocumentWorkbench } from "./components/DocumentWorkbench";
 import { EditorBottomPanel, type EditorBottomTab } from "./components/EditorBottomPanel";
-import { EditorWorkbench } from "./components/EditorWorkbench";
-import { PdfViewerWorkbench } from "./components/PdfViewerWorkbench";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { useAgentEvents } from "./hooks/useAgentEvents";
@@ -124,9 +123,13 @@ export function App() {
 
   const handleTogglePdf = () => {
     const panel = pdfRef.current;
-    if (panel) {
-      if (panel.isCollapsed()) panel.expand();
-      else panel.collapse();
+    if (!panel) return;
+    if (panel.isCollapsed()) {
+      panel.expand();
+      setIsPdfCollapsed(false);
+    } else {
+      panel.collapse();
+      setIsPdfCollapsed(true);
     }
   };
 
@@ -525,47 +528,23 @@ export function App() {
                 orientation="vertical"
               >
                 <Panel defaultSize="78%" minSize="40%" className="min-h-0 min-w-0">
-                  <Group
-                    className="h-full min-h-0 min-w-0"
-                    id="bigtex-document-panels"
-                    orientation="horizontal"
-                  >
-                    <Panel defaultSize="52%" minSize="25%" className="min-h-0 min-w-0">
-                      <EditorWorkbench
-                        tabs={editorTabs}
-                        diagnostics={compileResult?.diagnostics ?? []}
-                        revealLine={editorRevealLine}
-                        onRevealHandled={() => setEditorRevealLine(null)}
-                        onSelectTab={activateEditorTab}
-                        onCloseTab={requestCloseEditorTab}
-                        onDraftChange={updateEditorTabContent}
-                        onSave={saveEditorTab}
-                        showPdf={!isPdfCollapsed}
-                        onTogglePdf={handleTogglePdf}
-                      />
-                    </Panel>
-
-                    <Separator
-                      className={`resize-handle-horizontal ${
-                        isPdfCollapsed ? "hidden pointer-events-none" : ""
-                      }`}
-                    />
-
-                    <Panel
-                      panelRef={pdfRef}
-                      collapsible={true}
-                      defaultSize="48%"
-                      minSize="20%"
-                      onResize={collapsiblePanelOnResize(setIsPdfCollapsed)}
-                      className="min-h-0 min-w-0"
-                    >
-                      <PdfViewerWorkbench
-                        tabs={pdfTabs}
-                        onSelectTab={activatePdfTab}
-                        onCloseTab={closePdfTabAt}
-                      />
-                    </Panel>
-                  </Group>
+                  <DocumentWorkbench
+                    editorTabs={editorTabs}
+                    pdfTabs={pdfTabs}
+                    diagnostics={compileResult?.diagnostics ?? []}
+                    revealLine={editorRevealLine}
+                    showPdf={!isPdfCollapsed}
+                    pdfPanelRef={pdfRef}
+                    onRevealHandled={() => setEditorRevealLine(null)}
+                    onSelectEditorTab={activateEditorTab}
+                    onCloseEditorTab={requestCloseEditorTab}
+                    onSelectPdfTab={activatePdfTab}
+                    onClosePdfTab={closePdfTabAt}
+                    onDraftChange={updateEditorTabContent}
+                    onSave={saveEditorTab}
+                    onTogglePdf={handleTogglePdf}
+                    onPdfPanelResize={collapsiblePanelOnResize(setIsPdfCollapsed)}
+                  />
                 </Panel>
 
                 <Separator
