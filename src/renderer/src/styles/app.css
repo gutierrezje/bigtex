@@ -93,7 +93,9 @@ body {
 button,
 input,
 textarea {
-  font: inherit;
+  font-family: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
 }
 
 ul {

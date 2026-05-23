@@ -1,4 +1,5 @@
 import type { CompileDiagnostic, CompileResult } from "../../../shared/domain";
+import { TREE_LABEL_CLASS } from "../lib/treeTypography";
 import { OutputPanel } from "./OutputPanel";
 import { ProblemsPanel } from "./ProblemsPanel";
 
@@ -46,14 +47,16 @@ export function EditorBottomPanel({
             }}
           />
         </div>
-        <span className="hidden shrink-0 truncate text-[10px] text-text-muted sm:inline mr-2">
+        <span
+          className={`hidden shrink-0 truncate ${TREE_LABEL_CLASS} text-text-muted sm:inline mr-2`}
+        >
           {result
             ? `${result.success ? "clean" : "needs attention"} · ${result.durationMs}ms`
             : "not run"}
         </span>
         <button
           type="button"
-          className="shrink-0 rounded border border-border px-2.5 py-0.5 text-[11px] font-medium text-text-muted transition-colors duration-100 hover:border-accent/30 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer bg-surface-inset/40"
+          className={`shrink-0 rounded border border-border px-2.5 py-0.5 ${TREE_LABEL_CLASS} text-text-muted transition-colors duration-100 hover:border-accent/30 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer bg-surface-inset/40`}
           onClick={onCompile}
           disabled={compiling}
         >
@@ -90,7 +93,7 @@ function BottomTabButton({
   return (
     <button
       type="button"
-      className={`rounded-t border-b-2 px-3 py-1.5 text-[11px] font-medium transition-colors duration-100 cursor-pointer ${
+      className={`rounded-t border-b-2 px-3 py-1.5 ${TREE_LABEL_CLASS} transition-colors duration-100 cursor-pointer ${
         active
           ? "border-accent text-text-primary"
           : "border-transparent text-text-muted hover:text-text-secondary"
@@ -100,7 +103,7 @@ function BottomTabButton({
       {label}
       {count != null && count > 0 ? (
         <span
-          className={`ml-1.5 rounded border px-1.5 py-0.5 text-[9px] ${
+          className={`ml-1.5 rounded border px-1.5 py-0.5 text-[12px] leading-none ${
             active
               ? "bg-accent/10 text-accent border-accent/20"
               : "bg-surface-inset text-text-muted border-border"

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { PerformanceMark } from "../../../shared/domain";
+import { TREE_LABEL_CLASS } from "../lib/treeTypography";
 import type { OutputEntry, OutputLevel } from "../store";
 import { useAppStore } from "../store";
 
@@ -58,7 +59,7 @@ export function OutputPanel() {
       <div className="flex shrink-0 items-center justify-end gap-2 border-b border-border/40 px-2 py-1">
         <button
           type="button"
-          className="rounded px-2 py-0.5 text-[10px] font-medium text-text-muted transition-colors duration-100 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
+          className={`rounded px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-muted transition-colors duration-100 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40`}
           disabled={outputLog.length === 0}
           onClick={() => clearOutputLog()}
         >

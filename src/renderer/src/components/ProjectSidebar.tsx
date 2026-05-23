@@ -1,6 +1,7 @@
 import { type MouseEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectFile, ProjectSnapshot } from "../../../shared/domain";
 import { isPdfPath, parentDirectoryPath } from "../../../shared/projectFiles";
+import { TREE_LABEL_CLASS, TREE_ROOT_LABEL_CLASS } from "../lib/treeTypography";
 import { PdfFileIcon } from "./icons/PdfFileIcon";
 import { NewFileDialog } from "./NewFileDialog";
 
@@ -46,7 +47,7 @@ function FolderIcon({ expanded }: { expanded: boolean }) {
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill="currentColor"
-      className="h-4 w-4 shrink-0 text-text-muted/70"
+      className="h-3.5 w-3.5 shrink-0 text-text-muted/70"
     >
       <title>{expanded ? "Expanded Folder" : "Collapsed Folder"}</title>
       {expanded ? (
@@ -60,7 +61,7 @@ function FolderIcon({ expanded }: { expanded: boolean }) {
 
 function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
   if (kind === "pdf" || isPdfPath(fileName)) {
-    return <PdfFileIcon />;
+    return <PdfFileIcon className="h-3.5 w-3.5 shrink-0" />;
   }
 
   if (kind === "tex") {
@@ -69,7 +70,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
         fill="currentColor"
-        className="h-4 w-4 shrink-0 text-text-secondary"
+        className="h-3.5 w-3.5 shrink-0 text-text-secondary"
       >
         <title>LaTeX Source File</title>
         <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
@@ -88,7 +89,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-4 w-4 shrink-0 text-text-muted"
+        className="h-3.5 w-3.5 shrink-0 text-text-muted"
       >
         <title>Bibliography Database File</title>
         <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -108,7 +109,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-4 w-4 shrink-0 text-text-muted"
+        className="h-3.5 w-3.5 shrink-0 text-text-muted"
       >
         <title>Style or Class File</title>
         <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -128,7 +129,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-4 w-4 shrink-0 text-text-muted"
+        className="h-3.5 w-3.5 shrink-0 text-text-muted"
       >
         <title>Configuration File</title>
         <circle cx="12" cy="12" r="3" />
@@ -146,7 +147,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="h-4 w-4 shrink-0 text-text-muted"
+      className="h-3.5 w-3.5 shrink-0 text-text-muted"
     >
       <title>Document File</title>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -179,7 +180,7 @@ function InlineNameEditor({
       ref={inputRef}
       type="text"
       value={value}
-      className="min-w-0 flex-1 rounded border border-accent/50 bg-zinc-900 px-1.5 py-0 text-[13px] text-text-primary outline-none"
+      className={`min-w-0 flex-1 rounded border border-accent/50 bg-zinc-900 px-1 py-0 ${TREE_LABEL_CLASS} text-text-primary outline-none`}
       onChange={(event) => setValue(event.target.value)}
       onBlur={() => onCommit(value.trim())}
       onKeyDown={(event) => {
@@ -243,9 +244,9 @@ function FileRow({
   return (
     <li className="list-none">
       <button
-        className={`flex w-full items-center gap-2 rounded-md border-0 bg-transparent px-2 py-1 text-left text-[13px] transition-colors duration-100 ${
+        className={`flex w-full items-center gap-1 rounded-sm border-0 bg-transparent px-1 py-0.5 text-left ${TREE_LABEL_CLASS} transition-colors duration-100 ${
           isActive || isSelected
-            ? "bg-accent-muted text-text-primary font-medium"
+            ? "bg-accent-muted text-text-primary"
             : "text-text-secondary hover:bg-surface-inset hover:text-text-primary"
         }`}
         type="button"
@@ -263,7 +264,7 @@ function FileRow({
           </>
         ) : (
           <>
-            <span className="w-3 shrink-0" />
+            <span className="w-2 shrink-0" />
             <FileIcon kind={file.kind} fileName={file.name} />
           </>
         )}
@@ -274,12 +275,14 @@ function FileRow({
             onCancel={onCancelRename}
           />
         ) : (
-          <span className="truncate">{file.name}</span>
+          <span className={`truncate ${TREE_LABEL_CLASS}`}>
+            {isFolder ? file.name.toUpperCase() : file.name}
+          </span>
         )}
       </button>
 
       {file.children && isExpanded ? (
-        <ul className="relative ml-[13px] border-l border-border/30 pl-1.5 my-0.5">
+        <ul className="relative ml-2 border-l border-border/30 pl-1 my-0.5">
           {file.children.map((child) => (
             <FileRow
               key={child.path}
@@ -462,54 +465,44 @@ export function ProjectSidebar({
 
   return (
     <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
-      <section
-        className="flex items-center justify-between gap-2 border-b border-border/40 px-4 py-2"
-        onContextMenu={handleWorkspaceContextMenu}
-        aria-label="Workspace"
-      >
-        <div>
-          <span className="text-[9px] font-semibold uppercase tracking-wider text-text-muted/70">
-            workspace
-          </span>
-          <strong className="mt-0.5 block truncate text-xs font-medium text-text-secondary">
-            {project?.name ?? "No project"}
-          </strong>
-        </div>
-        {project ? (
-          <button
-            type="button"
-            title="Add new file"
-            className="shrink-0 rounded border border-border/80 p-1 text-text-muted transition-colors hover:border-accent/30 hover:text-text-primary cursor-pointer bg-surface-inset/40 hover:bg-surface-raised"
-            onClick={openNewFileDialog}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-3 w-3"
-            >
-              <title>Add new file</title>
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
-        ) : null}
-      </section>
-
       {project ? (
         <div
           ref={treeRef}
           role="tree"
           tabIndex={0}
-          className="flex-1 overflow-y-auto px-2 pb-4 my-0 outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+          className="flex-1 overflow-y-auto px-1 pb-3 pt-1 outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
           onKeyDown={handleTreeKeyDown}
           onContextMenu={handleWorkspaceContextMenu}
         >
           <ul className="m-0 p-0">
+            <li className="list-none">
+              <div className="flex w-full items-center gap-1 px-1 py-0.5">
+                <span className={`min-w-0 flex-1 truncate ${TREE_ROOT_LABEL_CLASS}`}>
+                  {project.name.toUpperCase()}
+                </span>
+                <button
+                  type="button"
+                  title="Add new file"
+                  className="shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-primary cursor-pointer"
+                  onClick={openNewFileDialog}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-3 w-3"
+                  >
+                    <title>Add new file</title>
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+            </li>
             {project.files.map((file) => (
               <FileRow
                 key={file.path}

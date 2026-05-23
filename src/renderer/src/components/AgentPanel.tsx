@@ -5,6 +5,7 @@ import {
   ThreadPrimitive,
   useAuiState,
 } from "@assistant-ui/react";
+import { TREE_LABEL_CLASS } from "../lib/treeTypography";
 import type { AgentChatState } from "../store";
 import { AgentComposer } from "./agent/AgentComposer";
 import { AgentMessageReasoningPart } from "./agent/AgentMessageReasoningPart";
@@ -77,14 +78,16 @@ function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<vo
       {isAssistant ? (
         <div className="flex min-w-0 w-fit max-w-full flex-wrap items-center gap-1.5 sm:max-w-[92%]">
           <ActionBarPrimitive.Root hideWhenRunning={false} className="flex items-center gap-1">
-            <ActionBarPrimitive.Copy className="rounded border border-border bg-transparent px-2 py-0.5 text-[10px] text-text-muted transition-colors duration-100 hover:border-accent/30 hover:text-text-secondary cursor-pointer">
+            <ActionBarPrimitive.Copy
+              className={`rounded border border-border bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-muted transition-colors duration-100 hover:border-accent/30 hover:text-text-secondary cursor-pointer`}
+            >
               Copy
             </ActionBarPrimitive.Copy>
           </ActionBarPrimitive.Root>
           {patch ? (
             <button
               type="button"
-              className="rounded border border-accent/20 bg-accent/8 px-2.5 py-0.5 text-[10px] font-medium text-accent transition-colors duration-100 hover:bg-accent/15 cursor-pointer"
+              className={`rounded border border-accent/20 bg-accent/8 px-2.5 py-0.5 ${TREE_LABEL_CLASS} text-accent transition-colors duration-100 hover:bg-accent/15 cursor-pointer`}
               onClick={() => onApplyPatch(patch)}
             >
               Apply detected patch
@@ -148,7 +151,7 @@ export function AgentPanel({
         {chat.running ? (
           <button
             type="button"
-            className="shrink-0 rounded border border-danger/30 bg-transparent px-2 py-0.5 text-[10px] font-medium text-danger hover:bg-danger-muted transition-colors cursor-pointer"
+            className={`shrink-0 rounded border border-danger/30 bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-danger hover:bg-danger-muted transition-colors cursor-pointer`}
             onClick={() => onCancel(chat.runId)}
           >
             cancel

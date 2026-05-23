@@ -7,6 +7,7 @@ import {
   filterDiagnosticsByTab,
   type ProblemsTab,
 } from "../../../shared/problems";
+import { TREE_LABEL_CLASS } from "../lib/treeTypography";
 
 interface ProblemsPanelProps {
   result: CompileResult | null;
@@ -178,7 +179,7 @@ export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: Problems
             <button
               key={tab.id}
               type="button"
-              className={`rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors duration-100 cursor-pointer ${
+              className={`rounded px-2.5 py-0.5 ${TREE_LABEL_CLASS} transition-colors duration-100 cursor-pointer ${
                 active
                   ? "border border-accent/20 bg-accent/8 text-text-primary"
                   : "border border-transparent text-text-muted hover:text-text-secondary"
@@ -187,7 +188,7 @@ export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: Problems
             >
               {tab.label}
               <span
-                className={`ml-1.5 rounded border px-1.5 py-0.5 text-[9px] ${
+                className={`ml-1.5 rounded border px-1.5 py-0.5 text-[12px] leading-none ${
                   active
                     ? "bg-accent/10 text-accent border-accent/20"
                     : "bg-surface-inset text-text-muted border-border"

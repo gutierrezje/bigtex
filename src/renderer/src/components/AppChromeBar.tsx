@@ -45,11 +45,11 @@ export function AppChromeBar({
 
   return (
     <div
-      className={`${chromeRowClass} ${showWindowControls ? "pl-3" : NATIVE_TRAFFIC_LIGHT_GUTTER}`}
+      className={`relative ${chromeRowClass} ${showWindowControls ? "pl-3" : NATIVE_TRAFFIC_LIGHT_GUTTER}`}
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       <div
-        className="flex shrink-0 items-center gap-2"
+        className="relative z-10 flex shrink-0 items-center gap-2"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         {showWindowControls ? <WindowControls /> : null}
@@ -61,15 +61,15 @@ export function AppChromeBar({
       </div>
 
       {showWorkspaceLabel ? (
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text-secondary">
-          {label}
-        </span>
-      ) : (
-        <div className="min-w-0 flex-1" aria-hidden />
-      )}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-36">
+          <span className="max-w-full truncate text-center text-[13px] font-medium leading-snug text-text-secondary">
+            {label}
+          </span>
+        </div>
+      ) : null}
 
       <div
-        className="flex shrink-0 items-center gap-0.5"
+        className="relative z-10 ml-auto flex shrink-0 items-center gap-0.5"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
         <PanelToggleButtons
