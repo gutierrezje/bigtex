@@ -36,17 +36,17 @@ export function AgentComposer() {
   }, [focusToken, aui]);
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-lg border border-border bg-surface-inset p-2">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded border border-border bg-surface-inset p-2 focus-within:border-accent/30 transition-colors duration-150">
       <ComposerPrimitive.Input
         ref={inputRef}
-        className="max-h-32 min-h-10 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-relaxed text-text-primary outline-none placeholder:text-text-muted"
-        placeholder="Ask BigTeX to revise, explain, or fix this LaTeX..."
+        className="max-h-32 min-h-10 resize-none border-0 bg-transparent px-1 py-1 text-xs leading-relaxed text-text-primary outline-none placeholder:text-text-muted"
+        placeholder="Ask BigTeX to revise, explain, or fix..."
         rows={2}
         submitMode="enter"
       />
-      <div className="flex items-end">
-        <ComposerPrimitive.Send className="rounded-md border-0 bg-accent px-3 py-2 text-xs font-semibold text-zinc-950 transition-opacity duration-100 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">
-          Send
+      <div className="flex items-end select-none">
+        <ComposerPrimitive.Send className="rounded border border-accent/20 bg-accent/8 px-2.5 py-1 text-[11px] font-medium text-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:bg-transparent disabled:border-border/50 disabled:text-text-muted/40 transition-all cursor-pointer">
+          send
         </ComposerPrimitive.Send>
       </div>
     </div>

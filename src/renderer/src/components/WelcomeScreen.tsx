@@ -110,26 +110,26 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
   };
 
   return (
-    <div className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-zinc-950 text-text-primary welcome-fade-in select-none">
+    <div className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-surface text-text-primary welcome-fade-in select-none">
       {/* Main two-column dashboard */}
       <div className="z-10 grid w-full max-w-5xl grid-cols-1 gap-12 px-6 md:grid-cols-12">
         {/* Left Column: branding and main actions */}
         <section className="welcome-slide-up flex flex-col justify-center md:col-span-5">
-          <div className="flex items-center gap-4 mb-4">
-            <span className="grid h-12 w-12 place-items-center rounded-xl bg-accent text-lg font-black tracking-tight text-zinc-950">
-              BT
+          <div className="flex items-center gap-3.5 mb-5">
+            <span className="grid h-11 w-11 place-items-center rounded-lg border border-border bg-surface-inset text-md font-bold tracking-tight text-text-secondary select-none">
+              bt
             </span>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-text-primary leading-tight">
+              <h1 className="text-xl font-bold tracking-tight text-text-primary leading-none">
                 BigTeX
               </h1>
-              <p className="text-xs font-medium text-accent tracking-wide uppercase">
-                Agent-First LaTeX Workspace
+              <p className="text-[10px] font-medium text-accent tracking-wider uppercase mt-1">
+                Agent-first LaTeX workspace
               </p>
             </div>
           </div>
 
-          <p className="text-sm leading-relaxed text-text-secondary mb-8 pr-4">
+          <p className="text-xs leading-relaxed text-text-secondary mb-8 pr-4">
             Welcome to the early MVP LaTeX desktop environment. BigTeX streamlines documents with
             integrated deep agents, real-time local compilation, and diagnostic assistance.
           </p>
@@ -138,17 +138,17 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
             {/* Open Folder Card */}
             <button
               onClick={handleOpenFolder}
-              className="welcome-card-flat text-left p-4 rounded-xl flex items-center gap-4 cursor-pointer group outline-none"
+              className="welcome-card-flat text-left p-4 rounded-lg flex items-center gap-4 cursor-pointer group outline-none"
               type="button"
             >
-              <div className="p-3 rounded-lg bg-accent/10 text-accent group-hover:bg-accent/20 transition-colors duration-200">
+              <div className="p-2.5 rounded-md bg-surface-raised border border-border text-text-muted group-hover:text-text-primary transition-colors duration-150">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth="2"
                   stroke="currentColor"
-                  className="h-6 w-6"
+                  className="h-5 w-5"
                 >
                   <title>Folder Icon</title>
                   <path
@@ -159,10 +159,10 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-text-primary text-sm group-hover:text-accent transition-colors duration-200">
-                  Open Folder…
+                <h3 className="font-medium text-text-primary text-xs group-hover:text-accent transition-colors duration-150">
+                  Open folder...
                 </h3>
-                <p className="text-xs text-text-muted mt-0.5">
+                <p className="text-[11px] text-text-muted mt-0.5">
                   Select a LaTeX folder from your disk
                 </p>
               </div>
@@ -172,17 +172,17 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
             <button
               data-testid="welcome-open-sample"
               onClick={handleOpenSample}
-              className="welcome-card-flat text-left p-4 rounded-xl flex items-center gap-4 cursor-pointer group outline-none"
+              className="welcome-card-flat text-left p-4 rounded-lg flex items-center gap-4 cursor-pointer group outline-none"
               type="button"
             >
-              <div className="p-3 rounded-lg bg-teal-500/10 text-teal-400 group-hover:bg-teal-500/20 transition-colors duration-200">
+              <div className="p-2.5 rounded-md bg-surface-raised border border-border text-text-muted group-hover:text-text-primary transition-colors duration-150">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth="2"
                   stroke="currentColor"
-                  className="h-6 w-6"
+                  className="h-5 w-5"
                 >
                   <title>Sample Document Icon</title>
                   <path
@@ -193,10 +193,10 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-text-primary text-sm group-hover:text-accent transition-colors duration-200">
-                  Open Sample Project
+                <h3 className="font-medium text-text-primary text-xs group-hover:text-accent transition-colors duration-150">
+                  Open sample project
                 </h3>
-                <p className="text-xs text-text-muted mt-0.5">
+                <p className="text-[11px] text-text-muted mt-0.5">
                   Launch the minimal smoke test workspace
                 </p>
               </div>
@@ -206,17 +206,17 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
 
         {/* Right Column: Recent workspaces list */}
         <section className="welcome-slide-up delay-100 md:col-span-7 flex flex-col justify-center">
-          <header className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
-            <h2 className="text-sm font-semibold tracking-wider uppercase text-text-muted">
-              Recent Workspaces
+          <header className="flex items-center justify-between border-b border-border/40 pb-3 mb-4">
+            <h2 className="text-[10px] font-semibold tracking-wider uppercase text-text-muted/80">
+              Recent workspaces
             </h2>
             {recents.length > 0 ? (
               <button
                 type="button"
                 onClick={handleClearRecents}
-                className="text-xs text-rose-400 hover:text-rose-300 font-medium transition-colors cursor-pointer"
+                className="text-[11px] text-text-muted hover:text-rose-400 font-normal transition-colors cursor-pointer"
               >
-                Clear History
+                Clear history
               </button>
             ) : null}
           </header>
@@ -226,27 +226,27 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
               <ul className="flex flex-col gap-2">
                 {recents.map((item) => (
                   <li key={item.path}>
-                    <div className="welcome-recent-item flex w-full items-center justify-between gap-2 rounded-lg border border-border/20 bg-zinc-900/20 p-1">
+                    <div className="welcome-recent-item flex w-full items-center justify-between gap-2 rounded-lg border border-border/20 bg-surface-inset p-1 hover:border-border/40 transition-all duration-150">
                       <button
                         type="button"
                         onClick={() => handleOpenPath(item.path)}
-                        className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 text-left cursor-pointer outline-none hover:bg-zinc-800/40"
+                        className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 text-left cursor-pointer outline-none hover:bg-surface-raised/40"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
                           fill="currentColor"
-                          className="h-4.5 w-4.5 shrink-0 text-accent/80"
+                          className="h-4 w-4 shrink-0 text-text-muted/80"
                         >
                           <title>Project Folder</title>
                           <path d="M19.5 21a3 3 0 0 0 3-3V9a3 3 0 0 0-3-3h-5.379a1.5 1.5 0 0 1-1.06-.44L11.44 3.938A3 3 0 0 0 9.318 3H4.5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h15Z" />
                         </svg>
                         <div className="min-w-0">
-                          <h4 className="truncate text-sm font-semibold leading-tight text-text-primary">
+                          <h4 className="truncate text-xs font-semibold leading-tight text-text-secondary hover:text-text-primary transition-colors">
                             {item.name}
                           </h4>
                           <p
-                            className="mt-0.5 max-w-[420px] truncate font-mono text-xs text-text-muted"
+                            className="mt-0.5 max-w-[420px] truncate font-mono text-[10px] text-text-muted/80"
                             title={item.path}
                           >
                             {item.path}
@@ -254,7 +254,7 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
                         </div>
                       </button>
                       <div className="flex shrink-0 items-center gap-2 pr-2">
-                        <span className="text-[11px] text-text-muted">
+                        <span className="text-[10px] text-text-muted/80">
                           {formatDate(item.lastOpened)}
                         </span>
                         <button

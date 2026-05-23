@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:ital,wght@0,300..700;1,300..700&display=swap");
 
 /* ── Geist Sans ── */
 @font-face {
@@ -48,22 +49,22 @@
 
 /* ── Tailwind v4 Design Tokens ── */
 @theme {
-  --font-sans: "Geist Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Instrument Sans", "Geist Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-surface: #09090b;
-  --color-surface-raised: #18181b;
-  --color-surface-inset: #0c0c0e;
-  --color-border: #27272a;
-  --color-border-subtle: #1e1e21;
-  --color-text-primary: #fafafa;
-  --color-text-secondary: #a1a1aa;
-  --color-text-muted: #71717a;
-  --color-accent: #2dd4bf;
-  --color-accent-muted: rgba(45, 212, 191, 0.12);
-  --color-danger: #f87171;
-  --color-danger-muted: rgba(248, 113, 113, 0.12);
-  --color-success: #34d399;
+  --color-surface-raised: #111113;
+  --color-surface-inset: #060607;
+  --color-border: #1d1d20;
+  --color-border-subtle: #141416;
+  --color-text-primary: #f4f4f6;
+  --color-text-secondary: #96969e;
+  --color-text-muted: #55555c;
+  --color-accent: #3b82f6;
+  --color-accent-muted: rgba(59, 130, 246, 0.08);
+  --color-danger: #ef4444;
+  --color-danger-muted: rgba(239, 68, 68, 0.08);
+  --color-success: #10b981;
 }
 
 /* ── Base Resets ── */
@@ -345,14 +346,15 @@ ul {
 }
 
 .welcome-card-flat {
-  background: var(--color-surface-raised);
+  background: var(--color-surface-inset);
   border: 1px solid var(--color-border);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 150ms ease;
 }
 
 .welcome-card-flat:hover {
-  border-color: var(--color-accent);
-  background: #202024;
+  border-color: rgba(59, 130, 246, 0.25);
+  background: var(--color-surface-raised);
+  transform: translateY(-1px);
 }
 
 .welcome-recent-item {

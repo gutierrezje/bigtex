@@ -252,12 +252,13 @@ export function App() {
       clearPdfTabs();
       setCompileResult(null);
       clearOutputLog();
+      clearAgent();
     });
     return () => {
       unsubOpened();
       unsubClosed();
     };
-  }, [setProject, clearEditorTabs, clearPdfTabs, setCompileResult, clearOutputLog]);
+  }, [setProject, clearEditorTabs, clearPdfTabs, setCompileResult, clearOutputLog, clearAgent]);
 
   async function openProjectFile(file: ProjectFile): Promise<void> {
     if (!project || !selectable(file)) return;
@@ -494,6 +495,14 @@ export function App() {
                 onCreateFile={createProjectFile}
                 onRenamePath={renameProjectPath}
                 onDeletePath={deleteProjectPath}
+                showSidebar={!isSidebarCollapsed}
+                onToggleSidebar={handleToggleSidebar}
+                showDiagnostics={!isDiagnosticsCollapsed}
+                onToggleDiagnostics={handleToggleDiagnostics}
+                showPdf={!isPdfCollapsed}
+                onTogglePdf={handleTogglePdf}
+                showAgent={!isAgentCollapsed}
+                onToggleAgent={handleToggleAgent}
                 onError={(message) => {
                   appendOutput(message, "error");
                   setEditorBottomTab("output");

@@ -11,6 +11,14 @@ interface ProjectSidebarProps {
   onCreateFile(parentPath: string, name: string): Promise<void>;
   onRenamePath(path: string, newName: string): Promise<void>;
   onDeletePath(path: string): Promise<void>;
+  showSidebar: boolean;
+  onToggleSidebar(): void;
+  showDiagnostics: boolean;
+  onToggleDiagnostics(): void;
+  showPdf: boolean;
+  onTogglePdf(): void;
+  showAgent: boolean;
+  onToggleAgent(): void;
   onError(message: string): void;
 }
 
@@ -46,7 +54,7 @@ function FolderIcon({ expanded }: { expanded: boolean }) {
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill="currentColor"
-      className="h-4 w-4 shrink-0 text-amber-500/80"
+      className="h-4 w-4 shrink-0 text-text-muted/70"
     >
       <title>{expanded ? "Expanded Folder" : "Collapsed Folder"}</title>
       {expanded ? (
@@ -69,7 +77,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
         fill="currentColor"
-        className="h-4 w-4 shrink-0 text-teal-400"
+        className="h-4 w-4 shrink-0 text-text-secondary"
       >
         <title>LaTeX Source File</title>
         <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z" />
@@ -88,7 +96,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-4 w-4 shrink-0 text-sky-400"
+        className="h-4 w-4 shrink-0 text-text-muted"
       >
         <title>Bibliography Database File</title>
         <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -108,7 +116,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-4 w-4 shrink-0 text-violet-400"
+        className="h-4 w-4 shrink-0 text-text-muted"
       >
         <title>Style or Class File</title>
         <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -128,7 +136,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-4 w-4 shrink-0 text-zinc-400"
+        className="h-4 w-4 shrink-0 text-text-muted"
       >
         <title>Configuration File</title>
         <circle cx="12" cy="12" r="3" />
@@ -146,7 +154,7 @@ function FileIcon({ kind, fileName }: { kind: string; fileName: string }) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="h-4 w-4 shrink-0 text-zinc-400"
+      className="h-4 w-4 shrink-0 text-text-muted"
     >
       <title>Document File</title>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -246,7 +254,7 @@ function FileRow({
         className={`flex w-full items-center gap-2 rounded-md border-0 bg-transparent px-2 py-1 text-left text-[13px] transition-colors duration-100 ${
           isActive || isSelected
             ? "bg-accent-muted text-text-primary font-medium"
-            : "text-text-secondary hover:bg-zinc-800/40 hover:text-text-primary"
+            : "text-text-secondary hover:bg-surface-inset hover:text-text-primary"
         }`}
         type="button"
         onClick={handleClick}
@@ -310,6 +318,14 @@ export function ProjectSidebar({
   onCreateFile,
   onRenamePath,
   onDeletePath,
+  showSidebar,
+  onToggleSidebar,
+  showDiagnostics,
+  onToggleDiagnostics,
+  showPdf,
+  onTogglePdf,
+  showAgent,
+  onToggleAgent,
   onError,
 }: ProjectSidebarProps) {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set());
@@ -462,26 +478,114 @@ export function ProjectSidebar({
 
   return (
     <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
-      <div className="flex min-w-0 items-center gap-3 px-4 pt-4 pb-4">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent text-xs font-bold tracking-tight text-zinc-950 shadow-sm transition-transform hover:scale-102">
-          BT
-        </span>
-        <div className="min-w-0">
-          <h1 className="text-sm font-semibold tracking-tight text-text-primary">BigTeX</h1>
-          <p className="text-[11px] text-text-muted">Agentic LaTeX editor</p>
+      <div className="flex shrink-0 items-center justify-between h-11 border-b border-border/40 px-3 bg-surface-raised/40 select-none">
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            title="Toggle Sidebar (Files)"
+            className={`p-1.5 rounded transition-all duration-100 cursor-pointer ${
+              showSidebar
+                ? "bg-accent/8 text-text-primary border border-accent/20"
+                : "text-text-muted hover:text-text-secondary border border-transparent"
+            }`}
+            onClick={onToggleSidebar}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5"
+            >
+              <title>Toggle Sidebar</title>
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M9 3v18" />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            title="Toggle Problems"
+            className={`p-1.5 rounded transition-all duration-100 cursor-pointer ${
+              showDiagnostics
+                ? "bg-accent/8 text-text-primary border border-accent/20"
+                : "text-text-muted hover:text-text-secondary border border-transparent"
+            }`}
+            onClick={onToggleDiagnostics}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5"
+            >
+              <title>Toggle Problems</title>
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="M3 15h18" />
+              <path d="m8 9 2 2-2 2" />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            title="Toggle PDF viewer"
+            className={`p-1.5 rounded transition-all duration-100 cursor-pointer ${
+              showPdf
+                ? "bg-accent/8 text-text-primary border border-accent/20"
+                : "text-text-muted hover:text-text-secondary border border-transparent"
+            }`}
+            onClick={onTogglePdf}
+          >
+            <PdfFileIcon
+              className={`h-3.5 w-3.5 ${showPdf ? "text-text-primary" : "text-text-muted"}`}
+            />
+          </button>
+
+          <button
+            type="button"
+            title="Toggle AI Agent Panel"
+            className={`p-1.5 rounded transition-all duration-100 cursor-pointer ${
+              showAgent
+                ? "bg-accent/8 text-text-primary border border-accent/20"
+                : "text-text-muted hover:text-text-secondary border border-transparent"
+            }`}
+            onClick={onToggleAgent}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5"
+            >
+              <title>Toggle AI Agent</title>
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+              <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5Z" opacity="0.4" />
+            </svg>
+          </button>
         </div>
       </div>
 
       <section
-        className="flex items-start justify-between gap-2 px-4 pb-2"
+        className="flex items-center justify-between gap-2 px-4 py-2 border-b border-border-subtle/50 mb-1 mt-1"
         onContextMenu={handleWorkspaceContextMenu}
         aria-label="Workspace"
       >
         <div>
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-text-muted">
-            Workspace
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-text-muted/70">
+            workspace
           </span>
-          <strong className="mt-0.5 block truncate text-sm font-medium text-text-primary">
+          <strong className="mt-0.5 block truncate text-xs font-medium text-text-secondary">
             {project?.name ?? "No project"}
           </strong>
         </div>
@@ -489,10 +593,23 @@ export function ProjectSidebar({
           <button
             type="button"
             title="Add new file"
-            className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-text-muted transition-colors hover:border-accent/40 hover:text-text-primary"
+            className="shrink-0 rounded border border-border/80 p-1 text-text-muted transition-colors hover:border-accent/30 hover:text-text-primary cursor-pointer bg-surface-inset/40 hover:bg-surface-raised"
             onClick={openNewFileDialog}
           >
-            New
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3 w-3"
+            >
+              <title>Add new file</title>
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
           </button>
         ) : null}
       </section>

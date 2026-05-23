@@ -56,7 +56,7 @@ export function AgentModelToolbar() {
           <button
             type="button"
             disabled={!config}
-            className="flex items-center gap-1 rounded-md border border-border bg-surface-inset px-2 py-0.5 text-[11px] font-medium text-text-secondary transition-all duration-100 hover:border-accent/40 hover:text-text-primary disabled:opacity-40"
+            className="flex items-center gap-1 rounded border border-border bg-surface-inset px-2 py-0.5 text-[11px] font-medium text-text-secondary transition-all duration-100 hover:border-accent/30 hover:text-text-primary disabled:opacity-40 cursor-pointer"
             onClick={() => {
               setShowProviderDropdown(!showProviderDropdown);
               setShowModelDropdown(false);
@@ -67,12 +67,12 @@ export function AgentModelToolbar() {
             <ChevronDown />
           </button>
           {showProviderDropdown ? (
-            <div className="absolute bottom-full left-0 z-50 mb-1.5 w-28 rounded-lg border border-border bg-surface-raised p-1 shadow-xl">
+            <div className="absolute bottom-full left-0 z-50 mb-1.5 w-28 rounded border border-border bg-surface-raised p-1 shadow-xl">
               {(["free", "go"] as const).map((group) => (
                 <button
                   key={group}
                   type="button"
-                  className={`w-full rounded-md px-2 py-1 text-left text-[11px] font-medium transition-all ${providerGroup === group ? "bg-accent-muted/20 text-accent" : "text-text-secondary hover:bg-zinc-800 hover:text-text-primary"}`}
+                  className={`w-full rounded px-2 py-1 text-left text-[11px] font-medium transition-all cursor-pointer ${providerGroup === group ? "bg-accent/8 text-accent border border-accent/15" : "text-text-secondary hover:bg-surface-inset hover:text-text-primary"}`}
                   onClick={() => {
                     setAgentProviderGroup(group);
                     setShowProviderDropdown(false);
@@ -88,7 +88,7 @@ export function AgentModelToolbar() {
           <button
             type="button"
             disabled={!config || modelsForGroup.length === 0}
-            className="flex items-center gap-1 rounded-md border border-border bg-surface-inset px-2 py-0.5 text-[11px] font-medium text-text-secondary transition-all duration-100 hover:border-accent/40 hover:text-text-primary disabled:opacity-40"
+            className="flex items-center gap-1 rounded border border-border bg-surface-inset px-2 py-0.5 text-[11px] font-medium text-text-secondary transition-all duration-100 hover:border-accent/30 hover:text-text-primary disabled:opacity-40 cursor-pointer"
             onClick={() => {
               setShowModelDropdown(!showModelDropdown);
               setShowProviderDropdown(false);
@@ -101,12 +101,12 @@ export function AgentModelToolbar() {
             <ChevronDown />
           </button>
           {showModelDropdown ? (
-            <div className="absolute bottom-full left-0 z-50 mb-1.5 max-h-48 w-52 overflow-y-auto rounded-lg border border-border bg-surface-raised p-1 shadow-xl">
+            <div className="absolute bottom-full left-0 z-50 mb-1.5 max-h-48 w-52 overflow-y-auto rounded border border-border bg-surface-raised p-1 shadow-xl">
               {modelsForGroup.map((model) => (
                 <button
                   key={model.id}
                   type="button"
-                  className={`w-full rounded-md px-2 py-1 text-left text-[11px] font-medium transition-all ${model.id === modelId ? "bg-accent-muted/20 text-accent" : "text-text-secondary hover:bg-zinc-800 hover:text-text-primary"}`}
+                  className={`w-full rounded px-2 py-1 text-left text-[11px] font-medium transition-all cursor-pointer ${model.id === modelId ? "bg-accent/8 text-accent border border-accent/15" : "text-text-secondary hover:bg-surface-inset hover:text-text-primary"}`}
                   onClick={() => {
                     setAgentModelId(model.id);
                     setShowModelDropdown(false);
@@ -130,7 +130,7 @@ export function AgentModelToolbar() {
                   ? "Reasoning effort (max → low); off uses the base model"
                   : "No reasoning variants for this model"
             }
-            className={`flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-all duration-100 disabled:cursor-not-allowed disabled:opacity-40 ${reasoningLevel ? "border-accent-muted bg-accent-muted/10 text-text-primary" : "border-border bg-surface-inset text-text-muted hover:border-accent/40"}`}
+            className={`flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-medium transition-all duration-100 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer ${reasoningLevel ? "border-accent/25 bg-accent/8 text-text-primary font-medium" : "border-border bg-surface-inset text-text-muted hover:border-accent/30 hover:text-text-secondary"}`}
             onClick={() => {
               setShowReasoningDropdown(!showReasoningDropdown);
               setShowProviderDropdown(false);
@@ -141,12 +141,12 @@ export function AgentModelToolbar() {
             <ChevronDown />
           </button>
           {showReasoningDropdown ? (
-            <div className="absolute bottom-full left-0 z-50 mb-1.5 min-w-[5.5rem] rounded-lg border border-border bg-surface-raised p-1 shadow-xl">
+            <div className="absolute bottom-full left-0 z-50 mb-1.5 min-w-[5.5rem] rounded border border-border bg-surface-raised p-1 shadow-xl">
               {reasoningOptions.map((option) => (
                 <button
                   key={option.label}
                   type="button"
-                  className={`w-full rounded-md px-2 py-1 text-left text-[11px] font-medium transition-all ${reasoningLevel === option.value ? "bg-accent-muted/20 text-accent" : "text-text-secondary hover:bg-zinc-800 hover:text-text-primary"}`}
+                  className={`w-full rounded px-2 py-1 text-left text-[11px] font-medium transition-all cursor-pointer ${reasoningLevel === option.value ? "bg-accent/8 text-accent border border-accent/15" : "text-text-secondary hover:bg-surface-inset hover:text-text-primary"}`}
                   onClick={() => {
                     setAgentReasoningLevel(option.value);
                     setShowReasoningDropdown(false);

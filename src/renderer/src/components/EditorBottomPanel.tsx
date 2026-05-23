@@ -29,35 +29,35 @@ export function EditorBottomPanel({
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-2 py-1">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-2 py-1 select-none">
         <div className="flex min-w-0 flex-1 items-center gap-0.5">
           <BottomTabButton
             active={activeTab === "problems"}
-            label="Problems"
+            label="problems"
             count={problemTotal}
             onClick={() => onTabChange("problems")}
           />
           <BottomTabButton
             active={activeTab === "output"}
-            label="Output"
+            label="output"
             onClick={() => {
               onTabChange("output");
               onOutputTabSelect?.();
             }}
           />
         </div>
-        <span className="hidden shrink-0 truncate text-[10px] text-text-muted sm:inline">
+        <span className="hidden shrink-0 truncate text-[10px] text-text-muted sm:inline mr-2">
           {result
-            ? `${result.success ? "Clean" : "Needs attention"} · ${result.durationMs}ms`
-            : "Not run"}
+            ? `${result.success ? "clean" : "needs attention"} · ${result.durationMs}ms`
+            : "not run"}
         </span>
         <button
           type="button"
-          className="shrink-0 rounded-md border border-border bg-transparent px-3 py-1 text-xs font-medium text-text-muted transition-colors duration-100 hover:border-accent/40 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40"
+          className="shrink-0 rounded border border-border px-2.5 py-0.5 text-[11px] font-medium text-text-muted transition-colors duration-100 hover:border-accent/30 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer bg-surface-inset/40"
           onClick={onCompile}
           disabled={compiling}
         >
-          {compiling ? "Compiling..." : "Compile"}
+          {compiling ? "compiling..." : "compile"}
         </button>
       </div>
 
@@ -90,7 +90,7 @@ function BottomTabButton({
   return (
     <button
       type="button"
-      className={`rounded-t-md border-b-2 px-3 py-1.5 text-[11px] font-medium transition-colors duration-100 ${
+      className={`rounded-t border-b-2 px-3 py-1.5 text-[11px] font-medium transition-colors duration-100 cursor-pointer ${
         active
           ? "border-accent text-text-primary"
           : "border-transparent text-text-muted hover:text-text-secondary"
@@ -100,8 +100,10 @@ function BottomTabButton({
       {label}
       {count != null && count > 0 ? (
         <span
-          className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${
-            active ? "bg-accent/20 text-accent" : "bg-zinc-800 text-text-muted"
+          className={`ml-1.5 rounded border px-1.5 py-0.5 text-[9px] ${
+            active
+              ? "bg-accent/10 text-accent border-accent/20"
+              : "bg-surface-inset text-text-muted border-border"
           }`}
         >
           {count}
