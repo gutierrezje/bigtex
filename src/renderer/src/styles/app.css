@@ -175,6 +175,23 @@ ul {
   color: var(--color-text-primary);
 }
 
+.tree-children {
+  position: relative;
+  margin: 2px 0 2px 8px;
+  padding: 0 0 0 4px;
+}
+
+.tree-children::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--color-border) 70%, transparent);
+  pointer-events: none;
+}
+
 /* ── Monaco Editor Overrides ── */
 .monaco-editor,
 .monaco-editor .overflow-guard {

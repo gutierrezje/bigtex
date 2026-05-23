@@ -15,6 +15,17 @@ export function parentDirectoryPath(filePath: string): string {
   return slash === -1 ? "" : filePath.slice(0, slash);
 }
 
+/** Folder paths that must be expanded to reveal `filePath` in the project tree. */
+export function ancestorFolderPaths(filePath: string): string[] {
+  const folders: string[] = [];
+  let dir = parentDirectoryPath(filePath);
+  while (dir) {
+    folders.push(dir);
+    dir = parentDirectoryPath(dir);
+  }
+  return folders;
+}
+
 export function isPdfPath(filePath: string): boolean {
   return filePath.toLowerCase().endsWith(".pdf");
 }

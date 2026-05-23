@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ancestorFolderPaths,
   isCreatableFileName,
   isPdfPath,
   parentDirectoryPath,
@@ -16,6 +17,10 @@ describe("projectFiles", () => {
 
     expect(parentDirectoryPath("chapters/intro.tex")).toBe("chapters");
     expect(parentDirectoryPath("main.tex")).toBe("");
+
+    expect(ancestorFolderPaths("chapters/intro.tex")).toEqual(["chapters"]);
+    expect(ancestorFolderPaths("a/b/c.tex")).toEqual(["a/b", "a"]);
+    expect(ancestorFolderPaths("main.tex")).toEqual([]);
   });
 
   it("detects PDF paths and normalizes project-relative paths", () => {

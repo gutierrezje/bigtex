@@ -27,6 +27,7 @@ describe("loadProject", () => {
       await writeFile(join(root, "main.tex"), "\\documentclass{article}\n", "utf8");
       await writeFile(join(root, "notes.aux"), "aux", "utf8");
       await writeFile(join(root, "main.out"), "out", "utf8");
+      await writeFile(join(root, "main.synctex.gz"), "gzip", "utf8");
       await mkdir(join(root, ".tex-build"), { recursive: true });
       await writeFile(join(root, ".tex-build", "main.pdf"), "%PDF", "utf8");
 
@@ -35,6 +36,7 @@ describe("loadProject", () => {
       expect(snapshot.files.some((file) => file.name === "main.tex")).toBe(true);
       expect(snapshot.files.some((file) => file.name === "notes.aux")).toBe(false);
       expect(snapshot.files.some((file) => file.name === "main.out")).toBe(false);
+      expect(snapshot.files.some((file) => file.name === "main.synctex.gz")).toBe(false);
       expect(snapshot.files.some((file) => file.name === ".tex-build")).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });

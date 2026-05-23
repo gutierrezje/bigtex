@@ -54,21 +54,32 @@ export const IGNORED_LATEX_FILE_EXTENSIONS = [
 ] as const;
 
 const ignoredDirectorySet = new Set<string>(IGNORED_PROJECT_DIRECTORY_NAMES);
-const ignoredExtensionSet = new Set<string>(IGNORED_LATEX_FILE_EXTENSIONS);
+
+/** Longest suffixes first so `.synctex.gz` wins over a hypothetical shorter match. */
+const ignoredLatexArtifactSuffixes = [...IGNORED_LATEX_FILE_EXTENSIONS].sort(
+  (a, b) => b.length - a.length,
+);
+
+function hasIgnoredLatexArtifactSuffix(fileName: string): boolean {
+  const lower = fileName.toLowerCase();
+  return ignoredLatexArtifactSuffixes.some((suffix) => lower.endsWith(suffix));
+}
 
 export function isIgnoredProjectDirectory(name: string): boolean {
   return ignoredDirectorySet.has(name);
 }
 
 export function isIgnoredLatexArtifactFile(name: string): boolean {
-  return ignoredExtensionSet.has(extname(name).toLowerCase());
+  return hasIgnoredLatexArtifactSuffix(basename(name));
 }
 
 export function isIgnoredProjectRelativePath(relativePath: string): boolean {
   const normalized = relativePath.replace(/\\/g, "/");
   const segments = normalized.split("/");
   if (segments.some((segment) => ignoredDirectorySet.has(segment))) return true;
-  return ignoredExtensionSet.has(extname(normalized).toLowerCase());
+  const leaf = segments[segments.length - 1] ?? "";
+  if (!leaf) return false;
+  return hasIgnoredLatexArtifactSuffix(leaf);
 }
 
 export function shouldHideProjectTreeEntry(name: string, isDirectory: boolean): boolean {
