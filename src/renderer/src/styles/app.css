@@ -192,10 +192,23 @@ ul {
   pointer-events: none;
 }
 
-/* ── Monaco Editor Overrides ── */
-.monaco-editor,
-.monaco-editor .overflow-guard {
-  border-radius: 0;
+/* ── Monaco Editor — isolate from Tailwind v4 ──
+   1) Tailwind's universal reset corrupts Monaco's internal pixel-level layout.
+   2) Tailwind v4 / @tailwindcss/vite generates a `content: counter(line-number)`
+      rule on `::before` pseudo-elements that overlaps Monaco's DOM-rendered line
+      numbers, producing a ghost "1" on every gutter row. */
+.monaco-editor *,
+.monaco-editor *::before,
+.monaco-editor *::after {
+  box-sizing: initial;
+  margin: initial;
+  padding: initial;
+  border: initial;
+}
+
+.monaco-editor .line-numbers::before {
+  content: none !important;
+  display: none !important;
 }
 
 /* ── Agent Markdown Overrides ── */
