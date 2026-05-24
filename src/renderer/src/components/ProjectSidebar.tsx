@@ -355,7 +355,7 @@ export function ProjectSidebar({
   const contextPath = contextTarget?.path ?? selectedPath;
 
   return (
-    <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface-raised">
+    <aside className="flex h-full min-h-0 min-w-0 flex-col bg-surface-raised">
       {project ? (
         <>
           <ProjectSidebarHeader

@@ -9,21 +9,24 @@ export function WindowControls() {
     >
       <button
         type="button"
-        aria-label="Close"
-        className={`${controlBase} bg-[#ff5f57]`}
+        aria-label="Close window"
         onClick={() => void window.bigTex.window.close()}
+        className={controlBase}
+        style={{ backgroundColor: "#ff5f57" }}
       />
       <button
         type="button"
-        aria-label="Minimize"
-        className={`${controlBase} bg-[#febc2e]`}
+        aria-label="Minimize window"
         onClick={() => void window.bigTex.window.minimize()}
+        className={controlBase}
+        style={{ backgroundColor: "#febc2e" }}
       />
       <button
         type="button"
         aria-label="Toggle fullscreen"
-        className={`${controlBase} bg-[#28c840]`}
         onClick={() => void window.bigTex.window.toggleFullscreen()}
+        className={controlBase}
+        style={{ backgroundColor: "#28c840" }}
       />
     </div>
   );

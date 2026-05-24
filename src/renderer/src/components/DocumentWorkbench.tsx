@@ -156,7 +156,7 @@ export function DocumentWorkbench({
         pdfPreviewInverted={pdfPreviewInverted}
         onTogglePdf={onTogglePdf}
         onTogglePdfPreviewInvert={onTogglePdfPreviewInvert}
-        className="absolute top-0 right-0 z-20 border-b border-border/40 bg-surface-raised"
+        className="absolute top-0 right-0 z-40 border-b border-border/40 bg-surface-raised"
       />
     </div>
   );

@@ -8,7 +8,7 @@ import { WindowControls } from "./WindowControls";
 export const NATIVE_TRAFFIC_LIGHT_GUTTER = "pl-[4.75rem]";
 
 const chromeRowClass =
-  "flex h-11 shrink-0 items-center gap-2 border-b border-border/40 bg-surface-raised pr-3 select-none";
+  "relative z-30 flex h-11 shrink-0 items-center gap-2 overflow-visible border-b border-border/40 bg-surface-raised pr-3 select-none";
 
 interface AppChromeBarProps {
   projectName: string;
@@ -53,7 +53,7 @@ export function AppChromeBar({
         <SidebarToggleButton
           active={sidebarOpen}
           alignWithNativeTrafficLights={!showWindowControls}
-          title={sidebarOpen ? "Collapse Sidebar (Files)" : "Open Sidebar (Files)"}
+          title={sidebarOpen ? "Hide explorer" : "Show explorer"}
           onClick={onToggleSidebar}
         />
       </div>

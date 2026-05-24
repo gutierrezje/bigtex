@@ -1,3 +1,5 @@
+import { IconTooltipButton } from "./IconTooltipButton";
+
 interface SidebarToggleButtonProps {
   active?: boolean;
   title?: string;
@@ -8,14 +10,15 @@ interface SidebarToggleButtonProps {
 
 export function SidebarToggleButton({
   active = false,
-  title = "Toggle Sidebar (Files)",
+  title = "Show explorer",
   alignWithNativeTrafficLights = false,
   onClick,
 }: SidebarToggleButtonProps) {
   return (
-    <button
-      type="button"
-      title={title}
+    <IconTooltipButton
+      hint={title}
+      tooltipPlacement="right"
+      onClick={onClick}
       className={`inline-flex items-center justify-center rounded border p-1.5 transition-all duration-200 cursor-pointer ${
         alignWithNativeTrafficLights ? "translate-y-px" : ""
       } ${
@@ -23,7 +26,6 @@ export function SidebarToggleButton({
           ? "border-transparent bg-surface-raised text-text-primary"
           : "border-transparent text-text-muted hover:text-text-secondary hover:bg-surface-raised/50"
       }`}
-      onClick={onClick}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -34,8 +36,9 @@ export function SidebarToggleButton({
         strokeLinecap="round"
         strokeLinejoin="round"
         className="block h-3.5 w-3.5 shrink-0"
+        aria-hidden
       >
-        <title>Toggle Sidebar</title>
+        <title>{title}</title>
         <rect width="18" height="18" x="3" y="3" rx="2" />
         <line
           x1="9"
@@ -49,6 +52,6 @@ export function SidebarToggleButton({
           }}
         />
       </svg>
-    </button>
+    </IconTooltipButton>
   );
 }

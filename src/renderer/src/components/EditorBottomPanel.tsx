@@ -56,6 +56,7 @@ export function EditorBottomPanel({
         </span>
         <button
           type="button"
+          title={compiling ? "Compiling…" : "Compile LaTeX (latexmk)"}
           className={`shrink-0 rounded border border-border px-2.5 py-0.5 ${TREE_LABEL_CLASS} text-text-muted transition-colors duration-100 hover:border-accent/30 hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer bg-surface-inset/40`}
           onClick={onCompile}
           disabled={compiling}

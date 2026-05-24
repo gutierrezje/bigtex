@@ -11,7 +11,7 @@ export function PdfInvertIcon({ inverted }: { inverted: boolean }) {
       className="block h-4 w-4"
       aria-hidden
     >
-      <title>{inverted ? "Inverted PDF preview" : "Normal PDF preview"}</title>
+      <title>{inverted ? "Original" : "Invert"}</title>
       <rect
         x="5"
         y="3.5"

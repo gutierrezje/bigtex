@@ -85,6 +85,7 @@ export function AgentModelToolbar() {
           <button
             type="button"
             disabled={!config}
+            title="Choose AI provider"
             className={`flex items-center gap-1 rounded-md border border-border/60 bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-secondary transition-all duration-100 hover:border-accent/30 hover:bg-surface-raised/40 hover:text-text-primary disabled:opacity-40 cursor-pointer`}
             onClick={() => {
               setShowModelDropdown(false);
@@ -117,6 +118,7 @@ export function AgentModelToolbar() {
           <button
             type="button"
             disabled={!config || modelsForGroup.length === 0}
+            title="Choose model"
             className={`flex items-center gap-1 rounded-md border border-border/60 bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-secondary transition-all duration-100 hover:border-accent/30 hover:bg-surface-raised/40 hover:text-text-primary disabled:opacity-40 cursor-pointer`}
             onClick={() => {
               setShowProviderDropdown(false);

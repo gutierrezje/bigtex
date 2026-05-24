@@ -1,3 +1,5 @@
+import { IconTooltipButton } from "./IconTooltipButton";
+
 interface PanelToggleButtonsProps {
   bottomPanelOpen: boolean;
   onToggleBottomPanel(): void;
@@ -12,7 +14,7 @@ export function PanelToggleButtons({
   onToggleAgent,
 }: PanelToggleButtonsProps) {
   const toggleClass = (active: boolean) =>
-    `rounded border p-1.5 transition-all duration-200 cursor-pointer ${
+    `flex items-center justify-center rounded border p-1.5 transition-all duration-200 cursor-pointer ${
       active
         ? "border-transparent bg-surface-raised text-text-primary"
         : "border-transparent text-text-muted hover:text-text-secondary hover:bg-surface-raised/50"
@@ -20,11 +22,11 @@ export function PanelToggleButtons({
 
   return (
     <>
-      <button
-        type="button"
-        title="Toggle Bottom Panel"
-        className={toggleClass(bottomPanelOpen)}
+      <IconTooltipButton
+        hint={bottomPanelOpen ? "Hide bottom panel" : "Show bottom panel"}
+        tooltipPlacement="left"
         onClick={onToggleBottomPanel}
+        className={toggleClass(bottomPanelOpen)}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -35,8 +37,9 @@ export function PanelToggleButtons({
           strokeLinecap="round"
           strokeLinejoin="round"
           className="h-3.5 w-3.5"
+          aria-hidden
         >
-          <title>Toggle Bottom Panel</title>
+          <title>{bottomPanelOpen ? "Hide bottom panel" : "Show bottom panel"}</title>
           <rect width="18" height="18" x="3" y="3" rx="2" />
           <line
             x1="3"
@@ -51,13 +54,13 @@ export function PanelToggleButtons({
             }}
           />
         </svg>
-      </button>
+      </IconTooltipButton>
 
-      <button
-        type="button"
-        title="Toggle AI Agent Panel"
-        className={toggleClass(showAgent)}
+      <IconTooltipButton
+        hint={showAgent ? "Hide assistant" : "Show assistant"}
+        tooltipPlacement="left"
         onClick={onToggleAgent}
+        className={toggleClass(showAgent)}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -68,8 +71,9 @@ export function PanelToggleButtons({
           strokeLinecap="round"
           strokeLinejoin="round"
           className="h-3.5 w-3.5"
+          aria-hidden
         >
-          <title>Toggle AI Agent</title>
+          <title>{showAgent ? "Hide assistant" : "Show assistant"}</title>
           <rect width="18" height="18" x="3" y="3" rx="2" />
           <line
             x1="15"
@@ -84,7 +88,7 @@ export function PanelToggleButtons({
             }}
           />
         </svg>
-      </button>
+      </IconTooltipButton>
     </>
   );
 }

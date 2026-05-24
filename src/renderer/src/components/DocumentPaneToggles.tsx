@@ -1,4 +1,5 @@
 import { PdfViewerToggle } from "./DocumentTabStrip";
+import { IconTooltipButton } from "./IconTooltipButton";
 import { PdfInvertIcon } from "./icons/PdfInvertIcon";
 
 const paneToggleButtonClass =
@@ -22,24 +23,22 @@ export function DocumentPaneToggles({
 }: DocumentPaneTogglesProps) {
   return (
     <div
-      className={`flex h-9 shrink-0 items-stretch border-l border-border/20 ${className}`.trim()}
+      className={`flex h-9 shrink-0 items-stretch overflow-visible border-l border-border/20 ${className}`.trim()}
     >
       <div className="flex w-11 shrink-0 items-center justify-center border-r border-border/20">
-        <button
-          type="button"
-          title={
-            pdfPreviewInverted ? "Show PDF with original colors" : "Invert PDF for dark preview"
-          }
+        <IconTooltipButton
+          hint={pdfPreviewInverted ? "Original" : "Invert"}
+          tooltipPlacement="left"
           aria-pressed={pdfPreviewInverted}
+          onClick={onTogglePdfPreviewInvert}
           className={`${paneToggleButtonClass} ${
             pdfPreviewInverted
               ? "border-transparent bg-surface text-text-primary"
               : "border-transparent text-text-muted hover:bg-surface/50 hover:text-text-secondary"
           }`}
-          onClick={onTogglePdfPreviewInvert}
         >
           <PdfInvertIcon inverted={pdfPreviewInverted} />
-        </button>
+        </IconTooltipButton>
       </div>
       <PdfViewerToggle showPdf={showPdf} onToggle={onTogglePdf} embedded />
     </div>
