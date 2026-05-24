@@ -45,7 +45,7 @@ export function AgentComposer() {
         rows={2}
         submitMode="enter"
       />
-      <div className="flex items-end select-none">
+      <div className="flex items-center self-center select-none">
         <ComposerPrimitive.Send
           className={`rounded border border-accent/20 bg-accent/8 px-2.5 py-1 ${TREE_LABEL_CLASS} text-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:bg-transparent disabled:border-border/50 disabled:text-text-muted/40 transition-all cursor-pointer`}
         >

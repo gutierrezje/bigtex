@@ -14,7 +14,7 @@ Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with
 ├── src/renderer/        # Vite shell; UI in src/renderer/src (AGENTS.md)
 ├── src/shared/          # IPC contracts + domain types
 ├── samples/minimal/     # sample LaTeX project for smoke tests
-├── samples/workshop/  # demo project with intentional compile issues for UI/agent testing
+├── samples/workshop/  # resettable demo fixture — never commit changes (see NOTES)
 └── electron.vite.config.ts
 ```
 
@@ -48,6 +48,7 @@ Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with
 - Spawning `opencode run` or surfacing the opencode command in UI.
 - Applying agent patches without the patch IPC (git apply + path checks).
 - Throwing compile/agent failures into UI; surface as diagnostics/toasts.
+- Committing edits under `samples/workshop/` — reset the fixture instead (`git restore samples/workshop`).
 
 ## COMMANDS
 
@@ -89,12 +90,13 @@ Single-context: one root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`
 
 - Project tree hides `.tex-build/` (latexmk outdir) plus build/aux dirs and LaTeX artifact extensions.
 - ACP messages are parsed for fenced diff blocks; extracted patches emit via IPC.
-- Compiler diagnostics parsed from stdout/stderr; capped at 100 entries.
+- Compiler diagnostics merged from latexmk console output and `.tex-build/{main}.log`; capped at 100 entries.
 - Performance marks recorded in main via measure()/recordMark; renderer shows latest.
 
 ## NOTES
 
 - Do not run `pnpm run dev`.
+- `samples/workshop/` ships intentional compile issues for demos and agent testing. **Never commit changes** to it; after runs restore with `git restore samples/workshop` (and drop `samples/workshop/.tex-build/` if present).
 - Cleanup: use `latexmk -C` scoped to the sample or active project.
 - macOS TeX installs may require PATH helper restart for latexmk.
 - `out/` is build output; avoid editing by hand.

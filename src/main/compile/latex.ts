@@ -1,12 +1,12 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import type { CompileRequest, CompileResult } from "../../shared/domain";
 import { LATEX_BUILD_DIR } from "../../shared/latexArtifacts";
 import { assertInsideRoot, outputPdfPath } from "../files/project";
 import { measure } from "../performance/marks";
-import { parseDiagnostics } from "./diagnostics";
+import { resolveCompileDiagnostics, resolveCompileLogPath } from "./diagnostics";
 
 function compilerCommand(request: CompileRequest): { command: string; args: string[] } {
   const mainFile = assertInsideRoot(request.rootPath, request.mainFile);
@@ -74,7 +74,19 @@ function compileWithProcess(
     child.on("close", (exitCode) => {
       const durationMs = Math.round(performance.now() - startedAt);
       const pdfPath = outputPdfPath(request.rootPath, request.mainFile);
-      const diagnostics = parseDiagnostics(output);
+      const logPath = resolveCompileLogPath(request.rootPath, request.mainFile);
+      let logText: string | null = null;
+      if (existsSync(logPath)) {
+        try {
+          logText = readFileSync(logPath, "utf8");
+        } catch {
+          logText = null;
+        }
+      }
+
+      const diagnostics = resolveCompileDiagnostics(output, logText, {
+        rootPath: request.rootPath,
+      });
 
       resolve({
         success: exitCode === 0 && existsSync(pdfPath),
