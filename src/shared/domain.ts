@@ -171,6 +171,8 @@ export interface AgentRunSummary {
 export interface PatchApplyRequest {
   rootPath: string;
   patch: string;
+  /** Project-relative paths to prefer when the diff omits nested directories. */
+  hintPaths?: string[];
 }
 
 export interface PatchApplyResult {

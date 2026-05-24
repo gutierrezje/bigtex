@@ -1,8 +1,9 @@
 import { spawn, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { type Dirent, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { PatchApplyRequest, PatchApplyResult } from "../../shared/domain";
+import { shouldHideProjectTreeEntry } from "../../shared/latexArtifacts";
 import { assertInsideRoot } from "../files/project";
 
 function pathFromDiffHeader(header: string): string | null {
@@ -134,8 +135,80 @@ export function normalizePatchPath(path: string, rootPath: string): string {
   return cleaned;
 }
 
+const PATCH_PATH_SEARCH_MAX_DEPTH = 8;
+
+function findRelativePathsByBasename(rootPath: string, fileName: string): string[] {
+  const root = resolve(rootPath);
+  const matches: string[] = [];
+
+  function walk(directoryPath: string, depth: number, relativePrefix: string): void {
+    if (depth > PATCH_PATH_SEARCH_MAX_DEPTH) return;
+
+    let entries: Dirent[];
+    try {
+      entries = readdirSync(directoryPath, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (shouldHideProjectTreeEntry(entry.name, entry.isDirectory())) continue;
+
+      const relativePath = relativePrefix ? `${relativePrefix}/${entry.name}` : entry.name;
+      if (!entry.isDirectory()) {
+        if (entry.name === fileName) matches.push(relativePath);
+        continue;
+      }
+
+      walk(join(directoryPath, entry.name), depth + 1, relativePath);
+    }
+  }
+
+  walk(root, 0, "");
+  return matches;
+}
+
+function projectRelativePathExists(rootPath: string, relativePath: string): boolean {
+  if (!relativePath || relativePath === "/dev/null") return false;
+  return existsSync(join(resolve(rootPath), relativePath));
+}
+
+/** Map agent paths to an existing project file (nested dirs, repo-root prefixes). */
+export function resolvePatchPath(
+  path: string,
+  rootPath: string,
+  hintPaths: readonly string[] = [],
+): string {
+  const normalized = normalizePatchPath(path, rootPath);
+  if (!normalized || normalized === "/dev/null") return normalized;
+  if (projectRelativePathExists(rootPath, normalized)) return normalized;
+
+  const hinted = hintPaths.filter(
+    (hint) => hint === normalized || basename(hint) === basename(normalized),
+  );
+  if (hinted.length === 1 && projectRelativePathExists(rootPath, hinted[0])) {
+    return hinted[0];
+  }
+
+  const matches = findRelativePathsByBasename(rootPath, basename(normalized));
+  if (matches.length === 1) return matches[0];
+
+  const parent = dirname(normalized).split("/").filter(Boolean).at(-1);
+  if (parent) {
+    const withParent = matches.filter((match) => match.split("/").includes(parent));
+    if (withParent.length === 1) return withParent[0];
+  }
+
+  if (hinted.length === 1) return hinted[0];
+  return normalized;
+}
+
 /** Normalize agent-produced diffs so `git apply` can match project-relative paths. */
-export function normalizeUnifiedPatch(patch: string, rootPath: string): string {
+export function normalizeUnifiedPatch(
+  patch: string,
+  rootPath: string,
+  hintPaths: readonly string[] = [],
+): string {
   return patch
     .split(/\r?\n/)
     .map((line) => {
@@ -143,7 +216,7 @@ export function normalizeUnifiedPatch(patch: string, rootPath: string): string {
         const prefix = line.slice(0, 4);
         const path = pathFromDiffHeader(line);
         if (!path) return line;
-        const normalized = normalizePatchPath(path, rootPath);
+        const normalized = resolvePatchPath(path, rootPath, hintPaths);
         const timestamp = line.includes("\t") ? line.slice(line.indexOf("\t")) : "";
         return `${prefix}${normalized}${timestamp}`;
       }
@@ -233,7 +306,9 @@ async function runGitApply(
 }
 
 export async function applyUnifiedPatch(request: PatchApplyRequest): Promise<PatchApplyResult> {
-  const patch = repairUnifiedPatchHunks(normalizeUnifiedPatch(request.patch, request.rootPath));
+  const patch = repairUnifiedPatchHunks(
+    normalizeUnifiedPatch(request.patch, request.rootPath, request.hintPaths ?? []),
+  );
   const changedFiles = changedFilesFromPatch(patch);
   for (const file of changedFiles) {
     assertInsideRoot(request.rootPath, file);

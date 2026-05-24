@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { makeTempGitRepo, readRepoFile } from "../../../test/helpers/temp-git-repo";
 import {
@@ -6,6 +6,7 @@ import {
   normalizePatchPath,
   normalizeUnifiedPatch,
   repairUnifiedPatchHunks,
+  resolvePatchPath,
   unifiedDiffFromTexts,
 } from "./patch";
 
@@ -44,6 +45,33 @@ describe("patch hygiene (repair + paths)", () => {
     expect(normalized).toContain("--- main.tex");
     expect(normalized).toContain("+++ main.tex");
   });
+
+  it("resolves nested paths when the agent drops parent directories", () => {
+    const workshop = resolve("samples/workshop");
+    const wrongPath = "samples/workshop/intro.tex";
+    const resolved = resolvePatchPath(wrongPath, workshop, ["chapters/intro.tex"]);
+    expect(resolved).toBe("chapters/intro.tex");
+
+    const repo = resolve(".");
+    expect(resolvePatchPath("chapters/intro.tex", repo)).toBe(
+      "samples/workshop/chapters/intro.tex",
+    );
+    expect(resolvePatchPath(wrongPath, repo)).toBe("samples/workshop/chapters/intro.tex");
+  });
+
+  it("rewrites diff headers to nested paths before git apply", () => {
+    const workshop = resolve("samples/workshop");
+    const patch = [
+      "--- a/samples/workshop/intro.tex",
+      "+++ b/samples/workshop/intro.tex",
+      "@@ -1,1 +1,1 @@",
+      " x",
+    ].join("\n");
+
+    const normalized = normalizeUnifiedPatch(patch, workshop, ["chapters/intro.tex"]);
+    expect(normalized).toContain("--- chapters/intro.tex");
+    expect(normalized).toContain("+++ chapters/intro.tex");
+  });
 });
 
 describe("unifiedDiffFromTexts", () => {
@@ -56,6 +84,39 @@ describe("unifiedDiffFromTexts", () => {
 });
 
 describe("applyUnifiedPatch", () => {
+  it("applies patches to nested project files when paths omit subdirectories", async () => {
+    const workshop = resolve("samples/workshop");
+    const introPath = join(workshop, "chapters/intro.tex");
+    const { readFile } = await import("node:fs/promises");
+    const before = await readFile(introPath, "utf8");
+    const marker = "% nested-patch-test-marker\n";
+    if (before.includes(marker)) {
+      const without = before.replace(marker, "");
+      const { writeFile } = await import("node:fs/promises");
+      await writeFile(introPath, without, "utf8");
+    }
+
+    const current = await readFile(introPath, "utf8");
+    const patch = unifiedDiffFromTexts("intro.tex", current, `${marker}${current}`);
+
+    const wrongHeaderPatch = patch
+      .replaceAll("--- a/intro.tex", "--- a/samples/workshop/intro.tex")
+      .replaceAll("+++ b/intro.tex", "+++ b/samples/workshop/intro.tex");
+
+    const result = await applyUnifiedPatch({
+      rootPath: workshop,
+      patch: wrongHeaderPatch,
+      hintPaths: ["chapters/intro.tex"],
+    });
+    expect(result.applied).toBe(true);
+    expect(result.changedFiles).toEqual(["chapters/intro.tex"]);
+
+    const after = await readFile(introPath, "utf8");
+    expect(after).toContain(marker);
+    const { writeFile } = await import("node:fs/promises");
+    await writeFile(introPath, current, "utf8");
+  });
+
   it("applies clean patches, blocks path escape, and repairs bad hunks", async () => {
     {
       const { root, cleanup } = await makeTempGitRepo({ "main.tex": "old line\n" });

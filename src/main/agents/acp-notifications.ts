@@ -1,6 +1,6 @@
 import { relative, resolve, sep } from "node:path";
 import type { AgentEvent } from "../../shared/domain";
-import { unifiedDiffFromTexts } from "./patch";
+import { resolvePatchPath, unifiedDiffFromTexts } from "./patch";
 
 export interface JsonRpcNotification {
   jsonrpc: "2.0";
@@ -43,7 +43,7 @@ export function patchFromToolCallUpdate(
 
     const oldText = typeof block.oldText === "string" ? block.oldText : "";
     const newText = typeof block.newText === "string" ? block.newText : "";
-    const relativePath = toProjectRelative(rootPath, block.path);
+    const relativePath = resolvePatchPath(toProjectRelative(rootPath, block.path), rootPath);
     const patch = unifiedDiffFromTexts(relativePath, oldText, newText);
     if (patch) return patch;
   }

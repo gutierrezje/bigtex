@@ -406,7 +406,11 @@ export function App() {
 
   async function applyPatch(patch: string): Promise<void> {
     if (!project) return;
-    const result = await window.bigTex.patch.apply({ rootPath: project.rootPath, patch });
+    const result = await window.bigTex.patch.apply({
+      rootPath: project.rootPath,
+      patch,
+      hintPaths: mergeAgentSelectedFiles(activeEditor?.path ?? null, agentHandoffFiles),
+    });
     if (result.applied) {
       await refreshProjectFiles(
         result.changedFiles,
