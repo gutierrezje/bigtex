@@ -5,6 +5,7 @@ import {
   ThreadPrimitive,
   useAuiState,
 } from "@assistant-ui/react";
+import { CREATABLE_FILE_EXTENSIONS } from "../../../shared/projectFiles";
 import {
   AGENT_MESSAGE_CLASS,
   CHROME_META_CLASS,
@@ -19,6 +20,13 @@ import { AgentMessageReasoningPart } from "./agent/AgentMessageReasoningPart";
 import { AgentMessageTextPart } from "./agent/AgentMessageTextPart";
 import { AgentModelToolbar } from "./agent/AgentModelToolbar";
 import { BigTexAssistantRuntime } from "./agent/BigTexAssistantRuntime";
+
+function formatSupportedExtensions(extensions: readonly string[]): string {
+  if (extensions.length <= 1) return extensions[0] ?? "";
+  return `${extensions.slice(0, -1).join(", ")}, or ${extensions[extensions.length - 1]}`;
+}
+
+const SUPPORTED_SOURCE_FILES = formatSupportedExtensions(CREATABLE_FILE_EXTENSIONS);
 
 interface AgentPanelProps {
   rootPath: string | null;
@@ -41,7 +49,7 @@ function EmptyThread() {
       <div className="mx-auto grid max-w-[260px] gap-1.5 px-4 py-12 text-center select-none">
         <span className={CHROME_SECTION_CLASS}>ready</span>
         <p className={`m-0 ${CHROME_META_CLASS} text-text-muted`}>
-          Ask BigTeX to edit, explain, or repair the selected LaTeX file.
+          Ask BigTeX to edit, explain, or repair the selected {SUPPORTED_SOURCE_FILES} source file.
         </p>
       </div>
     </ThreadPrimitive.Empty>
@@ -158,7 +166,7 @@ export function AgentPanel({
       <header className={`${PANEL_CHROME_ROW_CLASS} justify-between gap-2 px-2`}>
         <h2
           className={`min-w-0 flex-1 truncate text-text-secondary ${CHROME_TITLE_CLASS}`}
-          title="LaTeX editing assistant"
+          title={`Assistant for selected ${SUPPORTED_SOURCE_FILES} files`}
         >
           Assistant
         </h2>
