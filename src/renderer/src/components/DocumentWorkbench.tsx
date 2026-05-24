@@ -4,7 +4,7 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import type { EditorTabsState, PdfTabsState } from "../../../shared/documentTabs";
 import { getActiveEditor, getActivePdf } from "../../../shared/documentTabs";
 import type { CompileDiagnostic } from "../../../shared/domain";
-import { PANEL_CHROME_ROW_CLASS } from "../lib/treeTypography";
+import { DOCUMENT_TAB_ROW_CLASS } from "../lib/treeTypography";
 import { DocumentPaneToggles } from "./DocumentPaneToggles";
 import { DocumentTabList } from "./DocumentTabStrip";
 import { EditorPane } from "./EditorPane";
@@ -36,9 +36,7 @@ interface DocumentWorkbenchProps {
 
 function DocumentTabRow({ tabList, className = "" }: { tabList: ReactNode; className?: string }) {
   return (
-    <div className={`${PANEL_CHROME_ROW_CLASS} items-stretch overflow-hidden ${className}`.trim()}>
-      {tabList}
-    </div>
+    <div className={`${DOCUMENT_TAB_ROW_CLASS} items-stretch ${className}`.trim()}>{tabList}</div>
   );
 }
 

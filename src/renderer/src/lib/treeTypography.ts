@@ -8,6 +8,10 @@ export const CHROME_TITLE_CLASS = "text-[13px] font-medium leading-[22px]";
 export const PANEL_CHROME_ROW_CLASS =
   "flex h-9 shrink-0 items-center border-b border-border/40 bg-surface-raised select-none";
 
+/** Document tab rows: no bottom border (active tab meets `surface` editor below). */
+export const DOCUMENT_TAB_ROW_CLASS =
+  "flex h-9 shrink-0 items-center bg-surface-raised select-none";
+
 /** Secondary chrome lines (agent status, empty states, PDF footer). */
 export const CHROME_META_CLASS = "text-[11px] font-normal leading-[16px]";
 

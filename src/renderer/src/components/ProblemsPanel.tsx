@@ -7,7 +7,7 @@ import {
   filterDiagnosticsByTab,
   type ProblemsTab,
 } from "../../../shared/problems";
-import { CHROME_META_CLASS, TREE_LABEL_CLASS } from "../lib/treeTypography";
+import { CHROME_META_CLASS } from "../lib/treeTypography";
 
 interface ProblemsPanelProps {
   result: CompileResult | null;
@@ -171,7 +171,7 @@ export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: Problems
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
-      <div className="flex gap-1 border-b border-border/40 px-2 py-1.5">
+      <div className="flex items-center gap-1.5 border-b border-border/40 px-2 py-1.5">
         {TABS.map((tab) => {
           const count = tabCount(tab.id, counts, diagnostics.length);
           const active = activeTab === tab.id;
@@ -179,19 +179,19 @@ export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: Problems
             <button
               key={tab.id}
               type="button"
-              className={`rounded px-2.5 py-0.5 ${TREE_LABEL_CLASS} transition-colors duration-100 cursor-pointer ${
+              className={`inline-flex h-7 items-center gap-1.5 rounded border px-2 text-[13px] leading-none transition-colors duration-100 cursor-pointer ${
                 active
-                  ? "border border-accent/20 bg-accent/8 text-text-primary"
-                  : "border border-transparent text-text-muted hover:text-text-secondary"
+                  ? "border-accent/20 bg-accent/8 text-text-primary"
+                  : "border-transparent text-text-muted hover:text-text-secondary"
               }`}
               onClick={() => setActiveTab(tab.id)}
             >
-              {tab.label}
+              <span>{tab.label}</span>
               <span
-                className={`ml-1.5 rounded border px-1.5 py-0.5 text-[12px] leading-none ${
+                className={`inline-flex h-4 min-w-4 items-center justify-center rounded border px-1 text-[11px] font-medium tabular-nums leading-none ${
                   active
-                    ? "bg-accent/10 text-accent border-accent/20"
-                    : "bg-surface-inset text-text-muted border-border"
+                    ? "border-accent/20 bg-accent/10 text-accent"
+                    : "border-border bg-surface-inset text-text-muted"
                 }`}
               >
                 {count}

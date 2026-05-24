@@ -37,7 +37,9 @@ export function DocumentTabList({
           <div
             key={tab.path}
             className={`group flex max-w-[12rem] min-w-0 shrink-0 items-center gap-1 border-r border-border/40 px-1.5 ${
-              active ? "bg-surface text-text-primary" : "text-text-muted hover:bg-surface/60"
+              active
+                ? "relative z-10 bg-surface text-text-primary"
+                : "border-b border-border/40 text-text-muted hover:bg-surface/60"
             }`}
           >
             <button
