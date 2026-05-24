@@ -83,20 +83,35 @@ function ProblemRow({
       : "bg-surface-raised/40"
   }`;
 
-  const content = (
+  const messageClassName = `min-w-0 ${canNavigate ? "cursor-pointer text-left" : ""}`;
+  const message = (
     <>
-      <div className="min-w-0">
-        <p
-          className={`m-0 ${CHROME_META_CLASS} ${
-            diagnostic.severity === "error" ? "text-danger" : "text-text-secondary"
-          }`}
+      <p
+        className={`m-0 ${CHROME_META_CLASS} ${
+          diagnostic.severity === "error" ? "text-danger" : "text-text-secondary"
+        }`}
+      >
+        {diagnostic.message}
+      </p>
+      <p className={`m-0 mt-0.5 font-mono ${CHROME_META_CLASS} text-text-muted/80`}>
+        {location || "project"}
+      </p>
+    </>
+  );
+
+  return (
+    <div className={rowClassName}>
+      {canNavigate ? (
+        <button
+          type="button"
+          className={`${messageClassName} border-0 bg-transparent p-0`}
+          onClick={() => onGoToSource(diagnostic)}
         >
-          {diagnostic.message}
-        </p>
-        <p className={`m-0 mt-0.5 font-mono ${CHROME_META_CLASS} text-text-muted/80`}>
-          {location || "project"}
-        </p>
-      </div>
+          {message}
+        </button>
+      ) : (
+        <div className={messageClassName}>{message}</div>
+      )}
       <div className="flex shrink-0 items-center gap-1 pt-0.5">
         <ProblemActionButton
           hint={
@@ -105,8 +120,7 @@ function ProblemRow({
               : "Go to source — no file or line for this problem"
           }
           disabled={!canNavigate}
-          onClick={(event) => {
-            event.stopPropagation();
+          onClick={() => {
             if (canNavigate) onGoToSource(diagnostic);
           }}
         >
@@ -127,10 +141,7 @@ function ProblemRow({
         <ProblemActionButton
           hint="Hand off to agent — prefill composer with this problem"
           accentOnHover
-          onClick={(event) => {
-            event.stopPropagation();
-            onAgentHandoff(diagnostic);
-          }}
+          onClick={() => onAgentHandoff(diagnostic)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -146,18 +157,8 @@ function ProblemRow({
           </svg>
         </ProblemActionButton>
       </div>
-    </>
+    </div>
   );
-
-  if (canNavigate) {
-    return (
-      <button type="button" className={rowClassName} onClick={() => onGoToSource(diagnostic)}>
-        {content}
-      </button>
-    );
-  }
-
-  return <div className={rowClassName}>{content}</div>;
 }
 
 export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: ProblemsPanelProps) {
