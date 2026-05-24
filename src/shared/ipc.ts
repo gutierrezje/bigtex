@@ -17,6 +17,7 @@ import type {
   ProjectSnapshot,
   RecentProject,
 } from "./domain";
+import type { LspSendRequest, LspServerMessageEvent } from "./lsp";
 
 export const IPC_CHANNELS = {
   appMetrics: "app:metrics",
@@ -44,6 +45,8 @@ export const IPC_CHANNELS = {
   lspSessionStart: "lsp:session-start",
   lspSessionStop: "lsp:session-stop",
   lspSessionStatus: "lsp:session-status",
+  lspSend: "lsp:send",
+  lspMessage: "lsp:message",
   recentsGet: "recents:get",
   recentsRemove: "recents:remove",
   recentsClear: "recents:clear",
@@ -128,6 +131,8 @@ export interface BigTexApi {
     startSession(request: LanguageServerStartSessionRequest): Promise<LanguageServerSessionStatus>;
     stopSession(rootPath: string): Promise<void>;
     sessionStatus(rootPath: string): Promise<LanguageServerSessionStatus | null>;
+    send(request: LspSendRequest): Promise<void>;
+    onMessage(listener: (event: LspServerMessageEvent) => void): () => void;
   };
   agent: {
     check(request: AgentCheckRequest): Promise<AgentAvailability>;

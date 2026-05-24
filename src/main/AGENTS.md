@@ -14,7 +14,7 @@ Electron main runtime: window creation, IPC, compile/agent/patch/file services.
 | Agent ACP runtime + JSON-RPC handling | agents/opencode.ts |
 | Patch application (git apply) | agents/patch.ts |
 | LaTeX compiler runner | compile/latex.ts |
-| Texlab LSP session (stdio) | lsp/texlab.ts |
+| Texlab LSP session + IPC proxy | lsp/texlab.ts |
 | Project tree + file IO + path safety | files/project.ts |
 | Performance marks + metrics | performance/marks.ts |
 

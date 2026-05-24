@@ -1,7 +1,11 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
-import { basename, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { resolve } from "node:path";
 import type { LanguageServerAvailability, LanguageServerSessionStatus } from "../../shared/domain";
+import {
+  isLspJsonRpcMessage,
+  type LspJsonRpcMessage,
+  type LspServerMessageEvent,
+} from "../../shared/lsp";
 import { formatLspMessage, LspMessageReader } from "./framing";
 
 const DEFAULT_TEXLAB_COMMAND = "texlab";
@@ -13,8 +17,21 @@ interface JsonRpcResponse {
   error?: { code: number; message: string; data?: unknown };
 }
 
+type ServerMessageHandler = (event: LspServerMessageEvent) => void;
+
+let serverMessageHandler: ServerMessageHandler | null = null;
+
+export function setLspServerMessageHandler(handler: ServerMessageHandler | null): void {
+  serverMessageHandler = handler;
+}
+
+function emitServerMessage(rootPath: string, message: LspJsonRpcMessage): void {
+  serverMessageHandler?.({ rootPath, message });
+}
+
 class LspConnection {
-  private nextId = 1;
+  /** Renderer-proxied requests use low ids; main reserves high ids for shutdown. */
+  private nextId = 10_000;
   private readonly reader = new LspMessageReader();
   private readonly pending = new Map<
     number,
@@ -23,6 +40,7 @@ class LspConnection {
       reject(error: Error): void;
     }
   >();
+  private onServerMessage: ((message: LspJsonRpcMessage) => void) | null = null;
 
   constructor(private readonly child: ChildProcessWithoutNullStreams) {
     child.stdout.on("data", (chunk: Buffer) => {
@@ -37,18 +55,27 @@ class LspConnection {
     });
   }
 
+  setServerMessageHandler(handler: ((message: LspJsonRpcMessage) => void) | null): void {
+    this.onServerMessage = handler;
+  }
+
+  write(message: LspJsonRpcMessage): void {
+    this.child.stdin.write(formatLspMessage(message), "utf8");
+  }
+
+  /** Internal requests used for session shutdown (not proxied from renderer). */
   async request(method: string, params?: unknown): Promise<unknown> {
     const id = this.nextId++;
     const payload = { jsonrpc: "2.0", id, method, params };
     const promise = new Promise<unknown>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
     });
-    this.child.stdin.write(formatLspMessage(payload), "utf8");
+    this.write(payload);
     return promise;
   }
 
   notify(method: string, params?: unknown): void {
-    this.child.stdin.write(formatLspMessage({ jsonrpc: "2.0", method, params }), "utf8");
+    this.write({ jsonrpc: "2.0", method, params });
   }
 
   private onMessage(body: string): void {
@@ -62,25 +89,22 @@ class LspConnection {
 
     if (!parsed || typeof parsed !== "object") return;
 
-    const message = parsed as Record<string, unknown>;
+    const message = parsed as LspJsonRpcMessage;
     if (typeof message.id === "number") {
       const pending = this.pending.get(message.id);
-      if (!pending) return;
-      this.pending.delete(message.id);
-
-      const response = message as unknown as JsonRpcResponse;
-      if (response.error) {
-        pending.reject(new Error(response.error.message));
+      if (pending) {
+        this.pending.delete(message.id);
+        const response = message as unknown as JsonRpcResponse;
+        if (response.error) {
+          pending.reject(new Error(response.error.message));
+          return;
+        }
+        pending.resolve(response.result);
         return;
       }
-      pending.resolve(response.result);
-      return;
     }
 
-    // Server-initiated notifications (e.g. publishDiagnostics) — handled in step 2.
-    if (typeof message.method === "string") {
-      return;
-    }
+    this.onServerMessage?.(message);
   }
 
   rejectAll(error: Error): void {
@@ -97,7 +121,6 @@ class TexlabSession {
   readonly command: string;
   private readonly child: ChildProcessWithoutNullStreams;
   private readonly connection: LspConnection;
-  private readonly ready: Promise<void>;
   private stopped = false;
 
   constructor(rootPath: string, mainFile: string | null, command: string) {
@@ -110,36 +133,20 @@ class TexlabSession {
       stdio: ["pipe", "pipe", "pipe"],
     });
     this.connection = new LspConnection(this.child);
-    this.ready = this.initialize();
+    this.connection.setServerMessageHandler((message) => {
+      emitServerMessage(this.rootPath, message);
+    });
 
     this.child.on("error", (error) => {
       this.connection.rejectAll(error);
     });
   }
 
-  private async initialize(): Promise<void> {
-    const rootUri = pathToFileURL(this.rootPath).href;
-    await this.connection.request("initialize", {
-      processId: process.pid,
-      rootUri,
-      capabilities: {},
-      workspaceFolders: [{ uri: rootUri, name: basename(this.rootPath) }],
-    });
-    this.connection.notify("initialized", {});
-
-    if (this.mainFile) {
-      this.connection.notify("workspace/didChangeConfiguration", {
-        settings: {
-          texlab: {
-            rootDirectory: this.rootPath,
-          },
-        },
-      });
+  send(message: LspJsonRpcMessage): void {
+    if (this.stopped) {
+      throw new Error("LSP session is not active");
     }
-  }
-
-  async waitUntilReady(): Promise<void> {
-    await this.ready;
+    this.connection.write(message);
   }
 
   status(): LanguageServerSessionStatus {
@@ -155,9 +162,9 @@ class TexlabSession {
   async stop(): Promise<void> {
     if (this.stopped) return;
     this.stopped = true;
+    this.connection.setServerMessageHandler(null);
 
     try {
-      await this.ready;
       await this.connection.request("shutdown", null);
       this.connection.notify("exit", null);
     } catch {
@@ -174,6 +181,14 @@ const sessions = new Map<string, TexlabSession>();
 
 function sessionKey(rootPath: string): string {
   return resolve(rootPath);
+}
+
+function requireSession(rootPath: string): TexlabSession {
+  const session = sessions.get(sessionKey(rootPath));
+  if (!session) {
+    throw new Error("No active language server session for this project");
+  }
+  return session;
 }
 
 export function splitCommand(commandLine: string): string[] {
@@ -234,11 +249,11 @@ export async function startTexlabSession(
   const session = new TexlabSession(rootPath, mainFile, command ?? DEFAULT_TEXLAB_COMMAND);
 
   try {
-    await session.waitUntilReady();
     sessions.set(key, session);
     return session.status();
   } catch (error) {
     await session.stop();
+    sessions.delete(key);
     return {
       active: false,
       rootPath: key,
@@ -247,6 +262,13 @@ export async function startTexlabSession(
       message: error instanceof Error ? error.message : "Failed to start texlab session",
     };
   }
+}
+
+export function sendLspMessage(rootPath: string, message: LspJsonRpcMessage): void {
+  if (!isLspJsonRpcMessage(message)) {
+    throw new Error("Invalid LSP JSON-RPC message");
+  }
+  requireSession(rootPath).send(message);
 }
 
 export async function stopTexlabSession(rootPath: string): Promise<void> {

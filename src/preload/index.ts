@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { AgentEvent, ProjectSnapshot } from "../shared/domain";
 import { type BigTexApi, IPC_CHANNELS } from "../shared/ipc";
+import type { LspServerMessageEvent } from "../shared/lsp";
 
 const api: BigTexApi = {
   app: {
@@ -42,6 +43,14 @@ const api: BigTexApi = {
     startSession: (request) => ipcRenderer.invoke(IPC_CHANNELS.lspSessionStart, request),
     stopSession: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.lspSessionStop, rootPath),
     sessionStatus: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.lspSessionStatus, rootPath),
+    send: (request) => ipcRenderer.invoke(IPC_CHANNELS.lspSend, request),
+    onMessage: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, payload: LspServerMessageEvent) => {
+        listener(payload);
+      };
+      ipcRenderer.on(IPC_CHANNELS.lspMessage, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.lspMessage, handler);
+    },
   },
   agent: {
     check: (request) => ipcRenderer.invoke(IPC_CHANNELS.agentCheck, request),

@@ -14,6 +14,7 @@ import {
   type RenamePathRequest,
   type WriteFileRequest,
 } from "../shared/ipc";
+import type { LspSendRequest } from "../shared/lsp";
 import {
   cancelOpencode,
   checkOpencode,
@@ -37,6 +38,8 @@ import { addRecent, clearRecents, getRecents, removeRecent } from "./files/recen
 import {
   checkTexlab,
   getTexlabSessionStatus,
+  sendLspMessage,
+  setLspServerMessageHandler,
   startTexlabSession,
   stopAllTexlabSessions,
   stopTexlabSession,
@@ -123,6 +126,10 @@ function attachFullscreenChrome(window: BrowserWindow): void {
 }
 
 function registerIpc(): void {
+  setLspServerMessageHandler((event) => {
+    mainWindow?.webContents.send(IPC_CHANNELS.lspMessage, event);
+  });
+
   ipcMain.handle(IPC_CHANNELS.appMetrics, () => getMarks());
 
   ipcMain.handle(IPC_CHANNELS.projectOpenDialog, async () => {
@@ -240,6 +247,10 @@ function registerIpc(): void {
   ipcMain.handle(IPC_CHANNELS.lspSessionStatus, (_event, rootPath: string) =>
     getTexlabSessionStatus(rootPath),
   );
+
+  ipcMain.handle(IPC_CHANNELS.lspSend, (_event, request: LspSendRequest) => {
+    sendLspMessage(request.rootPath, request.message);
+  });
 
   ipcMain.handle(IPC_CHANNELS.windowClose, () => {
     focusedWindow()?.close();

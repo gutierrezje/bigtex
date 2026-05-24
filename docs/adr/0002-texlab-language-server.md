@@ -4,7 +4,7 @@ BigTeX adds **Language-server assist** and **Language-server diagnostic** via [T
 
 ## Decision
 
-- **Main process** spawns `texlab` (stdio JSON-RPC), one session per open project, stopped on project close. Same lifecycle pattern as `latexmk` and `opencode acp`.
+- **Main process** spawns `texlab` (stdio JSON-RPC), one session per open project, stopped on project close. Proxies JSON-RPC over IPC (`lsp:send` / `lsp:message`); the renderer performs `initialize` / `initialized` (not main).
 - **Renderer** uses `monaco-languageclient` with an IPC-backed transport; v1 registers completion, hover, definition, references, and diagnostics only (no rename/format/code actions).
 - **Open editor tabs** sync live buffer text via LSP `didOpen` / `didChange` (debounced), not disk-only after autosave.
 - **Root document** for Texlab matches **Compile** `mainFile` inference.
