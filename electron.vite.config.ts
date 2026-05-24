@@ -32,6 +32,20 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, "src/renderer"),
+    resolve: {
+      alias: {
+        vscode: resolve(
+          __dirname,
+          "node_modules/monaco-languageclient/lib/vscode-compatibility.js",
+        ),
+      },
+      dedupe: [
+        "monaco-editor",
+        "vscode-jsonrpc",
+        "vscode-languageserver-protocol",
+        "vscode-languageclient",
+      ],
+    },
     plugins: [tailwindcss(), react()],
     define: {
       "import.meta.env.VITE_BIGTEX_PERF": JSON.stringify(perfProfile),

@@ -29,6 +29,12 @@ function emitServerMessage(rootPath: string, message: LspJsonRpcMessage): void {
   serverMessageHandler?.({ rootPath, message });
 }
 
+function isBrokenPipeError(error: unknown): boolean {
+  return (
+    error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "EPIPE"
+  );
+}
+
 class LspConnection {
   /** Renderer-proxied requests use low ids; main reserves high ids for shutdown. */
   private nextId = 10_000;
@@ -41,6 +47,7 @@ class LspConnection {
     }
   >();
   private onServerMessage: ((message: LspJsonRpcMessage) => void) | null = null;
+  private alive = true;
 
   constructor(private readonly child: ChildProcessWithoutNullStreams) {
     child.stdout.on("data", (chunk: Buffer) => {
@@ -53,6 +60,29 @@ class LspConnection {
       const text = chunk.toString("utf8").trim();
       if (text) console.error(`[texlab] ${text}`);
     });
+
+    child.stdin.on("error", (error) => {
+      if (!isBrokenPipeError(error)) {
+        console.error("[texlab] stdin error:", error);
+      }
+      this.markDead();
+    });
+
+    child.on("exit", () => {
+      this.markDead();
+    });
+  }
+
+  private markDead(): void {
+    if (!this.alive) return;
+    this.alive = false;
+    this.rejectAll(new Error("texlab process exited"));
+  }
+
+  private canWrite(): boolean {
+    return (
+      this.alive && !this.child.killed && !this.child.stdin.destroyed && this.child.stdin.writable
+    );
   }
 
   setServerMessageHandler(handler: ((message: LspJsonRpcMessage) => void) | null): void {
@@ -60,11 +90,20 @@ class LspConnection {
   }
 
   write(message: LspJsonRpcMessage): void {
-    this.child.stdin.write(formatLspMessage(message), "utf8");
+    if (!this.canWrite()) return;
+    try {
+      this.child.stdin.write(formatLspMessage(message), "utf8");
+    } catch (error) {
+      if (!isBrokenPipeError(error)) throw error;
+      this.markDead();
+    }
   }
 
   /** Internal requests used for session shutdown (not proxied from renderer). */
   async request(method: string, params?: unknown): Promise<unknown> {
+    if (!this.canWrite()) {
+      throw new Error("texlab stdin is not writable");
+    }
     const id = this.nextId++;
     const payload = { jsonrpc: "2.0", id, method, params };
     const promise = new Promise<unknown>((resolve, reject) => {
@@ -164,6 +203,7 @@ class TexlabSession {
     this.stopped = true;
     this.connection.setServerMessageHandler(null);
 
+    // Renderer may already have sent shutdown/exit; avoid writing to a closed stdin.
     try {
       await this.connection.request("shutdown", null);
       this.connection.notify("exit", null);
@@ -171,6 +211,9 @@ class TexlabSession {
       // Process may already be gone.
     }
 
+    if (!this.child.stdin.destroyed) {
+      this.child.stdin.destroy();
+    }
     if (!this.child.killed) {
       this.child.kill("SIGTERM");
     }

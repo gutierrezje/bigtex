@@ -32,7 +32,11 @@
       "electron",
       "esbuild",
       "simple-git-hooks"
-    ]
+    ],
+    "overrides": {
+      "vscode-jsonrpc": "6.0.0",
+      "vscode-languageserver-protocol": "3.16.0"
+    }
   },
   "dependencies": {
     "@assistant-ui/react": "^0.12.28",
@@ -43,6 +47,7 @@
     "electron-updater": "latest",
     "geist": "^1.7.0",
     "monaco-editor": "latest",
+    "monaco-languageclient": "^0.18.1",
     "pdfjs-dist": "latest",
     "react": "latest",
     "react-dom": "latest",
@@ -51,6 +56,7 @@
     "react-shiki": "latest",
     "remark-gfm": "latest",
     "shiki": "4.0.2",
+    "vscode-jsonrpc": "6.0.0",
     "zod": "latest",
     "zustand": "latest"
   },

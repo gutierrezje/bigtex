@@ -21,6 +21,7 @@ import { WelcomeScreen } from "./components/WelcomeScreen";
 import { useAgentEvents } from "./hooks/useAgentEvents";
 
 import { formatWindowChromeLabel } from "./lib/windowChrome";
+import { startTexlabLanguageClient, stopTexlabLanguageClient } from "./lsp/texlab-client";
 import { useAppStore } from "./store";
 
 function selectable(file: ProjectFile): boolean {
@@ -253,6 +254,21 @@ export function App() {
         status.message ?? "Language server could not start for this project.",
         "warning",
       );
+      return;
+    }
+
+    try {
+      await startTexlabLanguageClient({
+        rootPath: snapshot.rootPath,
+        mainFile: snapshot.mainFile,
+      });
+    } catch (error) {
+      appendOutput(
+        error instanceof Error
+          ? `Language server client failed: ${error.message}`
+          : "Language server client failed to start.",
+        "warning",
+      );
     }
   }
 
@@ -286,7 +302,10 @@ export function App() {
     });
     const unsubClosed = window.bigTex.project.onClosed(() => {
       const rootPath = useAppStore.getState().project?.rootPath;
-      if (rootPath) void window.bigTex.lsp.stopSession(rootPath);
+      void (async () => {
+        await stopTexlabLanguageClient();
+        if (rootPath) await window.bigTex.lsp.stopSession(rootPath);
+      })();
       setProject(null);
       clearEditorTabs();
       clearPdfTabs();
