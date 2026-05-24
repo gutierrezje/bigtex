@@ -40,7 +40,7 @@ export function ProjectSidebarHeader({
 }: ProjectSidebarHeaderProps) {
   return (
     <header
-      className={`${PANEL_CHROME_ROW_CLASS} relative z-30 shrink-0 gap-1 overflow-visible px-2`}
+      className={`${PANEL_CHROME_ROW_CLASS} relative z-30 min-w-0 shrink-0 gap-1 overflow-visible px-2`}
     >
       <h2
         className={`min-w-0 flex-1 truncate text-text-secondary ${CHROME_TITLE_CLASS}`}
@@ -48,7 +48,7 @@ export function ProjectSidebarHeader({
       >
         {projectName}
       </h2>
-      <div className="flex shrink-0 items-center">
+      <div className="pointer-events-none flex max-w-0 shrink-0 items-center overflow-hidden opacity-0 transition-[max-width,opacity] duration-150 group-hover/explorer:pointer-events-auto group-hover/explorer:max-w-28 group-hover/explorer:opacity-100 group-focus-within/explorer:pointer-events-auto group-focus-within/explorer:max-w-28 group-focus-within/explorer:opacity-100">
         <ExplorerToolbarButton title="New Folder…" onClick={onNewFolder}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
