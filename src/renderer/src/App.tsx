@@ -19,7 +19,6 @@ import { EditorBottomPanel, type EditorBottomTab } from "./components/EditorBott
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { useAgentEvents } from "./hooks/useAgentEvents";
-import { useWindowFullscreen } from "./hooks/useWindowFullscreen";
 
 import { formatWindowChromeLabel } from "./lib/windowChrome";
 import { useAppStore } from "./store";
@@ -89,7 +88,7 @@ export function App() {
   const projectRef = useRef(project);
   projectRef.current = project;
 
-  const isFullscreen = useWindowFullscreen();
+  const usesCustomWindowControls = window.bigTex.window.usesCustomWindowControls;
 
   useEffect(() => {
     document.title = formatWindowChromeLabel(project?.name ?? null, activeEditor?.path ?? null);
@@ -480,7 +479,7 @@ export function App() {
           projectName={project.name}
           filePath={activeEditor?.path ?? null}
           sidebarOpen={!isSidebarCollapsed}
-          showWindowControls={isFullscreen}
+          showWindowControls={usesCustomWindowControls}
           onToggleSidebar={handleToggleSidebar}
           bottomPanelOpen={!isBottomPanelCollapsed}
           onToggleBottomPanel={handleToggleBottomPanel}

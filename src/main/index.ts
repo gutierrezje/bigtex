@@ -32,6 +32,7 @@ import {
 import { addRecent, clearRecents, getRecents, removeRecent } from "./files/recents";
 import { openProjectFolderDialog, setApplicationMenu } from "./menu";
 import { getMarks, measure, recordMark } from "./performance/marks";
+import { isWindowFullscreen, toggleWindowFullscreen } from "./windowFullscreen";
 
 const appStartedAt = performance.now();
 let mainWindow: BrowserWindow | null = null;
@@ -52,9 +53,7 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 600,
     title: "BigTeX",
-    titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 16, y: 16 },
-    simpleFullscreen: true,
+    titleBarStyle: "hidden",
     show: false,
     backgroundColor: "#09090b",
     webPreferences: {
@@ -68,6 +67,10 @@ function createWindow(): void {
   mainWindow.once("ready-to-show", () => {
     recordMark("window:ready-to-show", performance.now() - windowStartedAt);
     recordMark("app:cold-start", performance.now() - appStartedAt);
+    if (process.platform === "darwin") {
+      // Hide native traffic lights once; toggling them during fullscreen crashes AppKit.
+      mainWindow?.setWindowButtonVisibility(false);
+    }
     mainWindow?.show();
   });
 
@@ -99,13 +102,7 @@ function focusedWindow(): BrowserWindow | null {
   return BrowserWindow.getFocusedWindow() ?? mainWindow;
 }
 
-function setNativeTrafficLightsVisible(visible: boolean): void {
-  if (process.platform !== "darwin" || !mainWindow) return;
-  mainWindow.setWindowButtonVisibility(visible);
-}
-
 function notifyFullscreenChanged(isFullscreen: boolean): void {
-  setNativeTrafficLightsVisible(!isFullscreen);
   mainWindow?.webContents.send(IPC_CHANNELS.windowFullscreenChanged, isFullscreen);
 }
 
@@ -219,11 +216,14 @@ function registerIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.windowToggleFullscreen, () => {
     const window = focusedWindow();
-    if (!window) return;
-    window.setFullScreen(!window.isFullScreen());
+    if (!window || window.isDestroyed()) return;
+    toggleWindowFullscreen(window);
   });
 
-  ipcMain.handle(IPC_CHANNELS.windowIsFullscreen, () => mainWindow?.isFullScreen() ?? false);
+  ipcMain.handle(IPC_CHANNELS.windowIsFullscreen, () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return false;
+    return isWindowFullscreen(mainWindow);
+  });
 }
 
 app.whenReady().then(() => {

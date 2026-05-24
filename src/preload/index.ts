@@ -64,6 +64,7 @@ const api: BigTexApi = {
     minimize: () => ipcRenderer.invoke(IPC_CHANNELS.windowMinimize),
     toggleFullscreen: () => ipcRenderer.invoke(IPC_CHANNELS.windowToggleFullscreen),
     isFullscreen: () => ipcRenderer.invoke(IPC_CHANNELS.windowIsFullscreen),
+    usesCustomWindowControls: process.platform === "darwin",
     onFullscreenChanged: (listener) => {
       const handler = (_event: Electron.IpcRendererEvent, isFullscreen: boolean) => {
         listener(isFullscreen);

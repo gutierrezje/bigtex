@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import type { ProjectSnapshot, RecentProject } from "../../../shared/domain";
-import { useWindowFullscreen } from "../hooks/useWindowFullscreen";
 import { WelcomeChromeRow } from "./WelcomeChromeRow";
 
 interface WelcomeScreenProps {
@@ -8,7 +7,7 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
-  const isFullscreen = useWindowFullscreen();
+  const usesCustomWindowControls = window.bigTex.window.usesCustomWindowControls;
   const [recents, setRecents] = useState<RecentProject[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState("Opening workspace...");
@@ -114,7 +113,7 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-surface text-text-primary welcome-fade-in select-none">
-      {isFullscreen ? <WelcomeChromeRow /> : null}
+      {usesCustomWindowControls ? <WelcomeChromeRow /> : null}
       <div className="relative flex flex-1 w-full flex-col items-center justify-center overflow-hidden">
         {/* Main two-column dashboard */}
         <div className="z-10 grid w-full max-w-5xl grid-cols-1 gap-12 px-6 md:grid-cols-12">

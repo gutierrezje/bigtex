@@ -4,6 +4,7 @@ import { IPC_CHANNELS } from "../shared/ipc";
 import { loadProject } from "./files/project";
 import { addRecent } from "./files/recents";
 import { measure } from "./performance/marks";
+import { toggleWindowFullscreen } from "./windowFullscreen";
 
 export async function openProjectFolderDialog(
   parentWindow: BrowserWindow | null,
@@ -101,7 +102,14 @@ export function setApplicationMenu(getTargetWindow: () => BrowserWindow | null):
         { role: "reload" },
         { role: "forceReload" },
         { type: "separator" },
-        { role: "togglefullscreen" },
+        {
+          label: "Toggle Full Screen",
+          accelerator: process.platform === "darwin" ? "Ctrl+Command+F" : "F11",
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow() ?? getTargetWindow();
+            if (win && !win.isDestroyed()) toggleWindowFullscreen(win);
+          },
+        },
       ],
     },
     {

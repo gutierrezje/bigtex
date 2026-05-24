@@ -52,6 +52,7 @@ export function AppChromeBar({
         {showWindowControls ? <WindowControls /> : null}
         <SidebarToggleButton
           active={sidebarOpen}
+          alignWithNativeTrafficLights={!showWindowControls}
           title={sidebarOpen ? "Collapse Sidebar (Files)" : "Open Sidebar (Files)"}
           onClick={onToggleSidebar}
         />

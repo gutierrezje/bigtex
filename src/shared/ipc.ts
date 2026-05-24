@@ -125,6 +125,8 @@ export interface BigTexApi {
     minimize(): Promise<void>;
     toggleFullscreen(): Promise<void>;
     isFullscreen(): Promise<boolean>;
+    /** macOS uses custom HTML traffic lights; native ones are hidden at startup. */
+    usesCustomWindowControls: boolean;
     onFullscreenChanged(listener: (isFullscreen: boolean) => void): () => void;
   };
 }

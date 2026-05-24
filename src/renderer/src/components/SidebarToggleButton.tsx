@@ -1,19 +1,24 @@
 interface SidebarToggleButtonProps {
   active?: boolean;
   title?: string;
+  /** Nudge down to align with macOS native traffic lights (hiddenInset). */
+  alignWithNativeTrafficLights?: boolean;
   onClick(): void;
 }
 
 export function SidebarToggleButton({
   active = false,
   title = "Toggle Sidebar (Files)",
+  alignWithNativeTrafficLights = false,
   onClick,
 }: SidebarToggleButtonProps) {
   return (
     <button
       type="button"
       title={title}
-      className={`rounded border p-1.5 transition-all duration-200 cursor-pointer ${
+      className={`inline-flex items-center justify-center rounded border p-1.5 transition-all duration-200 cursor-pointer ${
+        alignWithNativeTrafficLights ? "translate-y-px" : ""
+      } ${
         active
           ? "border-transparent bg-surface-raised text-text-primary"
           : "border-transparent text-text-muted hover:text-text-secondary hover:bg-surface-raised/50"
@@ -28,7 +33,7 @@ export function SidebarToggleButton({
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="h-3.5 w-3.5"
+        className="block h-3.5 w-3.5 shrink-0"
       >
         <title>Toggle Sidebar</title>
         <rect width="18" height="18" x="3" y="3" rx="2" />
