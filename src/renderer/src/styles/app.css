@@ -196,7 +196,7 @@ ul {
    1) Tailwind's universal reset corrupts Monaco's internal pixel-level layout.
    2) Tailwind v4 / @tailwindcss/vite generates a `content: counter(line-number)`
       rule on `::before` pseudo-elements that overlaps Monaco's DOM-rendered line
-      numbers, producing a ghost "1" on every gutter row. */
+      numbers, producing a ghost "1" on every gutter row (still present in 4.3.0). */
 .monaco-editor *,
 .monaco-editor *::before,
 .monaco-editor *::after {
