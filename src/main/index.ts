@@ -5,8 +5,11 @@ import type { AgentRunInput, CompileRequest, PatchApplyRequest } from "../shared
 import {
   type AgentCheckRequest,
   type CreateFileRequest,
+  type CreateFolderRequest,
   type DeletePathRequest,
   IPC_CHANNELS,
+  type LanguageServerCheckRequest,
+  type LanguageServerStartSessionRequest,
   type ReadFileRequest,
   type RenamePathRequest,
   type WriteFileRequest,
@@ -22,6 +25,7 @@ import { applyUnifiedPatch } from "./agents/patch";
 import { compileLatex } from "./compile/latex";
 import {
   createProjectFile,
+  createProjectFolder,
   deleteProjectPath,
   loadProject,
   readProjectFile,
@@ -30,6 +34,13 @@ import {
   writeProjectFile,
 } from "./files/project";
 import { addRecent, clearRecents, getRecents, removeRecent } from "./files/recents";
+import {
+  checkTexlab,
+  getTexlabSessionStatus,
+  startTexlabSession,
+  stopAllTexlabSessions,
+  stopTexlabSession,
+} from "./lsp/texlab";
 import { openProjectFolderDialog, setApplicationMenu } from "./menu";
 import { getMarks, measure, recordMark } from "./performance/marks";
 import { isWindowFullscreen, toggleWindowFullscreen } from "./windowFullscreen";
@@ -157,6 +168,12 @@ function registerIpc(): void {
     ),
   );
 
+  ipcMain.handle(IPC_CHANNELS.folderCreate, (_event, request: CreateFolderRequest) =>
+    measure("folder:create", () =>
+      createProjectFolder(request.rootPath, request.parentPath, request.name),
+    ),
+  );
+
   ipcMain.handle(IPC_CHANNELS.fileRename, (_event, request: RenamePathRequest) =>
     measure("file:rename", () =>
       renameProjectPath(request.rootPath, request.path, request.newName),
@@ -206,6 +223,24 @@ function registerIpc(): void {
     applyUnifiedPatch(request),
   );
 
+  ipcMain.handle(IPC_CHANNELS.lspCheck, (_event, request: LanguageServerCheckRequest) =>
+    checkTexlab(request.command),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.lspSessionStart,
+    (_event, request: LanguageServerStartSessionRequest) =>
+      measure("lsp:session-start", () => startTexlabSession(request.rootPath, request.mainFile)),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.lspSessionStop, (_event, rootPath: string) =>
+    measure("lsp:session-stop", () => stopTexlabSession(rootPath)),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.lspSessionStatus, (_event, rootPath: string) =>
+    getTexlabSessionStatus(rootPath),
+  );
+
   ipcMain.handle(IPC_CHANNELS.windowClose, () => {
     focusedWindow()?.close();
   });
@@ -238,4 +273,8 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("before-quit", () => {
+  void stopAllTexlabSessions();
 });

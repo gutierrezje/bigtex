@@ -234,6 +234,28 @@ export function App() {
     void refreshMetrics();
   }, [refreshMetrics]);
 
+  async function syncLanguageServer(snapshot: ProjectSnapshot): Promise<void> {
+    const availability = await window.bigTex.lsp.check();
+    if (!availability.available) {
+      appendOutput(
+        `Language server unavailable: ${availability.message} Install texlab for completion and static diagnostics.`,
+        "warning",
+      );
+      return;
+    }
+
+    const status = await window.bigTex.lsp.startSession({
+      rootPath: snapshot.rootPath,
+      mainFile: snapshot.mainFile,
+    });
+    if (!status.active) {
+      appendOutput(
+        status.message ?? "Language server could not start for this project.",
+        "warning",
+      );
+    }
+  }
+
   async function loadProject(snapshot: ProjectSnapshot | null): Promise<void> {
     if (!snapshot) return;
     setProject(snapshot);
@@ -243,6 +265,7 @@ export function App() {
     clearOutputLog();
     clearAgent();
     void useAppStore.getState().loadAgentConfig(snapshot.rootPath);
+    void syncLanguageServer(snapshot);
 
     if (snapshot.mainFile) {
       openEditorFile(
@@ -262,6 +285,8 @@ export function App() {
       void loadProjectRef.current(snapshot);
     });
     const unsubClosed = window.bigTex.project.onClosed(() => {
+      const rootPath = useAppStore.getState().project?.rootPath;
+      if (rootPath) void window.bigTex.lsp.stopSession(rootPath);
       setProject(null);
       clearEditorTabs();
       clearPdfTabs();
@@ -414,6 +439,24 @@ export function App() {
     }
   }
 
+  async function createProjectFolder(parentPath: string, name: string): Promise<string> {
+    if (!project) return "";
+    try {
+      const { snapshot, createdPath } = await window.bigTex.files.createFolder({
+        rootPath: project.rootPath,
+        parentPath,
+        name,
+      });
+      setProject(snapshot);
+      appendOutput(`Created folder ${createdPath}.`, "success");
+      return createdPath;
+    } catch (error) {
+      appendOutput(error instanceof Error ? error.message : "Could not create folder", "error");
+      setEditorBottomTab("output");
+      throw error;
+    }
+  }
+
   async function renameProjectPath(path: string, newName: string): Promise<void> {
     if (!project) return;
     try {
@@ -508,6 +551,7 @@ export function App() {
                 activePath={activeEditor?.path ?? null}
                 onOpenFile={(file) => void openProjectFile(file)}
                 onCreateFile={createProjectFile}
+                onCreateFolder={createProjectFolder}
                 onRenamePath={renameProjectPath}
                 onDeletePath={deleteProjectPath}
                 onRefresh={() => void refreshProjectFiles()}

@@ -26,6 +26,7 @@ function ExplorerToolbarButton({ title, onClick, children }: ExplorerToolbarButt
 interface ProjectSidebarHeaderProps {
   projectName: string;
   onNewFile(): void;
+  onNewFolder(): void;
   onCollapseAll(): void;
   onRefresh(): void;
 }
@@ -33,6 +34,7 @@ interface ProjectSidebarHeaderProps {
 export function ProjectSidebarHeader({
   projectName,
   onNewFile,
+  onNewFolder,
   onCollapseAll,
   onRefresh,
 }: ProjectSidebarHeaderProps) {
@@ -47,6 +49,24 @@ export function ProjectSidebarHeader({
         {projectName}
       </h2>
       <div className="flex shrink-0 items-center">
+        <ExplorerToolbarButton title="New Folder…" onClick={onNewFolder}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={EXPLORER_TOOLBAR_ICON_CLASS}
+            aria-hidden
+          >
+            <title>New Folder…</title>
+            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+            <line x1="12" y1="11" x2="12" y2="17" />
+            <line x1="9" y1="14" x2="15" y2="14" />
+          </svg>
+        </ExplorerToolbarButton>
         <ExplorerToolbarButton title="New File…" onClick={onNewFile}>
           <svg
             xmlns="http://www.w3.org/2000/svg"

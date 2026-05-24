@@ -64,6 +64,21 @@ export interface AgentAvailability {
   message: string;
 }
 
+export type LanguageServerAvailability = AgentAvailability;
+
+export interface LanguageServerSessionStatus {
+  active: boolean;
+  rootPath: string;
+  mainFile: string | null;
+  command: string;
+  message: string | null;
+}
+
+export interface LanguageServerStartSessionRequest {
+  rootPath: string;
+  mainFile: string | null;
+}
+
 export type AgentProviderGroup = "free" | "go" | "copilot";
 
 export interface AgentModelOption {

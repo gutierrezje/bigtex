@@ -1,8 +1,12 @@
-import { access, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { access, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { FileKind, OpenFile, ProjectFile, ProjectSnapshot } from "../../shared/domain";
 import { latexOutputPdfPath, shouldHideProjectTreeEntry } from "../../shared/latexArtifacts";
-import { CREATABLE_FILE_EXTENSIONS, isCreatableFileName } from "../../shared/projectFiles";
+import {
+  CREATABLE_FILE_EXTENSIONS,
+  isCreatableFileName,
+  resolveFolderName,
+} from "../../shared/projectFiles";
 
 const MAX_TREE_DEPTH = 8;
 
@@ -201,6 +205,16 @@ async function uniqueFileName(directoryAbs: string, baseName: string): Promise<s
   return candidate;
 }
 
+async function uniqueFolderName(directoryAbs: string, baseName: string): Promise<string> {
+  let candidate = baseName;
+  let index = 1;
+  while (await pathExists(join(directoryAbs, candidate))) {
+    candidate = `${baseName}-${index}`;
+    index += 1;
+  }
+  return candidate;
+}
+
 function resolveParentDirectory(rootPath: string, parentPath: string): string {
   const parent = parentPath.trim();
   if (!parent) return resolve(rootPath);
@@ -224,6 +238,30 @@ export async function createProjectFile(
 
   const absolutePath = join(parentAbs, fileName);
   await writeFile(absolutePath, "", "utf8");
+  const createdPath = toProjectRelative(root, absolutePath);
+  return { snapshot: await loadProject(rootPath), createdPath };
+}
+
+export async function createProjectFolder(
+  rootPath: string,
+  parentPath: string,
+  name: string,
+): Promise<{ snapshot: ProjectSnapshot; createdPath: string }> {
+  const resolved = resolveFolderName(name);
+  if (!resolved) {
+    throw new Error("Invalid folder name");
+  }
+
+  const root = resolve(rootPath);
+  const parentAbs = resolveParentDirectory(root, parentPath);
+  const parentInfo = await stat(parentAbs);
+  if (!parentInfo.isDirectory()) {
+    throw new Error("Parent must be a folder");
+  }
+
+  const folderName = await uniqueFolderName(parentAbs, resolved);
+  const absolutePath = join(parentAbs, folderName);
+  await mkdir(absolutePath);
   const createdPath = toProjectRelative(root, absolutePath);
   return { snapshot: await loadProject(rootPath), createdPath };
 }

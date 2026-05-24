@@ -29,12 +29,19 @@ const api: BigTexApi = {
     read: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileRead, request),
     write: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileWrite, request),
     create: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileCreate, request),
+    createFolder: (request) => ipcRenderer.invoke(IPC_CHANNELS.folderCreate, request),
     rename: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileRename, request),
     delete: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileDelete, request),
   },
   latex: {
     compile: (request) => ipcRenderer.invoke(IPC_CHANNELS.latexCompile, request),
     readPdf: (path) => ipcRenderer.invoke(IPC_CHANNELS.pdfRead, path),
+  },
+  lsp: {
+    check: (request) => ipcRenderer.invoke(IPC_CHANNELS.lspCheck, request ?? {}),
+    startSession: (request) => ipcRenderer.invoke(IPC_CHANNELS.lspSessionStart, request),
+    stopSession: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.lspSessionStop, rootPath),
+    sessionStatus: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.lspSessionStatus, rootPath),
   },
   agent: {
     check: (request) => ipcRenderer.invoke(IPC_CHANNELS.agentCheck, request),

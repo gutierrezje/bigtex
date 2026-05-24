@@ -4,6 +4,7 @@ import { ancestorFolderPaths, parentDirectoryPath } from "../../../shared/projec
 import { TREE_LABEL_CLASS } from "../lib/treeTypography";
 import { FileTypeIcon, TreeChevronIcon, TreeFolderIcon } from "./icons/projectTreeIcons";
 import { NewFileDialog } from "./NewFileDialog";
+import { NewFolderDialog } from "./NewFolderDialog";
 import { ProjectSidebarHeader } from "./ProjectSidebarHeader";
 
 interface ProjectSidebarProps {
@@ -11,6 +12,7 @@ interface ProjectSidebarProps {
   activePath: string | null;
   onOpenFile(file: ProjectFile): void;
   onCreateFile(parentPath: string, name: string): Promise<void>;
+  onCreateFolder(parentPath: string, name: string): Promise<string>;
   onRenamePath(path: string, newName: string): Promise<void>;
   onDeletePath(path: string): Promise<void>;
   onRefresh(): void | Promise<void>;
@@ -181,6 +183,7 @@ export function ProjectSidebar({
   activePath,
   onOpenFile,
   onCreateFile,
+  onCreateFolder,
   onRenamePath,
   onDeletePath,
   onRefresh,
@@ -191,6 +194,7 @@ export function ProjectSidebar({
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [newFileDialog, setNewFileDialog] = useState<{ parentPath: string } | null>(null);
+  const [newFolderDialog, setNewFolderDialog] = useState<{ parentPath: string } | null>(null);
   const treeRef = useRef<HTMLDivElement>(null);
   const projectRoot = project?.rootPath ?? null;
   const previousProjectRootRef = useRef<string | null>(null);
@@ -324,6 +328,11 @@ export function ProjectSidebar({
     setNewFileDialog({ parentPath: parentPathForSelection() });
   };
 
+  const openNewFolderDialog = () => {
+    setContextMenu(null);
+    setNewFolderDialog({ parentPath: parentPathForSelection() });
+  };
+
   const collapseAllFolders = () => {
     setExpandedPaths(new Set());
   };
@@ -335,6 +344,24 @@ export function ProjectSidebar({
       setNewFileDialog(null);
     } catch (error) {
       onError(error instanceof Error ? error.message : "Could not create file");
+      throw error;
+    }
+  };
+
+  const handleCreateNewFolder = async (folderName: string) => {
+    if (!newFolderDialog) return;
+    try {
+      const createdPath = await onCreateFolder(newFolderDialog.parentPath, folderName);
+      setNewFolderDialog(null);
+      setExpandedPaths((prev) => {
+        const next = new Set(prev);
+        for (const folder of ancestorFolderPaths(createdPath)) next.add(folder);
+        next.add(createdPath);
+        return next;
+      });
+      setSelectedPath(createdPath);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : "Could not create folder");
       throw error;
     }
   };
@@ -361,6 +388,7 @@ export function ProjectSidebar({
           <ProjectSidebarHeader
             projectName={project.name}
             onNewFile={openNewFileDialog}
+            onNewFolder={openNewFolderDialog}
             onCollapseAll={collapseAllFolders}
             onRefresh={() => void onRefresh()}
           />
@@ -413,6 +441,14 @@ export function ProjectSidebar({
             type="button"
             role="menuitem"
             className="w-full px-3 py-1.5 text-left text-xs text-text-secondary hover:bg-zinc-800/60 hover:text-text-primary"
+            onClick={openNewFolderDialog}
+          >
+            New Folder…
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="w-full px-3 py-1.5 text-left text-xs text-text-secondary hover:bg-zinc-800/60 hover:text-text-primary"
             onClick={openNewFileDialog}
           >
             New File…
@@ -446,6 +482,12 @@ export function ProjectSidebar({
         parentLabel={newFileDialog?.parentPath ?? ""}
         onCancel={() => setNewFileDialog(null)}
         onCreate={handleCreateNewFile}
+      />
+      <NewFolderDialog
+        open={newFolderDialog !== null}
+        parentLabel={newFolderDialog?.parentPath ?? ""}
+        onCancel={() => setNewFolderDialog(null)}
+        onCreate={handleCreateNewFolder}
       />
     </aside>
   );

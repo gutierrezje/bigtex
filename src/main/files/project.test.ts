@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertInsideRoot,
   createProjectFile,
+  createProjectFolder,
   deleteProjectPath,
   loadProject,
   renameProjectPath,
@@ -56,6 +57,31 @@ describe("createProjectFile", () => {
       expect(dup.createdPath).toBe("draft-1.tex");
 
       await expect(createProjectFile(root, "", "readme.md")).rejects.toThrow(/Only LaTeX-related/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("createProjectFolder", () => {
+  it("creates folders in-tree and dedupes names on collision", async () => {
+    const root = await mkdtemp(join(tmpdir(), "bigtex-folder-"));
+    try {
+      const first = await createProjectFolder(root, "", "chapters");
+      expect(first.createdPath).toBe("chapters");
+
+      await mkdir(join(root, "figures"));
+      const dup = await createProjectFolder(root, "", "figures");
+      expect(dup.createdPath).toBe("figures-1");
+
+      const nested = await createProjectFolder(root, "chapters", "intro");
+      expect(nested.createdPath).toBe("chapters/intro");
+      const chapters = nested.snapshot.files.find((file) => file.path === "chapters");
+      expect(chapters?.children?.some((child) => child.path === "chapters/intro")).toBe(true);
+
+      await expect(createProjectFolder(root, "", "bad/name")).rejects.toThrow(
+        /Invalid folder name/,
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

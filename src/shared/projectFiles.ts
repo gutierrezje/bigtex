@@ -4,6 +4,14 @@ export const CREATABLE_FILE_EXTENSIONS = [".tex", ".bib", ".sty", ".cls"] as con
 export type CreatableFileExtension = (typeof CREATABLE_FILE_EXTENSIONS)[number];
 
 export const DEFAULT_NEW_FILE_NAME = "untitled.tex";
+export const DEFAULT_NEW_FOLDER_NAME = "newfolder";
+
+export function resolveFolderName(raw: string): string | null {
+  const name = raw.trim();
+  if (!name) return null;
+  if (name.includes("/") || name.includes("\\") || name === "." || name === "..") return null;
+  return name;
+}
 
 export function isCreatableFileName(name: string): boolean {
   const lower = name.toLowerCase();

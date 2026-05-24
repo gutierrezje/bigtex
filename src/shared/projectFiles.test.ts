@@ -4,6 +4,7 @@ import {
   isCreatableFileName,
   isPdfPath,
   parentDirectoryPath,
+  resolveFolderName,
   toProjectRelativePath,
 } from "./projectFiles";
 
@@ -28,5 +29,13 @@ describe("projectFiles", () => {
     expect(isPdfPath("main.tex")).toBe(false);
 
     expect(toProjectRelativePath("/proj", "/proj/chapters/out.pdf")).toBe("chapters/out.pdf");
+  });
+
+  it("validates new folder names", () => {
+    expect(resolveFolderName("chapters")).toBe("chapters");
+    expect(resolveFolderName("  figures  ")).toBe("figures");
+    expect(resolveFolderName("")).toBeNull();
+    expect(resolveFolderName("a/b")).toBeNull();
+    expect(resolveFolderName(".")).toBeNull();
   });
 });

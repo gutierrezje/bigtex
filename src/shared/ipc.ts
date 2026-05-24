@@ -6,6 +6,9 @@ import type {
   AgentSessionConfig,
   CompileRequest,
   CompileResult,
+  LanguageServerAvailability,
+  LanguageServerSessionStatus,
+  LanguageServerStartSessionRequest,
   OpenFile,
   PatchApplyRequest,
   PatchApplyResult,
@@ -25,6 +28,7 @@ export const IPC_CHANNELS = {
   fileRead: "file:read",
   fileWrite: "file:write",
   fileCreate: "file:create",
+  folderCreate: "folder:create",
   fileRename: "file:rename",
   fileDelete: "file:delete",
   latexCompile: "latex:compile",
@@ -36,6 +40,10 @@ export const IPC_CHANNELS = {
   agentProbeModel: "agent:probe-model",
   agentEvent: "agent:event",
   patchApply: "patch:apply",
+  lspCheck: "lsp:check",
+  lspSessionStart: "lsp:session-start",
+  lspSessionStop: "lsp:session-stop",
+  lspSessionStatus: "lsp:session-status",
   recentsGet: "recents:get",
   recentsRemove: "recents:remove",
   recentsClear: "recents:clear",
@@ -61,6 +69,8 @@ export interface CreateFileRequest {
   name: string;
 }
 
+export type CreateFolderRequest = CreateFileRequest;
+
 export interface RenamePathRequest {
   rootPath: string;
   path: string;
@@ -75,6 +85,12 @@ export interface DeletePathRequest {
 export interface AgentCheckRequest {
   command: string;
 }
+
+export interface LanguageServerCheckRequest {
+  command?: string;
+}
+
+export type { LanguageServerStartSessionRequest } from "./domain";
 
 export interface AgentCancelRequest {
   runId: string;
@@ -97,12 +113,21 @@ export interface BigTexApi {
     read(request: ReadFileRequest): Promise<OpenFile>;
     write(request: WriteFileRequest): Promise<OpenFile>;
     create(request: CreateFileRequest): Promise<{ snapshot: ProjectSnapshot; createdPath: string }>;
+    createFolder(
+      request: CreateFolderRequest,
+    ): Promise<{ snapshot: ProjectSnapshot; createdPath: string }>;
     rename(request: RenamePathRequest): Promise<{ snapshot: ProjectSnapshot; newPath: string }>;
     delete(request: DeletePathRequest): Promise<ProjectSnapshot>;
   };
   latex: {
     compile(request: CompileRequest): Promise<CompileResult>;
     readPdf(path: string): Promise<PdfPayload>;
+  };
+  lsp: {
+    check(request?: LanguageServerCheckRequest): Promise<LanguageServerAvailability>;
+    startSession(request: LanguageServerStartSessionRequest): Promise<LanguageServerSessionStatus>;
+    stopSession(rootPath: string): Promise<void>;
+    sessionStatus(rootPath: string): Promise<LanguageServerSessionStatus | null>;
   };
   agent: {
     check(request: AgentCheckRequest): Promise<AgentAvailability>;
