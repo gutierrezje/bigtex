@@ -2,6 +2,8 @@
 
 Agent-first Electron LaTeX editor prototype focused on local performance.
 
+![BigTeX workbench: project tree, LaTeX editor, PDF preview, problems panel, and assistant](docs/images/SCR-20260523-topk.png)
+
 ## Features
 
 - Electron main process owns file IO, LaTeX compilation, agent subprocesses, and patch application.
