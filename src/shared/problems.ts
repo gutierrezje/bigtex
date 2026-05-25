@@ -1,6 +1,21 @@
-import type { CompileDiagnostic, CompileResult, ProjectFile } from "./domain";
+import type { CompileDiagnostic, CompileResult, ProblemSource, ProjectFile } from "./domain";
 
 export type ProblemsTab = "all" | "error" | "warning";
+
+function withSource(diagnostics: CompileDiagnostic[], source: ProblemSource): CompileDiagnostic[] {
+  return diagnostics.map((diagnostic) => ({ ...diagnostic, source }));
+}
+
+/** Unified Problems list: compile diagnostics first, then language-server rows. */
+export function mergeProblemDiagnostics(
+  compileDiagnostics: CompileDiagnostic[],
+  languageServerDiagnostics: CompileDiagnostic[],
+): CompileDiagnostic[] {
+  return [
+    ...withSource(compileDiagnostics, "compile"),
+    ...withSource(languageServerDiagnostics, "static"),
+  ];
+}
 
 export function countDiagnosticsBySeverity(diagnostics: CompileDiagnostic[]): {
   errors: number;

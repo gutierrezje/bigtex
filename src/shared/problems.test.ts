@@ -8,6 +8,7 @@ import {
   formatAgentHandoffLine,
   formatCompileSummary,
   mergeAgentSelectedFiles,
+  mergeProblemDiagnostics,
 } from "./problems";
 
 describe("formatCompileSummary", () => {
@@ -112,6 +113,31 @@ describe("diagnosticHasSource", () => {
     expect(diagnosticHasSource({ file: null, line: null, severity: "error", message: "x" })).toBe(
       false,
     );
+  });
+});
+
+describe("mergeProblemDiagnostics", () => {
+  it("tags compile and static rows and lists compile first", () => {
+    const merged = mergeProblemDiagnostics(
+      [{ file: "main.tex", line: 1, severity: "error", message: "build failed" }],
+      [{ file: "intro.tex", line: 2, severity: "warning", message: "undefined ref" }],
+    );
+    expect(merged).toEqual([
+      {
+        file: "main.tex",
+        line: 1,
+        severity: "error",
+        message: "build failed",
+        source: "compile",
+      },
+      {
+        file: "intro.tex",
+        line: 2,
+        severity: "warning",
+        message: "undefined ref",
+        source: "static",
+      },
+    ]);
   });
 });
 

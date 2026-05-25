@@ -10,7 +10,8 @@ import {
 import { CHROME_META_CLASS } from "../lib/treeTypography";
 
 interface ProblemsPanelProps {
-  result: CompileResult | null;
+  compileResult: CompileResult | null;
+  diagnostics: CompileDiagnostic[];
   onGoToSource(diagnostic: CompileDiagnostic): void;
   onAgentHandoff(diagnostic: CompileDiagnostic): void;
 }
@@ -91,6 +92,17 @@ function ProblemRow({
           diagnostic.severity === "error" ? "text-danger" : "text-text-secondary"
         }`}
       >
+        {diagnostic.source ? (
+          <span
+            className={`mr-1.5 inline-flex rounded border px-1 py-px font-medium uppercase tracking-wide ${
+              diagnostic.source === "compile"
+                ? "border-border bg-surface-inset text-text-muted"
+                : "border-accent/25 bg-accent/8 text-accent"
+            }`}
+          >
+            {diagnostic.source}
+          </span>
+        ) : null}
         {diagnostic.message}
       </p>
       <p className={`m-0 mt-0.5 font-mono ${CHROME_META_CLASS} text-text-muted/80`}>
@@ -161,9 +173,13 @@ function ProblemRow({
   );
 }
 
-export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: ProblemsPanelProps) {
+export function ProblemsPanel({
+  compileResult,
+  diagnostics,
+  onGoToSource,
+  onAgentHandoff,
+}: ProblemsPanelProps) {
   const [activeTab, setActiveTab] = useState<ProblemsTab>("all");
-  const diagnostics = result?.diagnostics ?? [];
   const counts = useMemo(() => countDiagnosticsBySeverity(diagnostics), [diagnostics]);
   const visible = useMemo(
     () => filterDiagnosticsByTab(diagnostics, activeTab),
@@ -209,7 +225,9 @@ export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: Problems
               const canNavigate = diagnosticHasSource(diagnostic);
               const location = [diagnostic.file, diagnostic.line].filter(Boolean).join(":");
               return (
-                <li key={`${diagnostic.message}-${location}-${index}`}>
+                <li
+                  key={`${diagnostic.source ?? "row"}-${diagnostic.message}-${location}-${index}`}
+                >
                   <ProblemRow
                     diagnostic={diagnostic}
                     canNavigate={canNavigate}
@@ -223,11 +241,11 @@ export function ProblemsPanel({ result, onGoToSource, onAgentHandoff }: Problems
           </ul>
         ) : (
           <p className={`px-1 ${CHROME_META_CLASS} text-text-muted`}>
-            {result?.success
+            {compileResult?.success && diagnostics.length === 0
               ? "No problems. The current PDF is ready."
-              : result
-                ? "No problems in this filter."
-                : "Compile to see errors and warnings here."}
+              : diagnostics.length === 0
+                ? "Compile to see build errors here, or open a LaTeX file for static checks."
+                : "No problems in this filter."}
           </p>
         )}
       </div>

@@ -9,7 +9,8 @@ interface EditorBottomPanelProps {
   activeTab: EditorBottomTab;
   onTabChange(tab: EditorBottomTab): void;
   onOutputTabSelect?(): void;
-  result: CompileResult | null;
+  compileResult: CompileResult | null;
+  problems: CompileDiagnostic[];
   compiling: boolean;
   onCompile(): void;
   onGoToSource(diagnostic: CompileDiagnostic): void;
@@ -20,13 +21,14 @@ export function EditorBottomPanel({
   activeTab,
   onTabChange,
   onOutputTabSelect,
-  result,
+  compileResult,
+  problems,
   compiling,
   onCompile,
   onGoToSource,
   onAgentHandoff,
 }: EditorBottomPanelProps) {
-  const problemTotal = result?.diagnostics.length ?? 0;
+  const problemTotal = problems.length;
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface">
@@ -50,8 +52,8 @@ export function EditorBottomPanel({
         <span
           className={`hidden shrink-0 truncate ${TREE_LABEL_CLASS} text-text-muted sm:inline mr-2`}
         >
-          {result
-            ? `${result.success ? "clean" : "needs attention"} · ${result.durationMs}ms`
+          {compileResult
+            ? `${compileResult.success ? "clean" : "needs attention"} · ${compileResult.durationMs}ms`
             : "not run"}
         </span>
         <button
@@ -68,7 +70,8 @@ export function EditorBottomPanel({
       <div className="min-h-0 flex-1 overflow-hidden">
         {activeTab === "problems" ? (
           <ProblemsPanel
-            result={result}
+            compileResult={compileResult}
+            diagnostics={problems}
             onGoToSource={onGoToSource}
             onAgentHandoff={onAgentHandoff}
           />

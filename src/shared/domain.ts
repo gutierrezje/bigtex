@@ -30,11 +30,15 @@ export interface OpenFile {
   loadedAt: number;
 }
 
+export type ProblemSource = "compile" | "static";
+
 export interface CompileDiagnostic {
   file: string | null;
   line: number | null;
   severity: "error" | "warning";
   message: string;
+  /** Problems panel badge; compile rows from latexmk, static rows from Texlab. */
+  source?: ProblemSource;
 }
 
 export interface CompileRequest {

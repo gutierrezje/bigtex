@@ -9,6 +9,7 @@ import {
   formatAgentHandoffLine,
   formatCompileSummary,
   mergeAgentSelectedFiles,
+  mergeProblemDiagnostics,
   normalizeDiagnosticPath,
 } from "../../shared/problems";
 import { isPdfPath, toProjectRelativePath } from "../../shared/projectFiles";
@@ -19,6 +20,7 @@ import { EditorBottomPanel, type EditorBottomTab } from "./components/EditorBott
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { useAgentEvents } from "./hooks/useAgentEvents";
+import { useStaticDiagnostics } from "./hooks/useStaticDiagnostics";
 import { useWelcomeOpen } from "./hooks/useWelcomeOpen";
 
 import { formatWindowChromeLabel } from "./lib/windowChrome";
@@ -71,6 +73,11 @@ export function App() {
     setPdfPreviewInverted,
   } = useAppStore();
   const activeEditor = getActiveEditor(editorTabs);
+  const staticDiagnostics = useStaticDiagnostics(project?.rootPath ?? null);
+  const problems = useMemo(
+    () => mergeProblemDiagnostics(compileResult?.diagnostics ?? [], staticDiagnostics),
+    [compileResult?.diagnostics, staticDiagnostics],
+  );
   const [compiling, setCompiling] = useState(false);
   const [editorRevealLine, setEditorRevealLine] = useState<number | null>(null);
   const [editorBottomTab, setEditorBottomTab] = useState<EditorBottomTab>("problems");
@@ -668,7 +675,8 @@ export function App() {
                     activeTab={editorBottomTab}
                     onTabChange={setEditorBottomTab}
                     onOutputTabSelect={() => void refreshMetrics()}
-                    result={compileResult}
+                    compileResult={compileResult}
+                    problems={problems}
                     compiling={compiling}
                     onCompile={() => void compile()}
                     onGoToSource={(diagnostic) => void goToDiagnosticSource(diagnostic)}

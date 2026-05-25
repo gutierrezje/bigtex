@@ -9,6 +9,7 @@ import { disposeAllLspEditorDocuments } from "./editor-documents";
 import { pathToFileUri } from "./file-uri";
 import { createLspIpcBridge } from "./ipc-bridge";
 import { createIpcConnectionProvider } from "./ipc-transport";
+import { LSP_DIAGNOSTIC_OWNER } from "./static-diagnostics";
 
 let client: MonacoLanguageClient | null = null;
 let bridge: ReturnType<typeof createLspIpcBridge> | null = null;
@@ -33,7 +34,7 @@ export async function startTexlabLanguageClient(options: {
         { scheme: "file", language: "latex" },
         { scheme: "file", language: "bibtex" },
       ],
-      diagnosticCollectionName: "latex-lsp",
+      diagnosticCollectionName: LSP_DIAGNOSTIC_OWNER,
       initializationOptions: options.mainFile ? { rootFile: options.mainFile } : {},
       errorHandler: {
         error: () => ErrorAction.Continue,
