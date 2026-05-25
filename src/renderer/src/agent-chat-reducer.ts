@@ -134,3 +134,13 @@ export function reduceAgentChat(chat: AgentChatState, event: AgentEvent): AgentC
 
   return chat;
 }
+
+/** Clear a detected patch from chat after the user applies it (or auto-apply succeeds). */
+export function clearAgentChatPatch(chat: AgentChatState, patch: string): AgentChatState {
+  return {
+    ...chat,
+    messages: chat.messages.map((message) =>
+      message.patch === patch ? { ...message, patch: null } : message,
+    ),
+  };
+}

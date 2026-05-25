@@ -1,6 +1,6 @@
 import type { AgentModelOption, AgentProviderGroup } from "./domain";
 
-/** UI labels for provider group toggles (ids stay `free` / `go` / `copilot` for logic). */
+/** UI labels for provider toggles (ids stay `free` / `go` / `copilot` for logic). */
 export const PROVIDER_GROUP_LABELS: Record<AgentProviderGroup, string> = {
   free: "OpenCode",
   go: "OpenCode Go",
@@ -77,7 +77,7 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Remove provider branding duplicated by the provider-group control. */
+/** Remove provider branding duplicated by the provider control. */
 export function stripProviderPrefixFromLabel(label: string, group: AgentProviderGroup): string {
   let text = label.trim();
   if (!text) return text;
@@ -103,7 +103,7 @@ export function stripProviderPrefixFromLabel(label: string, group: AgentProvider
 
 /**
  * Prefer OpenCode's human label when it is not just the slug; otherwise format the id tail.
- * Strips provider prefixes so the picker does not repeat the provider-group name.
+ * Strips provider prefixes so the picker does not repeat the provider name.
  */
 export function formatAgentModelLabel(
   model: Pick<AgentModelOption, "id" | "name" | "label" | "providerGroup">,

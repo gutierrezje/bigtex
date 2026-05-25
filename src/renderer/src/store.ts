@@ -38,7 +38,12 @@ import type {
   UserSettings,
 } from "../../shared/settings";
 import { DEFAULT_USER_SETTINGS, reconcileAgentModelPreference } from "../../shared/settings";
-import { type AgentChatMessage, type AgentChatState, reduceAgentChat } from "./agent-chat-reducer";
+import {
+  type AgentChatMessage,
+  type AgentChatState,
+  clearAgentChatPatch,
+  reduceAgentChat,
+} from "./agent-chat-reducer";
 import { readPdfPreviewInvert } from "./lib/pdfPreviewPrefs";
 import { schedulePersistWorkspaceAgentModel } from "./lib/persistWorkspaceAgent";
 
@@ -105,6 +110,7 @@ interface AppState {
   addAgentUserMessage(content: string): void;
   createPendingAgentMessage(): string;
   appendAgentEvent(event: AgentEvent): void;
+  clearAgentMessagePatch(patch: string): void;
   clearAgent(): void;
   loadAgentConfig(rootPath: string): Promise<void>;
   setAgentProviderGroup(group: AgentProviderGroup): void;
@@ -236,6 +242,10 @@ export const useAppStore = create<AppState>((set) => ({
   appendAgentEvent: (event) =>
     set((state) => ({
       agentChat: reduceAgentChat(state.agentChat, event),
+    })),
+  clearAgentMessagePatch: (patch) =>
+    set((state) => ({
+      agentChat: clearAgentChatPatch(state.agentChat, patch),
     })),
   clearAgent: () =>
     set({

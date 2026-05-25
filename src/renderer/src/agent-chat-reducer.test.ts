@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentEvent } from "../../shared/domain";
-import { type AgentChatState, reduceAgentChat } from "./agent-chat-reducer";
+import { type AgentChatState, clearAgentChatPatch, reduceAgentChat } from "./agent-chat-reducer";
 
 const RUN_ID = "run-1";
 const ASSISTANT_ID = "assistant-1";
@@ -95,6 +95,18 @@ describe("reduceAgentChat", () => {
       eventAt("finished", { runId: RUN_ID, exitCode: 0, durationMs: 1 }),
     );
     expect(assistant(ok)?.status).toBe("ready");
+  });
+
+  it("clears a detected patch after apply", () => {
+    const patchText = "--- a/main.tex\n+++ b/main.tex\n";
+    const withPatch = reduceAgentChat(
+      chatWithAssistant(),
+      eventAt("patch", { runId: RUN_ID, patch: patchText }),
+    );
+    expect(assistant(withPatch)?.patch).toBe(patchText);
+
+    const cleared = clearAgentChatPatch(withPatch, patchText);
+    expect(assistant(cleared)?.patch).toBeNull();
   });
 
   it("falls back to the last assistant when none is active", () => {

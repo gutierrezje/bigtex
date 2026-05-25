@@ -97,7 +97,7 @@ function WorkspaceAgentModelSettings() {
   return (
     <div className="grid gap-3">
       <label className="grid gap-1">
-        <span className={TREE_LABEL_CLASS}>Provider group</span>
+        <span className={TREE_LABEL_CLASS}>Provider</span>
         <select
           className="rounded-lg border border-border/50 bg-surface px-2 py-1.5 text-sm text-text-primary"
           value={providerGroup}

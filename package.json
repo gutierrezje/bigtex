@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "@assistant-ui/react": "^0.12.28",
+    "@lobehub/icons": "^5.8.0",
     "@monaco-editor/react": "latest",
     "@shikijs/langs": "4.0.2",
     "@shikijs/themes": "4.0.2",

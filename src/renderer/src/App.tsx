@@ -491,6 +491,7 @@ export function App() {
       hintPaths: mergeAgentSelectedFiles(activeEditor?.path ?? null, agentHandoffFiles),
     });
     if (result.applied) {
+      useAppStore.getState().clearAgentMessagePatch(patch);
       await refreshProjectFiles(
         result.changedFiles,
         result.message || `Applied ${result.changedFiles.length} file change(s).`,

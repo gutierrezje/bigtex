@@ -12,6 +12,16 @@ import {
 import { useDismissOnPointerDown } from "../../hooks/useDismissOnPointerDown";
 import { TREE_LABEL_CLASS } from "../../lib/treeTypography";
 import { useAppStore } from "../../store";
+import { AgentModelIcon, AgentProviderIcon } from "./AgentBrandIcon";
+
+const TOOLBAR_TRIGGER_BASE = `flex items-center gap-1 rounded-md border border-border/60 bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} transition-all duration-100 hover:border-accent/30 hover:bg-surface-raised/40 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer`;
+
+function toolbarTriggerClass(active: boolean, muted = false): string {
+  if (active) {
+    return `${TOOLBAR_TRIGGER_BASE} border-accent/25 bg-accent/8 text-text-primary`;
+  }
+  return `${TOOLBAR_TRIGGER_BASE} ${muted ? "text-text-muted" : "text-text-primary"}`;
+}
 
 function ChevronDown() {
   return (
@@ -86,14 +96,17 @@ export function AgentModelToolbar() {
             type="button"
             disabled={!config}
             title="Choose AI provider"
-            className={`flex items-center gap-1 rounded-md border border-border/60 bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-secondary transition-all duration-100 hover:border-accent/30 hover:bg-surface-raised/40 hover:text-text-primary disabled:opacity-40 cursor-pointer`}
+            className={toolbarTriggerClass(false)}
             onClick={() => {
               setShowModelDropdown(false);
               setShowReasoningDropdown(false);
               setShowProviderDropdown((open) => !open);
             }}
           >
-            <span className="text-accent">{formatProviderGroupLabel(providerGroup)}</span>
+            <AgentProviderIcon group={providerGroup} />
+            <span className="max-w-[120px] truncate">
+              {formatProviderGroupLabel(providerGroup)}
+            </span>
             <ChevronDown />
           </button>
           {showProviderDropdown ? (
@@ -102,13 +115,14 @@ export function AgentModelToolbar() {
                 <button
                   key={group}
                   type="button"
-                  className={`w-full rounded px-2 py-1 text-left ${TREE_LABEL_CLASS} transition-all cursor-pointer ${providerGroup === group ? "bg-accent/8 text-accent border border-accent/15" : "text-text-secondary hover:bg-surface-raised/60 hover:text-text-primary"}`}
+                  className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left ${TREE_LABEL_CLASS} transition-all cursor-pointer ${providerGroup === group ? "bg-accent/8 text-accent border border-accent/15" : "text-text-secondary hover:bg-surface-raised/60 hover:text-text-primary"}`}
                   onClick={() => {
                     setAgentProviderGroup(group);
                     setShowProviderDropdown(false);
                   }}
                 >
-                  {formatProviderGroupLabel(group)}
+                  <AgentProviderIcon group={group} />
+                  <span className="min-w-0 truncate">{formatProviderGroupLabel(group)}</span>
                 </button>
               ))}
             </div>
@@ -119,14 +133,15 @@ export function AgentModelToolbar() {
             type="button"
             disabled={!config || modelsForGroup.length === 0}
             title="Choose model"
-            className={`flex items-center gap-1 rounded-md border border-border/60 bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-secondary transition-all duration-100 hover:border-accent/30 hover:bg-surface-raised/40 hover:text-text-primary disabled:opacity-40 cursor-pointer`}
+            className={toolbarTriggerClass(false)}
             onClick={() => {
               setShowProviderDropdown(false);
               setShowReasoningDropdown(false);
               setShowModelDropdown((open) => !open);
             }}
           >
-            <span className="max-w-[140px] truncate text-text-primary">
+            {selectedModel ? <AgentModelIcon modelId={selectedModel.id} /> : null}
+            <span className="max-w-[140px] truncate">
               {selectedModel ? formatAgentModelLabel(selectedModel) : "Model"}
             </span>
             <ChevronDown />
@@ -137,13 +152,14 @@ export function AgentModelToolbar() {
                 <button
                   key={model.id}
                   type="button"
-                  className={`w-full rounded px-2 py-1 text-left ${TREE_LABEL_CLASS} transition-all cursor-pointer ${model.id === modelId ? "bg-accent/8 text-accent border border-accent/15" : "text-text-secondary hover:bg-surface-raised/60 hover:text-text-primary"}`}
+                  className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left ${TREE_LABEL_CLASS} transition-all cursor-pointer ${model.id === modelId ? "bg-accent/8 text-accent border border-accent/15" : "text-text-secondary hover:bg-surface-raised/60 hover:text-text-primary"}`}
                   onClick={() => {
                     setAgentModelId(model.id);
                     setShowModelDropdown(false);
                   }}
                 >
-                  <span className="block truncate">{formatAgentModelLabel(model)}</span>
+                  <AgentModelIcon modelId={model.id} />
+                  <span className="min-w-0 truncate">{formatAgentModelLabel(model)}</span>
                 </button>
               ))}
             </div>
@@ -161,7 +177,7 @@ export function AgentModelToolbar() {
                   ? "Reasoning effort (max → low); off uses the base model"
                   : "No reasoning variants for this model"
             }
-            className={`flex items-center gap-1 rounded-md border px-2 py-0.5 ${TREE_LABEL_CLASS} transition-all duration-100 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer ${reasoningLevel ? "border-accent/25 bg-accent/8 text-text-primary" : "border-border/60 bg-transparent text-text-muted hover:border-accent/30 hover:bg-surface-raised/40 hover:text-text-secondary"}`}
+            className={toolbarTriggerClass(Boolean(reasoningLevel), !reasoningLevel)}
             onClick={() => {
               setShowProviderDropdown(false);
               setShowModelDropdown(false);
