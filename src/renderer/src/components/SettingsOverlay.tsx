@@ -51,7 +51,7 @@ function SegmentedToggle<T extends string>({
   onChange(value: T): void;
 }) {
   return (
-    <div className="inline-flex w-fit max-w-full shrink-0 rounded-lg border border-border/50 bg-surface-inset p-0.5">
+    <div className="inline-flex w-fit max-w-full shrink-0 rounded-lg border border-border/40 bg-surface-inset/60 p-0.5">
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -60,7 +60,7 @@ function SegmentedToggle<T extends string>({
             type="button"
             className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 ${TREE_LABEL_CLASS} transition-colors duration-100 cursor-pointer ${
               active
-                ? "bg-surface-raised text-text-primary shadow-sm"
+                ? "bg-surface-raised/90 text-text-primary shadow-sm"
                 : "text-text-muted hover:text-text-secondary"
             }`}
             onClick={() => onChange(option.value)}
@@ -99,7 +99,7 @@ function WorkspaceAgentModelSettings() {
       <label className="grid gap-1">
         <span className={TREE_LABEL_CLASS}>Provider</span>
         <select
-          className="rounded-lg border border-border/50 bg-surface px-2 py-1.5 text-sm text-text-primary"
+          className="rounded-lg border border-border/40 bg-surface/60 px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent/50"
           value={providerGroup}
           onChange={(event) => setAgentProviderGroup(event.target.value as typeof providerGroup)}
         >
@@ -113,7 +113,7 @@ function WorkspaceAgentModelSettings() {
       <label className="grid gap-1">
         <span className={TREE_LABEL_CLASS}>Model</span>
         <select
-          className="rounded-lg border border-border/50 bg-surface px-2 py-1.5 text-sm text-text-primary"
+          className="rounded-lg border border-border/40 bg-surface/60 px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent/50"
           value={modelId}
           onChange={(event) => setAgentModelId(event.target.value)}
         >
@@ -128,7 +128,7 @@ function WorkspaceAgentModelSettings() {
         <label className="grid gap-1">
           <span className={TREE_LABEL_CLASS}>Reasoning</span>
           <select
-            className="rounded-lg border border-border/50 bg-surface px-2 py-1.5 text-sm text-text-primary"
+            className="rounded-lg border border-border/40 bg-surface/60 px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-accent/50"
             value={reasoningLevel ?? ""}
             onChange={(event) =>
               setAgentReasoningLevel(event.target.value ? event.target.value : null)
@@ -180,7 +180,7 @@ export function SettingsOverlay() {
     <div className="fixed inset-0 z-[70] grid place-items-center p-6">
       <button
         type="button"
-        className="absolute inset-0 bg-black/60"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-all duration-300"
         aria-label="Close settings"
         onClick={close}
       />
@@ -188,9 +188,9 @@ export function SettingsOverlay() {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative grid h-[min(640px,90vh)] w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-xl border border-border bg-surface-raised shadow-2xl"
+        className="relative grid h-[min(640px,90vh)] w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-xl border border-white/10 bg-surface-raised/75 backdrop-blur-xl shadow-2xl"
       >
-        <header className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-3">
+        <header className="flex items-center justify-between gap-3 border-b border-border/30 px-4 py-3">
           <h2 id={titleId} className="text-base font-semibold text-text-primary">
             Settings
           </h2>
@@ -204,8 +204,8 @@ export function SettingsOverlay() {
         </header>
 
         <div className="grid min-h-0 grid-cols-[11rem_minmax(0,1fr)]">
-          <aside className="flex min-h-0 flex-col border-r border-border/40 bg-surface-inset p-2">
-            <div className="mb-2 flex gap-1 rounded-lg border border-border/40 bg-surface p-0.5">
+          <aside className="flex min-h-0 flex-col border-r border-border/30 bg-surface-inset/40 p-2">
+            <div className="mb-2 flex gap-1 rounded-lg border border-border/30 bg-surface/40 p-0.5">
               {(["user", "workspace"] as SettingsScope[]).map((tab) => {
                 const active = scope === tab;
                 const disabled = tab === "workspace" && !workspaceEnabled;
@@ -218,7 +218,7 @@ export function SettingsOverlay() {
                     title={disabled ? "Open a project to edit workspace settings" : undefined}
                     className={`flex-1 rounded-md px-2 py-1 text-center ${TREE_LABEL_CLASS} transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
                       active
-                        ? "bg-surface-raised text-text-primary"
+                        ? "bg-surface-raised/85 text-text-primary shadow-sm"
                         : "text-text-muted hover:text-text-secondary"
                     }`}
                     onClick={() => setSettingsScope(tab)}
@@ -239,8 +239,8 @@ export function SettingsOverlay() {
                     disabled={disabled}
                     className={`rounded-md px-2.5 py-2 text-left text-sm transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 ${
                       active
-                        ? "bg-accent/10 text-text-primary"
-                        : "text-text-secondary hover:bg-surface hover:text-text-primary"
+                        ? "bg-accent/15 text-text-primary"
+                        : "text-text-secondary hover:bg-surface/50 hover:text-text-primary"
                     }`}
                     onClick={() => setSettingsCategory(entry.id)}
                   >
