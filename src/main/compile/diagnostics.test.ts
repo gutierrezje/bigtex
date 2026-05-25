@@ -111,6 +111,25 @@ describe("parseDiagnosticsFromLog", () => {
     expect(mathErrors).toHaveLength(1);
   });
 
+  it("maps package warnings (e.g. refcheck) to the current input file", () => {
+    const log = `
+ (./chapters/intro.tex
+
+Package refcheck Warning: Unused label \`sec:duplicate' on input line 8.
+
+) (./chapters/layout.tex
+`;
+    const parsed = parseDiagnosticsFromLog(log, { rootPath: "/proj" });
+    expect(parsed).toEqual([
+      expect.objectContaining({
+        file: "chapters/intro.tex",
+        line: 8,
+        severity: "warning",
+        message: expect.stringContaining("sec:duplicate"),
+      }),
+    ]);
+  });
+
   it("maps overfull hbox warnings to the current input file", () => {
     const parsed = parseDiagnosticsFromLog(WORKSHOP_LOG_EXCERPT, { rootPath: "/proj" });
     expect(parsed).toEqual(

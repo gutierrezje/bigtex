@@ -8,6 +8,7 @@ const MAX_DIAGNOSTICS = 100;
 const FILE_LINE_PATTERN = /^(.+?):(\d+):\s*(.+)$/;
 const INPUT_FILE_PATTERN = /\(\.?\/([^)\s]+\.(?:tex|bib|sty|cls))/;
 const LATEX_WARNING_LINE_PATTERN = /^LaTeX Warning:\s*(.+?)\s+on input line (\d+)\.?$/i;
+const PACKAGE_WARNING_LINE_PATTERN = /^Package\s+\S+\s+Warning:\s*(.+?)\s+on input line (\d+)\.?$/i;
 const OVERFULL_HBOX_PATTERN = /^Overfull \\hbox.*\sin paragraph at lines (\d+)(?:--(\d+))?/i;
 
 export function resolveCompileLogPath(rootPath: string, mainFile: string): string {
@@ -100,7 +101,11 @@ export function parseDiagnostics(output: string, rootPath?: string): CompileDiag
         },
         rootPath,
       );
-    } else if (/warning/i.test(line) && !/Font Info|Info:/i.test(line)) {
+    } else if (
+      /warning/i.test(line) &&
+      !/Font Info|Info:/i.test(line) &&
+      !PACKAGE_WARNING_LINE_PATTERN.test(line)
+    ) {
       pushDiagnostic(
         diagnostics,
         {
@@ -159,6 +164,22 @@ export function parseDiagnosticsFromLog(
           line: Number(latexWarning[2]),
           severity: "warning",
           message: latexWarning[1].trim(),
+        },
+        rootPath,
+      );
+      continue;
+    }
+
+    const packageWarning = line.match(PACKAGE_WARNING_LINE_PATTERN);
+    if (packageWarning && currentFile) {
+      pendingErrorMessage = null;
+      pushDiagnostic(
+        diagnostics,
+        {
+          file: currentFile,
+          line: Number(packageWarning[2]),
+          severity: "warning",
+          message: line.trim(),
         },
         rootPath,
       );

@@ -1,4 +1,3 @@
-import type React from "react";
 import { useMemo, useState } from "react";
 import type { CompileDiagnostic, CompileResult } from "../../../shared/domain";
 import {
@@ -8,6 +7,7 @@ import {
   type ProblemsTab,
 } from "../../../shared/problems";
 import { CHROME_META_CLASS } from "../lib/treeTypography";
+import { IconTooltipButton } from "./IconTooltipButton";
 
 interface ProblemsPanelProps {
   compileResult: CompileResult | null;
@@ -28,42 +28,8 @@ function tabCount(tab: ProblemsTab, counts: { errors: number; warnings: number }
   return total;
 }
 
-function ProblemActionButton({
-  hint,
-  disabled,
-  onClick,
-  children,
-  accentOnHover = false,
-}: {
-  hint: string;
-  disabled?: boolean;
-  onClick(event: React.MouseEvent<HTMLButtonElement>): void;
-  children: React.ReactNode;
-  accentOnHover?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={hint}
-      title={hint}
-      disabled={disabled}
-      className={`group/action relative rounded p-1 text-text-muted transition-colors duration-100 disabled:cursor-not-allowed disabled:opacity-30 ${
-        accentOnHover
-          ? "hover:bg-accent-muted hover:text-accent"
-          : "hover:bg-surface-raised hover:text-text-secondary"
-      }`}
-      onClick={onClick}
-    >
-      {children}
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute bottom-full right-0 z-20 mb-1.5 hidden whitespace-nowrap rounded border border-border bg-surface-raised px-2 py-1 text-[10px] font-medium text-text-secondary shadow-lg group-hover/action:block group-focus-visible/action:block"
-      >
-        {hint}
-      </span>
-    </button>
-  );
-}
+const PROBLEM_ACTION_CLASS =
+  "rounded p-1 text-text-muted transition-colors duration-100 disabled:cursor-not-allowed disabled:opacity-30";
 
 function ProblemRow({
   diagnostic,
@@ -125,17 +91,20 @@ function ProblemRow({
         <div className={messageClassName}>{message}</div>
       )}
       <div className="flex shrink-0 items-center gap-1 pt-0.5">
-        <ProblemActionButton
+        <IconTooltipButton
           hint={
             canNavigate
               ? "Go to source — open file at this line"
               : "Go to source — no file or line for this problem"
           }
+          tooltipPlacement="below"
           disabled={!canNavigate}
+          className={`${PROBLEM_ACTION_CLASS} hover:bg-surface-raised hover:text-text-secondary`}
           onClick={() => {
             if (canNavigate) onGoToSource(diagnostic);
           }}
         >
+          {/* biome-ignore lint/a11y/noSvgWithoutTitle: decorative; parent button has aria-label */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -145,16 +114,17 @@ function ProblemRow({
             className="h-3.5 w-3.5"
             aria-hidden
           >
-            <title>Go to source</title>
             <circle cx="12" cy="12" r="3" />
             <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
           </svg>
-        </ProblemActionButton>
-        <ProblemActionButton
+        </IconTooltipButton>
+        <IconTooltipButton
           hint="Hand off to agent — prefill composer with this problem"
-          accentOnHover
+          tooltipPlacement="below"
+          className={`${PROBLEM_ACTION_CLASS} hover:bg-accent-muted hover:text-accent`}
           onClick={() => onAgentHandoff(diagnostic)}
         >
+          {/* biome-ignore lint/a11y/noSvgWithoutTitle: decorative; parent button has aria-label */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -164,10 +134,9 @@ function ProblemRow({
             className="h-3.5 w-3.5"
             aria-hidden
           >
-            <title>Hand off to agent</title>
             <path d="M9.5 6.5l1.5 1.5M14.5 6.5l-1.5 1.5M12 3v2M5 10a7 7 0 1014 0" />
           </svg>
-        </ProblemActionButton>
+        </IconTooltipButton>
       </div>
     </div>
   );

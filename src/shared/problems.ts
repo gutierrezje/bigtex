@@ -58,8 +58,19 @@ export function normalizeDiagnosticPath(file: string | null): string | null {
 export function formatAgentHandoffLine(diagnostic: CompileDiagnostic): string {
   const path = normalizeDiagnosticPath(diagnostic.file);
   const location = [path, diagnostic.line].filter((part) => part != null && part !== "").join(":");
-  const prefix = location || "project";
-  return `${prefix} — ${diagnostic.message}`;
+  const sourceLabel =
+    diagnostic.source === "static"
+      ? "static/Texlab"
+      : diagnostic.source === "compile"
+        ? "compile"
+        : null;
+  const prefix = location ? (sourceLabel ? `${location} (${sourceLabel})` : location) : "project";
+  let line = `${prefix} — ${diagnostic.message}`;
+  if (path?.endsWith(".bib") && diagnostic.source === "static") {
+    line +=
+      " BibTeX note: % is not a comment in .bib files; use @comment{...} or prose outside @entries.";
+  }
+  return line;
 }
 
 export function appendAgentHandoffToComposer(current: string, handoffLine: string): string {

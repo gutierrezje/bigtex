@@ -52,6 +52,32 @@ describe("formatAgentHandoffLine", () => {
       }),
     ).toBe("resume.cls:111 — LaTeX Error: Missing \\begin{document}.");
   });
+
+  it("labels static .bib handoffs and explains BibTeX comments", () => {
+    expect(
+      formatAgentHandoffLine({
+        file: "references.bib",
+        line: 10,
+        severity: "error",
+        message: 'Expecting a curly bracket: "}"',
+        source: "static",
+      }),
+    ).toBe(
+      'references.bib:10 (static/Texlab) — Expecting a curly bracket: "}" BibTeX note: % is not a comment in .bib files; use @comment{...} or prose outside @entries.',
+    );
+  });
+
+  it("labels compile handoffs without BibTeX note", () => {
+    expect(
+      formatAgentHandoffLine({
+        file: "references.bib",
+        line: 3,
+        severity: "error",
+        message: "I found no \\citation commands",
+        source: "compile",
+      }),
+    ).toBe("references.bib:3 (compile) — I found no \\citation commands");
+  });
 });
 
 describe("appendAgentHandoffToComposer", () => {

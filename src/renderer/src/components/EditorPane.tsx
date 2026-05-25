@@ -82,10 +82,15 @@ function configureMonaco(monaco: Monaco): void {
   monaco.languages.setMonarchTokensProvider("bibtex", {
     tokenizer: {
       root: [
+        [/@[cC]omment\s*\{/, { token: "comment", next: "@commentBody" }],
         [/@[a-zA-Z]+/, "keyword"],
         [/[{}=,]/, "delimiter"],
         [/"[^"]*"/, "string"],
-        [/%.*$/, "comment"],
+      ],
+      commentBody: [
+        [/[^{}]+/, "comment"],
+        [/{/, "comment", "@push"],
+        [/}/, { token: "comment", next: "@pop" }],
       ],
     },
   });

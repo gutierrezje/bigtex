@@ -13,4 +13,16 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).not.toContain("ERROR main.tex");
     expect(prompt).toContain("User request:\nFix the error");
   });
+
+  it("includes BibTeX and static-diagnostic domain guidance", () => {
+    const prompt = buildAgentSystemPrompt({
+      selectedFiles: [],
+      compileSummary: null,
+      prompt: "Why is references.bib wrong?",
+    });
+
+    expect(prompt).toContain("static rows (Texlab)");
+    expect(prompt).toContain("% is LaTeX line-comment syntax only");
+    expect(prompt).toContain("@comment{ ... }");
+  });
 });

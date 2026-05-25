@@ -100,7 +100,6 @@ export function IconTooltipButton({
         ref={triggerRef}
         type={type}
         aria-label={hint}
-        title={hint}
         disabled={disabled}
         className={className.trim()}
         onMouseEnter={(event) => {
