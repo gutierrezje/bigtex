@@ -17,6 +17,7 @@ const PDF_TOGGLE_GUTTER_CLASS = "pr-[5.5rem]";
 interface DocumentWorkbenchProps {
   editorTabs: EditorTabsState;
   pdfTabs: PdfTabsState;
+  openingMainFilePath: string | null;
   diagnostics: CompileDiagnostic[];
   revealLine: number | null;
   showPdf: boolean;
@@ -52,6 +53,7 @@ function DocumentPanelChrome({ tabRow, children }: { tabRow: ReactNode; children
 export function DocumentWorkbench({
   editorTabs,
   pdfTabs,
+  openingMainFilePath,
   diagnostics,
   revealLine,
   showPdf,
@@ -117,6 +119,7 @@ export function DocumentWorkbench({
           <DocumentPanelChrome tabRow={editorTabRow}>
             <EditorPane
               file={activeFile}
+              openingPath={activeFile ? null : openingMainFilePath}
               diagnostics={diagnostics}
               revealLine={revealLine}
               onRevealHandled={onRevealHandled}

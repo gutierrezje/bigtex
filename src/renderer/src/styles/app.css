@@ -400,15 +400,6 @@ ul {
   }
 }
 
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .welcome-fade-in {
   animation: welcome-fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -461,13 +452,4 @@ ul {
 .welcome-recent-item:hover .welcome-recent-delete-btn {
   opacity: 1;
   transform: scale(1);
-}
-
-.welcome-spinner-ring {
-  border: 2px solid rgba(45, 212, 191, 0.1);
-  border-top-color: var(--color-accent);
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  animation: spin-slow 1s linear infinite;
 }

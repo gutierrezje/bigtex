@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { OnPanelResize, PanelImperativeHandle } from "react-resizable-panels";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { getActiveEditor, listDirtyEditorPaths } from "../../shared/documentTabs";
-import type { CompileDiagnostic, ProjectFile, ProjectSnapshot } from "../../shared/domain";
+import type {
+  CompileDiagnostic,
+  ProjectFile,
+  ProjectSnapshot,
+  RecentProject,
+} from "../../shared/domain";
 import {
   countDiagnosticsBySeverity,
   findProjectFileByPath,
@@ -80,6 +85,9 @@ export function App() {
   const [isBottomPanelCollapsed, setIsBottomPanelCollapsed] = useState(false);
   const [isPdfCollapsed, setIsPdfCollapsed] = useState(false);
   const [isAgentCollapsed, setIsAgentCollapsed] = useState(false);
+  const [openingMainFilePath, setOpeningMainFilePath] = useState<string | null>(null);
+  const [welcomeRecents, setWelcomeRecents] = useState<RecentProject[]>([]);
+  const [openingProject, setOpeningProject] = useState(false);
 
   const sidebarRef = useRef<PanelImperativeHandle>(null);
   const bottomPanelRef = useRef<PanelImperativeHandle>(null);
@@ -274,6 +282,7 @@ export function App() {
 
   async function loadProject(snapshot: ProjectSnapshot | null): Promise<void> {
     if (!snapshot) return;
+    setOpeningMainFilePath(null);
     setProject(snapshot);
     setCompileResult(null);
     clearEditorTabs();
@@ -283,18 +292,101 @@ export function App() {
     void useAppStore.getState().loadAgentConfig(snapshot.rootPath);
     void syncLanguageServer(snapshot);
 
-    if (snapshot.mainFile) {
+    if (!snapshot.mainFile) return;
+
+    const mainPath = snapshot.mainFile;
+    setOpeningMainFilePath(mainPath);
+    try {
       openEditorFile(
         await window.bigTex.files.read({
           rootPath: snapshot.rootPath,
-          path: snapshot.mainFile,
+          path: mainPath,
         }),
       );
+    } catch (error) {
+      appendOutput(error instanceof Error ? error.message : `Could not open ${mainPath}.`, "error");
+    } finally {
+      setOpeningMainFilePath(null);
     }
   }
 
   const loadProjectRef = useRef(loadProject);
   loadProjectRef.current = loadProject;
+
+  const refreshWelcomeRecents = useCallback(async () => {
+    try {
+      setWelcomeRecents(await window.bigTex.recents.get());
+    } catch (err) {
+      console.error("Failed to load recents", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!project) void refreshWelcomeRecents();
+  }, [project, refreshWelcomeRecents]);
+
+  const openProjectFromWelcome = useCallback(
+    async (
+      load: () => Promise<ProjectSnapshot | null>,
+      options: { failureMessage: string; recentPath?: string },
+    ): Promise<void> => {
+      setOpeningProject(true);
+      try {
+        const snapshot = await load();
+        if (snapshot) await loadProjectRef.current(snapshot);
+      } catch (err) {
+        console.error(options.failureMessage, err);
+        if (options.recentPath) {
+          setWelcomeRecents(await window.bigTex.recents.remove(options.recentPath));
+          alert(
+            `Could not open project at ${options.recentPath}. It may have been moved or deleted.`,
+          );
+        } else {
+          alert(err instanceof Error ? err.message : options.failureMessage);
+        }
+      } finally {
+        setOpeningProject(false);
+      }
+    },
+    [],
+  );
+
+  function openFolderFromWelcome(): void {
+    void openProjectFromWelcome(() => window.bigTex.project.openDialog(), {
+      failureMessage: "Failed to open folder",
+    });
+  }
+
+  function openSampleFromWelcome(): void {
+    void openProjectFromWelcome(() => window.bigTex.project.loadSample(), {
+      failureMessage: "Failed to load sample project",
+    });
+  }
+
+  function openRecentFromWelcome(path: string): void {
+    void openProjectFromWelcome(() => window.bigTex.project.load(path), {
+      failureMessage: "Failed to load project",
+      recentPath: path,
+    });
+  }
+
+  const removeWelcomeRecent = useCallback(async (path: string) => {
+    try {
+      setWelcomeRecents(await window.bigTex.recents.remove(path));
+    } catch (err) {
+      console.error("Failed to remove recent", err);
+    }
+  }, []);
+
+  const clearWelcomeRecents = useCallback(async () => {
+    if (!window.confirm("Clear all recently opened workspaces from history?")) return;
+    try {
+      await window.bigTex.recents.clear();
+      setWelcomeRecents([]);
+    } catch (err) {
+      console.error("Failed to clear recents", err);
+    }
+  }, []);
 
   useEffect(() => {
     const unsubOpened = window.bigTex.project.onOpened((snapshot) => {
@@ -307,6 +399,7 @@ export function App() {
         if (rootPath) await window.bigTex.lsp.stopSession(rootPath);
       })();
       setProject(null);
+      setOpeningMainFilePath(null);
       clearEditorTabs();
       clearPdfTabs();
       setCompileResult(null);
@@ -601,6 +694,7 @@ export function App() {
                   <DocumentWorkbench
                     editorTabs={editorTabs}
                     pdfTabs={pdfTabs}
+                    openingMainFilePath={openingMainFilePath}
                     diagnostics={compileResult?.diagnostics ?? []}
                     revealLine={editorRevealLine}
                     showPdf={!isPdfCollapsed}
@@ -673,7 +767,15 @@ export function App() {
             </Panel>
           </Group>
         ) : (
-          <WelcomeScreen onLoadProject={(snapshot) => void loadProject(snapshot)} />
+          <WelcomeScreen
+            recents={welcomeRecents}
+            opening={openingProject}
+            onOpenFolder={openFolderFromWelcome}
+            onOpenSample={openSampleFromWelcome}
+            onOpenRecent={openRecentFromWelcome}
+            onRemoveRecent={removeWelcomeRecent}
+            onClearRecents={clearWelcomeRecents}
+          />
         )}
       </div>
     </main>

@@ -19,6 +19,8 @@ registerBigTexMonacoTheme(monacoLocal);
 
 interface EditorPaneProps {
   file: OpenFile | null;
+  /** Project-relative path while the initial main file is being read after open. */
+  openingPath: string | null;
   diagnostics: CompileDiagnostic[];
   revealLine: number | null;
   onRevealHandled(): void;
@@ -73,6 +75,11 @@ function configureMonaco(monaco: Monaco): void {
   });
 }
 
+function editorTabLabel(path: string): string {
+  const parts = path.split(/[/\\]/);
+  return parts[parts.length - 1] || path;
+}
+
 function EmptyEditorPane() {
   return (
     <section className="grid h-full min-h-0 min-w-0 place-items-center overflow-hidden bg-surface">
@@ -85,6 +92,19 @@ function EmptyEditorPane() {
           The editor stays isolated from compile and agent work so typing remains responsive under
           load.
         </p>
+      </div>
+    </section>
+  );
+}
+
+function LoadingEditorPane({ path }: { path: string }) {
+  const label = editorTabLabel(path);
+  return (
+    <section className="grid h-full min-h-0 min-w-0 place-items-center overflow-hidden bg-surface">
+      <div className="max-w-sm text-center">
+        <span className={`${CHROME_SECTION_CLASS} text-accent`}>Opening</span>
+        <h2 className="mt-1 text-2xl font-semibold tracking-tight">{label}</h2>
+        <p className={`mt-2 ${CHROME_META_CLASS} text-text-muted`}>Loading file from disk…</p>
       </div>
     </section>
   );
@@ -206,22 +226,26 @@ function LoadedEditorPane({
 
 export function EditorPane({
   file,
+  openingPath,
   diagnostics,
   revealLine,
   onRevealHandled,
   onDraftChange,
   onSave,
 }: EditorPaneProps) {
-  if (!file) return <EmptyEditorPane />;
-  return (
-    <LoadedEditorPane
-      key={`${file.path}:${file.loadedAt}`}
-      file={file}
-      diagnostics={diagnostics}
-      revealLine={revealLine}
-      onRevealHandled={onRevealHandled}
-      onDraftChange={onDraftChange}
-      onSave={onSave}
-    />
-  );
+  if (file) {
+    return (
+      <LoadedEditorPane
+        key={`${file.path}:${file.loadedAt}`}
+        file={file}
+        diagnostics={diagnostics}
+        revealLine={revealLine}
+        onRevealHandled={onRevealHandled}
+        onDraftChange={onDraftChange}
+        onSave={onSave}
+      />
+    );
+  }
+  if (openingPath) return <LoadingEditorPane path={openingPath} />;
+  return <EmptyEditorPane />;
 }

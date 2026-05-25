@@ -1,106 +1,27 @@
-import { useEffect, useState } from "react";
-import type { ProjectSnapshot, RecentProject } from "../../../shared/domain";
+import type { RecentProject } from "../../../shared/domain";
 import { WelcomeChromeRow } from "./WelcomeChromeRow";
 
 interface WelcomeScreenProps {
-  onLoadProject(snapshot: ProjectSnapshot): void;
+  recents: RecentProject[];
+  opening: boolean;
+  onOpenFolder(): void;
+  onOpenSample(): void;
+  onOpenRecent(path: string): void;
+  onRemoveRecent(path: string): void;
+  onClearRecents(): void;
 }
 
-export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
+export function WelcomeScreen({
+  recents,
+  opening,
+  onOpenFolder,
+  onOpenSample,
+  onOpenRecent,
+  onRemoveRecent,
+  onClearRecents,
+}: WelcomeScreenProps) {
   const usesCustomWindowControls = window.bigTex.window.usesCustomWindowControls;
-  const [recents, setRecents] = useState<RecentProject[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState("Opening workspace...");
 
-  // Load recents on mount
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      try {
-        const list = await window.bigTex.recents.get();
-        if (active) setRecents(list);
-      } catch (err) {
-        console.error("Failed to load recents", err);
-      }
-    }
-    void load();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const handleOpenFolder = async () => {
-    try {
-      const snapshot = await window.bigTex.project.openDialog();
-      if (snapshot) {
-        setLoadingText("Loading project files...");
-        setLoading(true);
-        // Add artificial delays to allow transitions to wow the user
-        await new Promise((r) => setTimeout(r, 600));
-        onLoadProject(snapshot);
-      }
-    } catch (err) {
-      console.error("Failed to open folder", err);
-      alert(err instanceof Error ? err.message : "Failed to open folder");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenSample = async () => {
-    try {
-      setLoadingText("Copying sample workspace...");
-      setLoading(true);
-      const snapshot = await window.bigTex.project.loadSample();
-      await new Promise((r) => setTimeout(r, 850));
-      onLoadProject(snapshot);
-    } catch (err) {
-      console.error("Failed to load sample project", err);
-      alert(err instanceof Error ? err.message : "Failed to load sample");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenPath = async (path: string) => {
-    try {
-      setLoadingText(`Loading ${path.split("/").pop() || "workspace"}...`);
-      setLoading(true);
-      const snapshot = await window.bigTex.project.load(path);
-      await new Promise((r) => setTimeout(r, 600));
-      onLoadProject(snapshot);
-    } catch (err) {
-      console.error("Failed to load project", err);
-      // Remove bad paths from recents list automatically
-      const updated = await window.bigTex.recents.remove(path);
-      setRecents(updated);
-      alert(`Could not open project at ${path}. It may have been moved or deleted.`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveRecent = async (e: React.MouseEvent, path: string) => {
-    e.stopPropagation();
-    try {
-      const updated = await window.bigTex.recents.remove(path);
-      setRecents(updated);
-    } catch (err) {
-      console.error("Failed to remove recent", err);
-    }
-  };
-
-  const handleClearRecents = async () => {
-    if (!window.confirm("Clear all recently opened workspaces from history?")) return;
-    try {
-      await window.bigTex.recents.clear();
-      setRecents([]);
-    } catch (err) {
-      console.error("Failed to clear recents", err);
-    }
-  };
-
-  // Format date helper
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString(undefined, {
@@ -115,9 +36,7 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-surface text-text-primary welcome-fade-in select-none">
       {usesCustomWindowControls ? <WelcomeChromeRow /> : null}
       <div className="relative flex flex-1 w-full flex-col items-center justify-center overflow-hidden">
-        {/* Main two-column dashboard */}
         <div className="z-10 grid w-full max-w-5xl grid-cols-1 gap-12 px-6 md:grid-cols-12">
-          {/* Left Column: branding and main actions */}
           <section className="welcome-slide-up flex flex-col justify-center md:col-span-5">
             <div className="flex items-center gap-3.5 mb-5">
               <span className="grid h-11 w-11 place-items-center rounded-lg border border-border bg-surface-inset text-md font-bold tracking-tight text-text-secondary select-none">
@@ -139,10 +58,10 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
             </p>
 
             <div className="flex flex-col gap-4">
-              {/* Open Folder Card */}
               <button
-                onClick={handleOpenFolder}
-                className="welcome-card-flat text-left p-4 rounded-lg flex items-center gap-4 cursor-pointer group outline-none"
+                onClick={onOpenFolder}
+                disabled={opening}
+                className="welcome-card-flat text-left p-4 rounded-lg flex items-center gap-4 cursor-pointer group outline-none disabled:opacity-60 disabled:pointer-events-none"
                 type="button"
               >
                 <div className="p-2.5 rounded-md bg-surface-raised border border-border text-text-muted group-hover:text-text-primary transition-colors duration-150">
@@ -172,11 +91,11 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
                 </div>
               </button>
 
-              {/* Load Sample Project */}
               <button
                 data-testid="welcome-open-sample"
-                onClick={handleOpenSample}
-                className="welcome-card-flat text-left p-4 rounded-lg flex items-center gap-4 cursor-pointer group outline-none"
+                onClick={onOpenSample}
+                disabled={opening}
+                className="welcome-card-flat text-left p-4 rounded-lg flex items-center gap-4 cursor-pointer group outline-none disabled:opacity-60 disabled:pointer-events-none"
                 type="button"
               >
                 <div className="p-2.5 rounded-md bg-surface-raised border border-border text-text-muted group-hover:text-text-primary transition-colors duration-150">
@@ -208,7 +127,6 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
             </div>
           </section>
 
-          {/* Right Column: Recent workspaces list */}
           <section className="welcome-slide-up delay-100 md:col-span-7 flex flex-col justify-center">
             <header className="flex items-center justify-between border-b border-border/40 pb-3 mb-4">
               <h2 className="text-[10px] font-semibold tracking-wider uppercase text-text-muted/80">
@@ -217,8 +135,9 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
               {recents.length > 0 ? (
                 <button
                   type="button"
-                  onClick={handleClearRecents}
-                  className="text-[11px] text-text-muted hover:text-rose-400 font-normal transition-colors cursor-pointer"
+                  onClick={onClearRecents}
+                  disabled={opening}
+                  className="text-[11px] text-text-muted hover:text-rose-400 font-normal transition-colors cursor-pointer disabled:opacity-60 disabled:pointer-events-none"
                 >
                   Clear history
                 </button>
@@ -233,8 +152,9 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
                       <div className="welcome-recent-item flex w-full items-center justify-between gap-2 rounded-lg border border-border/20 bg-surface-inset p-1 hover:border-border/40 transition-all duration-150">
                         <button
                           type="button"
-                          onClick={() => handleOpenPath(item.path)}
-                          className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 text-left cursor-pointer outline-none hover:bg-surface-raised/40"
+                          onClick={() => onOpenRecent(item.path)}
+                          disabled={opening}
+                          className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 text-left cursor-pointer outline-none hover:bg-surface-raised/40 disabled:opacity-60 disabled:pointer-events-none"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -263,8 +183,12 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
                           </span>
                           <button
                             type="button"
-                            onClick={(e) => handleRemoveRecent(e, item.path)}
-                            className="welcome-recent-delete-btn rounded p-1 text-text-muted transition-colors duration-150 hover:text-rose-400"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRemoveRecent(item.path);
+                            }}
+                            disabled={opening}
+                            className="welcome-recent-delete-btn rounded p-1 text-text-muted transition-colors duration-150 hover:text-rose-400 disabled:opacity-60 disabled:pointer-events-none"
                             title="Remove from history"
                           >
                             <svg
@@ -315,16 +239,6 @@ export function WelcomeScreen({ onLoadProject }: WelcomeScreenProps) {
           </section>
         </div>
       </div>
-
-      {/* Modern, organic loading transition overlay */}
-      {loading ? (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-md transition-all duration-300 welcome-fade-in">
-          <div className="welcome-spinner-ring" />
-          <p className="mt-4 text-sm font-medium text-text-secondary tracking-wide animate-pulse">
-            {loadingText}
-          </p>
-        </div>
-      ) : null}
     </div>
   );
 }
