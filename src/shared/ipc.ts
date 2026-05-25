@@ -18,6 +18,13 @@ import type {
   RecentProject,
 } from "./domain";
 import type { LspSendRequest, LspServerMessageEvent } from "./lsp";
+import type {
+  AgentPermissionRequestPayload,
+  EffectiveSettings,
+  SettingsFile,
+  UserSettings,
+  WorkspaceSettings,
+} from "./settings";
 
 export const IPC_CHANNELS = {
   appMetrics: "app:metrics",
@@ -51,6 +58,13 @@ export const IPC_CHANNELS = {
   recentsGet: "recents:get",
   recentsRemove: "recents:remove",
   recentsClear: "recents:clear",
+  settingsLoad: "settings:load",
+  settingsGetEffective: "settings:get-effective",
+  settingsUpdateUser: "settings:update-user",
+  settingsUpdateWorkspace: "settings:update-workspace",
+  settingsPermissionRequest: "settings:permission-request",
+  settingsPermissionRespond: "settings:permission-respond",
+  settingsOpen: "settings:open",
   windowClose: "window:close",
   windowMinimize: "window:minimize",
   windowToggleFullscreen: "window:toggle-fullscreen",
@@ -98,6 +112,25 @@ export type { LanguageServerStartSessionRequest } from "./domain";
 
 export interface AgentCancelRequest {
   runId: string;
+}
+
+export interface SettingsLoadRequest {
+  legacyPdfPreviewInvert?: boolean;
+}
+
+export interface SettingsLoadResult {
+  file: SettingsFile;
+  effective: EffectiveSettings;
+}
+
+export interface SettingsUpdateWorkspaceRequest {
+  rootPath: string;
+  patch: Partial<WorkspaceSettings>;
+}
+
+export interface SettingsPermissionRespondRequest {
+  requestId: string;
+  optionId: string | null;
 }
 
 export interface BigTexApi {
@@ -152,6 +185,15 @@ export interface BigTexApi {
     get(): Promise<RecentProject[]>;
     remove(path: string): Promise<RecentProject[]>;
     clear(): Promise<void>;
+  };
+  settings: {
+    load(request?: SettingsLoadRequest): Promise<SettingsLoadResult>;
+    getEffective(rootPath?: string | null): Promise<EffectiveSettings>;
+    updateUser(patch: Partial<UserSettings>): Promise<EffectiveSettings>;
+    updateWorkspace(request: SettingsUpdateWorkspaceRequest): Promise<EffectiveSettings>;
+    onPermissionRequest(listener: (payload: AgentPermissionRequestPayload) => void): () => void;
+    respondPermission(request: SettingsPermissionRespondRequest): Promise<boolean>;
+    onOpen(listener: () => void): () => void;
   };
   window: {
     close(): Promise<void>;

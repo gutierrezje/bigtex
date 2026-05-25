@@ -76,6 +76,26 @@ const api: BigTexApi = {
     remove: (path) => ipcRenderer.invoke(IPC_CHANNELS.recentsRemove, path),
     clear: () => ipcRenderer.invoke(IPC_CHANNELS.recentsClear),
   },
+  settings: {
+    load: (request) => ipcRenderer.invoke(IPC_CHANNELS.settingsLoad, request),
+    getEffective: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.settingsGetEffective, rootPath),
+    updateUser: (patch) => ipcRenderer.invoke(IPC_CHANNELS.settingsUpdateUser, patch),
+    updateWorkspace: (request) => ipcRenderer.invoke(IPC_CHANNELS.settingsUpdateWorkspace, request),
+    onPermissionRequest: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+        listener(payload as Parameters<typeof listener>[0]);
+      };
+      ipcRenderer.on(IPC_CHANNELS.settingsPermissionRequest, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.settingsPermissionRequest, handler);
+    },
+    respondPermission: (request) =>
+      ipcRenderer.invoke(IPC_CHANNELS.settingsPermissionRespond, request),
+    onOpen: (listener) => {
+      const handler = () => listener();
+      ipcRenderer.on(IPC_CHANNELS.settingsOpen, handler);
+      return () => ipcRenderer.off(IPC_CHANNELS.settingsOpen, handler);
+    },
+  },
   window: {
     close: () => ipcRenderer.invoke(IPC_CHANNELS.windowClose),
     minimize: () => ipcRenderer.invoke(IPC_CHANNELS.windowMinimize),

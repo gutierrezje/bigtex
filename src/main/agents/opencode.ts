@@ -16,8 +16,10 @@ import type {
   AgentRunSummary,
   AgentSessionConfig,
 } from "../../shared/domain";
+import { type AgentPermissionOption, pickAllowPermissionOption } from "../../shared/settings";
 import { assertInsideRoot } from "../files/project";
 import { startProjectWatch } from "../files/watch";
+import { permissionOutcomeFromChoice, resolveAgentPermission } from "../settings/permission-bridge";
 import {
   type AcpSessionNewResult,
   type AcpSetConfigOptionResult,
@@ -94,6 +96,8 @@ class AcpConnection {
       reject(error: Error): void;
     }
   >();
+
+  private sessionPermissionsAllowed = false;
 
   constructor(
     private child: ChildProcessWithoutNullStreams,
@@ -207,18 +211,39 @@ class AcpConnection {
   private async resolveClientRequest(method: string, params: unknown): Promise<unknown> {
     if (method === "session/request_permission") {
       const request = params as {
-        options?: Array<{ optionId?: string; kind?: string }>;
+        options?: AgentPermissionOption[];
+        tool?: { name?: string };
+        path?: string;
       };
-      const allowOption =
-        request.options?.find((option) => option.kind?.startsWith("allow")) ??
-        request.options?.find((option) => option.optionId === "once");
+      const options = (request.options ?? []).filter(
+        (option): option is AgentPermissionOption => typeof option.optionId === "string",
+      );
 
-      return {
-        outcome: {
-          outcome: "selected",
-          optionId: allowOption?.optionId ?? "once",
+      const choice = await resolveAgentPermission(
+        this.runId,
+        {
+          options,
+          toolName: request.tool?.name,
+          path: typeof request.path === "string" ? request.path : undefined,
         },
-      };
+        this.sessionPermissionsAllowed,
+      );
+
+      if (
+        choice === "allow-session" ||
+        choice === "session" ||
+        options.some((option) => option.optionId === choice && option.kind === "allow_session")
+      ) {
+        this.sessionPermissionsAllowed = true;
+      }
+
+      const resolvedChoice =
+        choice === "allow-session" || choice === "session"
+          ? (pickAllowPermissionOption(options)?.optionId ?? "once")
+          : choice;
+
+      const outcome = permissionOutcomeFromChoice(options, resolvedChoice);
+      return { outcome };
     }
 
     if (method === "fs/read_text_file") {

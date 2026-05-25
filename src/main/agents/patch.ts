@@ -199,7 +199,9 @@ export function resolvePatchPath(
     if (withParent.length === 1) return withParent[0];
   }
 
-  if (hinted.length === 1) return hinted[0];
+  if (hinted.length === 1 && projectRelativePathExists(rootPath, hinted[0])) {
+    return hinted[0];
+  }
   return normalized;
 }
 
@@ -266,7 +268,12 @@ export function unifiedDiffFromTexts(
 function summarizeGitApplyOutput(output: string): string {
   if (!output) return "Patch failed.";
   const lines = output.split(/\r?\n/).filter(Boolean);
-  const errorLine = lines.find((line) => line.startsWith("error:"));
+  const errorLines = lines.filter((line) => line.startsWith("error:"));
+  const patchFailed = errorLines.find((line) => /patch failed/i.test(line));
+  if (patchFailed) return patchFailed.replace(/^error:\s*/i, "").trim();
+  const rejected = lines.find((line) => /Rejected hunk/i.test(line));
+  if (rejected) return rejected.trim();
+  const errorLine = errorLines[0];
   if (errorLine) return errorLine.replace(/^error:\s*/i, "").trim();
   if (output.includes("usage: git apply")) {
     return lines[0]?.trim() || "Patch failed.";
@@ -314,10 +321,9 @@ export async function applyUnifiedPatch(request: PatchApplyRequest): Promise<Pat
     assertInsideRoot(request.rootPath, file);
   }
 
-  let result = await runGitApply(request.rootPath, patch, 0);
-  if (result.exitCode !== 0) {
-    result = await runGitApply(request.rootPath, patch, 1);
-  }
+  // Patches are normalized to project-relative paths (no a/ prefix). Retrying with -p1
+  // would strip the first segment (e.g. chapters/math.tex → math.tex) and break nested files.
+  const result = await runGitApply(request.rootPath, patch, 0);
 
   if (result.exitCode === 0) {
     return {

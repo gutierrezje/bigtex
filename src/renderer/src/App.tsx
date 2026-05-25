@@ -18,6 +18,7 @@ import { AppChromeBar } from "./components/AppChromeBar";
 import { DocumentWorkbench } from "./components/DocumentWorkbench";
 import { EditorBottomPanel, type EditorBottomTab } from "./components/EditorBottomPanel";
 import { ProjectSidebar } from "./components/ProjectSidebar";
+import { SettingsOverlay } from "./components/SettingsOverlay";
 import { WelcomeScreen } from "./components/WelcomeScreen";
 import { useAgentEvents } from "./hooks/useAgentEvents";
 import { useStaticDiagnostics } from "./hooks/useStaticDiagnostics";
@@ -71,7 +72,12 @@ export function App() {
     refreshMetrics,
     pdfPreviewInverted,
     setPdfPreviewInverted,
+    hydrateSettings,
+    setSettingsOpen,
+    enqueuePermissionRequest,
+    agentComposerFocusToken,
   } = useAppStore();
+  const effectiveSettings = useAppStore((state) => state.effectiveSettings);
   const activeEditor = getActiveEditor(editorTabs);
   const staticDiagnostics = useStaticDiagnostics(project?.rootPath ?? null);
   const problems = useMemo(
@@ -227,19 +233,38 @@ export function App() {
     [setProject, replaceEditorTabFile, loadPdfTab, appendOutput],
   );
 
-  useAgentEvents({
-    onFilesChanged: (event) => {
-      void refreshProjectFiles(
-        event.paths,
-        event.paths.length === 1
-          ? `Agent updated ${event.paths[0]}.`
-          : `Agent updated ${event.paths.length} files.`,
-      );
-    },
-    onFinished: () => {
-      void refreshProjectFiles();
-    },
-  });
+  useEffect(() => {
+    void hydrateSettings();
+  }, [hydrateSettings]);
+
+  useEffect(() => {
+    const unsubOpen = window.bigTex.settings.onOpen(() => setSettingsOpen(true));
+    const unsubPermission = window.bigTex.settings.onPermissionRequest((payload) => {
+      enqueuePermissionRequest(payload);
+    });
+    return () => {
+      unsubOpen();
+      unsubPermission();
+    };
+  }, [setSettingsOpen, enqueuePermissionRequest]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === ",") {
+        event.preventDefault();
+        setSettingsOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [setSettingsOpen]);
+
+  useEffect(() => {
+    if (agentComposerFocusToken === 0) return;
+    const panel = agentRef.current;
+    if (panel?.isCollapsed()) panel.expand();
+    setIsAgentCollapsed(false);
+  }, [agentComposerFocusToken]);
 
   useEffect(() => {
     void refreshMetrics();
@@ -476,6 +501,27 @@ export function App() {
     setEditorBottomTab("output");
   }
 
+  const applyPatchRef = useRef(applyPatch);
+  applyPatchRef.current = applyPatch;
+
+  useAgentEvents({
+    onFilesChanged: (event) => {
+      void refreshProjectFiles(
+        event.paths,
+        event.paths.length === 1
+          ? `Agent updated ${event.paths[0]}.`
+          : `Agent updated ${event.paths.length} files.`,
+      );
+    },
+    onFinished: () => {
+      void refreshProjectFiles();
+    },
+    onPatch: (event) => {
+      if (effectiveSettings.patchApplyMode !== "auto") return;
+      void applyPatchRef.current(event.patch);
+    },
+  });
+
   async function createProjectFile(parentPath: string, name: string): Promise<void> {
     if (!project) return;
     try {
@@ -586,8 +632,10 @@ export function App() {
           onToggleBottomPanel={handleToggleBottomPanel}
           showAgent={!isAgentCollapsed}
           onToggleAgent={handleToggleAgent}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
       ) : null}
+      <SettingsOverlay />
       <div className="flex-1 min-h-0 w-full overflow-hidden">
         {project ? (
           <Group

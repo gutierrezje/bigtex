@@ -3,7 +3,6 @@ import {
   baseModelId,
   normalizeReasoningLevel,
   pickDefaultModel,
-  resolveAgentUiSelection,
   withModelVariants,
 } from "../../shared/agent-models";
 import {
@@ -32,8 +31,19 @@ import type {
   PerformanceMark,
   ProjectSnapshot,
 } from "../../shared/domain";
+import type {
+  AgentModelPreference,
+  AgentPermissionRequestPayload,
+  EffectiveSettings,
+  UserSettings,
+} from "../../shared/settings";
+import { DEFAULT_USER_SETTINGS, reconcileAgentModelPreference } from "../../shared/settings";
 import { type AgentChatMessage, type AgentChatState, reduceAgentChat } from "./agent-chat-reducer";
-import { readPdfPreviewInvert, writePdfPreviewInvert } from "./lib/pdfPreviewPrefs";
+import { readPdfPreviewInvert } from "./lib/pdfPreviewPrefs";
+import { schedulePersistWorkspaceAgentModel } from "./lib/persistWorkspaceAgent";
+
+export type SettingsScope = "user" | "workspace";
+export type SettingsCategory = "agent" | "pdf" | "general";
 
 export type { AgentChatMessage, AgentChatState };
 
@@ -72,6 +82,12 @@ interface AppState {
   outputLog: OutputEntry[];
   metrics: PerformanceMark[];
   pdfPreviewInverted: boolean;
+  effectiveSettings: EffectiveSettings;
+  settingsHydrated: boolean;
+  settingsOpen: boolean;
+  settingsScope: SettingsScope;
+  settingsCategory: SettingsCategory;
+  permissionQueue: AgentPermissionRequestPayload[];
   setProject(project: ProjectSnapshot | null): void;
   openEditorFile(file: OpenFile): void;
   activateEditorTab(path: string): void;
@@ -104,6 +120,15 @@ interface AppState {
   appendOutput(message: string, level?: OutputLevel): void;
   clearOutputLog(): void;
   setPdfPreviewInverted(inverted: boolean): void;
+  hydrateSettings(): Promise<void>;
+  refreshEffectiveSettings(rootPath?: string | null): Promise<void>;
+  setSettingsOpen(open: boolean): void;
+  setSettingsScope(scope: SettingsScope): void;
+  setSettingsCategory(category: SettingsCategory): void;
+  updateUserSettingsPatch(patch: Partial<EffectiveSettings>): Promise<void>;
+  enqueuePermissionRequest(payload: AgentPermissionRequestPayload): void;
+  dequeuePermissionRequest(requestId: string): void;
+  applyAgentModelPreference(preference: AgentModelPreference): void;
 }
 
 function createMessageId(prefix: string): string {
@@ -136,7 +161,13 @@ export const useAppStore = create<AppState>((set) => ({
   agentComposerFocusToken: 0,
   outputLog: [],
   metrics: [],
-  pdfPreviewInverted: readPdfPreviewInvert(),
+  pdfPreviewInverted: DEFAULT_USER_SETTINGS.pdfPreviewInverted,
+  effectiveSettings: { ...DEFAULT_USER_SETTINGS },
+  settingsHydrated: false,
+  settingsOpen: false,
+  settingsScope: "user",
+  settingsCategory: "agent",
+  permissionQueue: [],
   setProject: (project) => set({ project }),
   openEditorFile: (file) =>
     set((state) => ({ editorTabs: focusOrOpenEditor(state.editorTabs, file) })),
@@ -220,14 +251,18 @@ export const useAppStore = create<AppState>((set) => ({
       agentSettings: { ...state.agentSettings, loading: true, error: null },
     }));
     try {
-      const config = await window.bigTex.agent.loadConfig(rootPath);
-      const { providerGroup, modelId } = resolveAgentUiSelection(config);
+      const [config, effective] = await Promise.all([
+        window.bigTex.agent.loadConfig(rootPath),
+        window.bigTex.settings.getEffective(rootPath),
+      ]);
+      const preference = reconcileAgentModelPreference(effective.agentModel, config);
       set({
+        effectiveSettings: effective,
         agentSettings: {
           config,
-          providerGroup,
-          modelId,
-          reasoningLevel: normalizeReasoningLevel(config, modelId, config.currentVariant),
+          providerGroup: preference.providerGroup,
+          modelId: preference.modelId,
+          reasoningLevel: preference.reasoningLevel,
           reasoningProbing: false,
           loading: false,
           error: null,
@@ -248,31 +283,40 @@ export const useAppStore = create<AppState>((set) => ({
       const config = state.agentSettings.config;
       if (!config) return { agentSettings: { ...state.agentSettings, providerGroup } };
       const modelId = pickDefaultModel(config, providerGroup);
-      const next = {
-        agentSettings: {
-          ...state.agentSettings,
-          providerGroup,
-          modelId,
-          reasoningLevel: null,
-        },
+      const preference: AgentModelPreference = {
+        providerGroup,
+        modelId,
+        reasoningLevel: null,
       };
       const rootPath = state.project?.rootPath;
       if (rootPath) {
+        schedulePersistWorkspaceAgentModel(rootPath, preference);
         void useAppStore.getState().refreshAgentModelVariants(rootPath, modelId);
       }
-      return next;
+      return {
+        agentSettings: {
+          ...state.agentSettings,
+          ...preference,
+        },
+      };
     }),
   setAgentModelId: (modelId) => {
     const base = baseModelId(modelId);
     set((state) => {
       const config = state.agentSettings.config;
+      const preference: AgentModelPreference = {
+        providerGroup: state.agentSettings.providerGroup,
+        modelId: base,
+        reasoningLevel: config
+          ? normalizeReasoningLevel(config, base, state.agentSettings.reasoningLevel)
+          : null,
+      };
+      const rootPath = state.project?.rootPath;
+      if (rootPath) schedulePersistWorkspaceAgentModel(rootPath, preference);
       return {
         agentSettings: {
           ...state.agentSettings,
-          modelId: base,
-          reasoningLevel: config
-            ? normalizeReasoningLevel(config, base, state.agentSettings.reasoningLevel)
-            : null,
+          ...preference,
         },
       };
     });
@@ -316,9 +360,18 @@ export const useAppStore = create<AppState>((set) => ({
     }
   },
   setAgentReasoningLevel: (reasoningLevel) =>
-    set((state) => ({
-      agentSettings: { ...state.agentSettings, reasoningLevel },
-    })),
+    set((state) => {
+      const preference: AgentModelPreference = {
+        providerGroup: state.agentSettings.providerGroup,
+        modelId: state.agentSettings.modelId,
+        reasoningLevel,
+      };
+      const rootPath = state.project?.rootPath;
+      if (rootPath) schedulePersistWorkspaceAgentModel(rootPath, preference);
+      return {
+        agentSettings: { ...state.agentSettings, reasoningLevel },
+      };
+    }),
   setMetrics: (metrics) => set({ metrics }),
   refreshMetrics: async () => {
     const metrics = await window.bigTex.app.metrics();
@@ -352,7 +405,56 @@ export const useAppStore = create<AppState>((set) => ({
     }),
   clearOutputLog: () => set({ outputLog: [] }),
   setPdfPreviewInverted: (pdfPreviewInverted) => {
-    writePdfPreviewInvert(pdfPreviewInverted);
     set({ pdfPreviewInverted });
+    void window.bigTex.settings.updateUser({ pdfPreviewInverted });
   },
+  hydrateSettings: async () => {
+    const legacyPdfPreviewInvert = readPdfPreviewInvert();
+    const { effective } = await window.bigTex.settings.load({ legacyPdfPreviewInvert });
+    set({
+      settingsHydrated: true,
+      effectiveSettings: effective,
+      pdfPreviewInverted: effective.pdfPreviewInverted,
+    });
+  },
+  refreshEffectiveSettings: async (rootPath) => {
+    const effective = await window.bigTex.settings.getEffective(rootPath ?? null);
+    set({ effectiveSettings: effective, pdfPreviewInverted: effective.pdfPreviewInverted });
+  },
+  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  setSettingsScope: (settingsScope) => set({ settingsScope }),
+  setSettingsCategory: (settingsCategory) => set({ settingsCategory }),
+  updateUserSettingsPatch: async (patch) => {
+    const userPatch: Partial<UserSettings> = {};
+    if (patch.agentPermissionMode != null)
+      userPatch.agentPermissionMode = patch.agentPermissionMode;
+    if (patch.patchApplyMode != null) userPatch.patchApplyMode = patch.patchApplyMode;
+    if (patch.pdfPreviewInverted != null) userPatch.pdfPreviewInverted = patch.pdfPreviewInverted;
+    if (patch.agentModel !== undefined) userPatch.agentModel = patch.agentModel;
+    await window.bigTex.settings.updateUser(userPatch);
+    const rootPath = useAppStore.getState().project?.rootPath ?? null;
+    const effective = await window.bigTex.settings.getEffective(rootPath);
+    set({
+      effectiveSettings: effective,
+      pdfPreviewInverted: effective.pdfPreviewInverted,
+    });
+  },
+  enqueuePermissionRequest: (payload) =>
+    set((state) => ({
+      permissionQueue: [...state.permissionQueue, payload],
+      agentComposerFocusToken: state.agentComposerFocusToken + 1,
+    })),
+  dequeuePermissionRequest: (requestId) =>
+    set((state) => ({
+      permissionQueue: state.permissionQueue.filter((entry) => entry.requestId !== requestId),
+    })),
+  applyAgentModelPreference: (preference) =>
+    set((state) => ({
+      agentSettings: {
+        ...state.agentSettings,
+        providerGroup: preference.providerGroup,
+        modelId: preference.modelId,
+        reasoningLevel: preference.reasoningLevel,
+      },
+    })),
 }));

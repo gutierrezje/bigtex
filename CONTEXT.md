@@ -95,6 +95,62 @@ _Avoid_: Conflating this with **Go to definition** (symbol navigation while edit
 Editor command (e.g. Cmd-click) that jumps to the target of a LaTeX symbol — `\input`, `\ref`, `\cite`, macro, etc. — via the language server. Does not run compile and does not invoke the agent.
 _Avoid_: Go to source (Problems-driven navigation only).
 
+**User settings**:
+Preferences that apply across all projects and app sessions until the user changes them.
+_Avoid_: Global config (too generic); app config (collides with build/config files).
+
+**Workspace settings**:
+Preferences scoped to one open project, keyed by that project’s root folder on disk.
+_Avoid_: Project file (implies a file inside the repo); `.vscode/settings.json` (we are not VS Code-compatible in v1).
+
+**Agent provider group**:
+The assistant model family shown in the agent toolbar: Free, Go, or Copilot — not the raw OpenCode provider id string.
+_Avoid_: Provider (ambiguous with LLM vendor or Copilot product name alone).
+
+**Agent permission**:
+A mid-run request from the assistant runtime to read or write project files (surfaced via ACP `session/request_permission`).
+_Avoid_: Patch (file edits delivered as a unified diff are separate); Composer send (user still chooses when to run the agent).
+
+**Agent permission mode**:
+A **User setting** controlling whether **Agent permission** requests are auto-approved or shown to the user first.
+_Avoid_: Auto-run (sounds like sending messages without the user); YOLO mode (informal).
+
+**Detected patch**:
+A unified diff extracted from the assistant transcript (fenced `diff` / `patch` blocks) and shown on the assistant message.
+_Avoid_: Agent patch (too vague); git patch (implies VCS, not our apply path).
+
+**Patch apply**:
+Applying a **Detected patch** to the open project via the app’s patch IPC (`git apply` with path checks) — not direct editor buffer edits.
+_Avoid_: Accept changes (Cursor wording); save (autosave is unrelated).
+
+**Patch apply mode**:
+A **User setting** controlling whether **Detected patch**es are applied automatically after a run or only when the user clicks **Apply detected patch**.
+_Avoid_: Auto-save (editor flush); agent permission mode (orthogonal in v1).
+
+**Settings**:
+The in-app preferences UI for **User settings** and **Workspace settings** (opened from app chrome, menu, or `Cmd+,`).
+_Avoid_: Preferences dialog (generic); project settings file (no repo-local settings file in v1).
+
+**Settings scope**:
+Whether the **Settings** detail pane is editing **User settings** or **Workspace settings** for the open project.
+_Avoid_: Profile, configuration tab (ambiguous).
+
+**Agent permission prompt**:
+The in-run UI that asks the user to allow or deny an **Agent permission** when **Agent permission mode** is Ask.
+_Avoid_: Patch approval ( **Patch apply** is separate); system dialog (native OS dialog is not used in v1).
+
+**Agent model preference**:
+The chosen **Agent provider group**, base model id, and optional reasoning level for the assistant.
+_Avoid_: Model config (collides with ACP session catalog); provider (use **Agent provider group**).
+
+**Effective agent model preference**:
+The **Agent model preference** in force for the open project: workspace value when set, otherwise **User settings** default, otherwise app fallback.
+_Avoid_: Current model (collides with live ACP session state).
+
+**Settings file**:
+The single on-disk store for **User settings** and per-root **Workspace settings** (app user data, not inside the LaTeX project).
+_Avoid_: `.bigtex` project config (not in repo in v1); renderer **Settings** UI (the overlay).
+
 ## Relationships
 
 - A **Compile** produces zero or more **Compile diagnostics** in **Problems**. **Language-server diagnostics** appear there too (and as editor squiggles). **Compile diagnostic** wins for build pass/fail and **Compile summary**; duplicate file/line issues from both sources may appear until the user fixes them.
@@ -120,6 +176,22 @@ _Avoid_: Go to source (Problems-driven navigation only).
 - `store-stress` requires a **Perf build** (automation bridge); `boot-sample` and `typing-stress` do not.
 - **Render profiling run** artifacts are ephemeral (`perf-traces/` is gitignored); regression is by comparing two local runs with the same **Perf scenario** and build flavor, not by a checked-in golden file in v1.
 - **Interactive renderer profiling** complements automated runs; it is optional and used for investigation, not the default regression path.
+- **User settings** and **Workspace settings** are separate stores; workspace values override user defaults for agent model choices on that project only.
+- **Workspace settings** for agent model apply when a project is opened; changing them updates the in-session agent toolbar selection.
+- **User settings** include **Agent permission mode**, **Patch apply mode**, and UI preferences (e.g. PDF viewer invert); they are not duplicated per workspace in v1.
+- **Agent permission mode** applies to **Agent permission** requests during a run; it does not gate **Patch apply**.
+- **Patch apply mode** applies only to **Detected patch**es; it does not replace **Agent permission** for non-diff file access.
+- A **Detected patch** is always visible on the assistant message; **Patch apply** success or failure is reported in **Output** / a toast, not only in chat.
+- **Settings** edits **User settings** or **Workspace settings** by **Settings scope**; changes apply immediately (no separate Save action in v1).
+- **Settings** is a full-window overlay; it does not replace the **editor pane** or add a permanent settings column.
+- **User settings** and **Workspace settings** slices are persisted together in the **Settings file**; main process owns load, merge, and write.
+- With no project open, **Settings** only exposes **User settings** (**Settings scope** workspace tab disabled).
+- **Workspace settings** may store an **Agent model preference** per project root; **User settings** store the default **Agent model preference** when that workspace has none.
+- **Effective agent model preference** is the single runtime answer for “which model is this project using?” — not separate toolbar vs **Settings** vs disk copies.
+- The agent toolbar and **Settings** (workspace scope) are two views over **Effective agent model preference**; edits go through one update path that persists the workspace slice (and updates the live session).
+- When **Agent permission mode** is Ask, a pending **Agent permission** shows an **Agent permission prompt** in the agent column; denying cancels that permission request for the run.
+- A pending **Agent permission** expands a collapsed agent panel (same as **Agent handoff**) so the **Agent permission prompt** is visible.
+- Open tab lists and panel layout are not **User settings** or **Workspace settings** in v1 (session-only).
 
 ## Example dialogue
 
@@ -131,6 +203,12 @@ _Avoid_: Go to source (Problems-driven navigation only).
 >
 > **Dev:** "CI failed because Playwright reported a 1.2s wait — is the app broken?"
 > **Domain expert:** "That's a **Playwright slow action** from the **cold UX baseline** settle, not a **Renderer long task**. Check long tasks first; don't treat every slow step as a regression."
+>
+> **Dev:** "Where do I save the model I want for this thesis repo?"
+> **Domain expert:** "**Workspace settings** — provider group and model for this root path. **User settings** only supply the default when that workspace has never been configured."
+>
+> **Dev:** "Toolbar says glm-5 but Settings still shows the old model — which wins?"
+> **Domain expert:** "Neither — there’s only **Effective agent model preference**. Both UIs call the same update; if they disagree, that’s a bug."
 
 ## Flagged ambiguities
 
@@ -151,3 +229,14 @@ _Avoid_: Go to source (Problems-driven navigation only).
 - Last PDF tab closed; resolved: **empty state** in PDF viewer pane; no auto-collapse.
 - Open project; resolved: one **editor tab** for `mainFile` when set; no auto PDF tab.
 - "Performance testing" meaning CI gate vs dev workflow; resolved: **Render profiling run** is developer-only (A), ephemeral baselines (A), normal vs **Perf build** tracks (C).
+- Settings scope (user vs project); resolved: two tiers — **User settings** (global) and **Workspace settings** (per `project.rootPath`); agent permission mode is user-global in v1.
+- “Auto vs prompt” for the agent; resolved: **Agent permission mode** (ACP permissions during a run), plus separate **Patch apply mode** for **Detected patch**es — not confirm-before-every-composer-send.
+- Agent autonomy UI; resolved: two independent **User settings** toggles under **Agent** — permission (Ask default) and patches (Review before apply default); no single combined autonomy switch in v1.
+- Settings shell; resolved: **Settings** overlay (VS Code–like categories + detail, **User** \| **Workspace** **Settings scope** tabs); gear + menu + `Cmd+,`; Agent and PDF viewer categories in v1.
+- Agent toolbar vs workspace prefs; resolved: mirror + persist — toolbar and **Settings** (workspace scope) stay in sync; **User settings** defaults only when workspace has no entry.
+- Permission prompt placement; resolved: **Agent permission prompt** as a sticky banner above the agent composer; Allow once / Allow for session / Deny; queue indicator when multiple are pending.
+- Agent model persistence shape; resolved: store full **Agent model preference** triple (group + model + reasoning); revalidate against the live catalog on load.
+- Single source of truth; resolved: one **Effective agent model preference** at runtime (merged in main, mirrored in renderer store); two persistence tiers remain for defaults vs per-project overrides, not two competing UI states.
+- Settings persistence; resolved: one app **Settings file** in Electron user data (`settings.json`) with `user` and `workspaces` sections — not separate user/workspace files on disk.
+- PDF invert storage; resolved: one-time import from renderer `localStorage` into **User settings** when missing, then **Settings file** only.
+- Settings MVP categories; resolved: **Agent**, **PDF viewer**, **General** (clear recent projects only); defer editor font, autosave toggle, panel layout restore, in-repo project config.

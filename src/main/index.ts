@@ -12,9 +12,13 @@ import {
   type LanguageServerStartSessionRequest,
   type ReadFileRequest,
   type RenamePathRequest,
+  type SettingsLoadRequest,
+  type SettingsPermissionRespondRequest,
+  type SettingsUpdateWorkspaceRequest,
   type WriteFileRequest,
 } from "../shared/ipc";
 import type { LspSendRequest } from "../shared/lsp";
+import { mergeEffectiveSettings } from "../shared/settings";
 import {
   cancelOpencode,
   checkOpencode,
@@ -45,6 +49,16 @@ import {
 } from "./lsp/texlab";
 import { createProjectFolderDialog, openProjectFolderDialog, setApplicationMenu } from "./menu";
 import { getMarks, measure, recordMark } from "./performance/marks";
+import {
+  respondToPermissionRequest,
+  setPermissionWebContentsGetter,
+} from "./settings/permission-bridge";
+import {
+  getEffectiveSettings,
+  loadSettingsFile,
+  updateUserSettings,
+  updateWorkspaceSettings,
+} from "./settings/store";
 import { isWindowFullscreen, toggleWindowFullscreen } from "./windowFullscreen";
 
 const appStartedAt = performance.now();
@@ -109,6 +123,7 @@ function createWindow(): void {
   }
 
   attachFullscreenChrome(mainWindow);
+  setPermissionWebContentsGetter(() => mainWindow?.webContents ?? null);
 }
 
 function focusedWindow(): BrowserWindow | null {
@@ -169,6 +184,29 @@ function registerIpc(): void {
   ipcMain.handle(IPC_CHANNELS.recentsGet, () => getRecents());
   ipcMain.handle(IPC_CHANNELS.recentsRemove, (_event, path: string) => removeRecent(path));
   ipcMain.handle(IPC_CHANNELS.recentsClear, () => clearRecents());
+
+  ipcMain.handle(IPC_CHANNELS.settingsLoad, async (_event, request?: SettingsLoadRequest) => {
+    const file = await loadSettingsFile(request?.legacyPdfPreviewInvert);
+    return { file, effective: mergeEffectiveSettings(file, null) };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.settingsGetEffective, (_event, rootPath?: string | null) =>
+    getEffectiveSettings(rootPath ?? null),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.settingsUpdateUser, (_event, patch) => updateUserSettings(patch));
+
+  ipcMain.handle(
+    IPC_CHANNELS.settingsUpdateWorkspace,
+    (_event, request: SettingsUpdateWorkspaceRequest) =>
+      updateWorkspaceSettings(request.rootPath, request.patch),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.settingsPermissionRespond,
+    (_event, request: SettingsPermissionRespondRequest) =>
+      respondToPermissionRequest(request.requestId, request.optionId),
+  );
 
   ipcMain.handle(IPC_CHANNELS.fileRead, (_event, request: ReadFileRequest) =>
     measure("file:read", () => readProjectFile(request.rootPath, request.path)),

@@ -96,6 +96,17 @@ export function setApplicationMenu(getTargetWindow: () => BrowserWindow | null):
             submenu: [
               { role: "about" },
               { type: "separator" },
+              {
+                label: "Settings…",
+                accelerator: "CmdOrCtrl+,",
+                click: () => {
+                  const win = BrowserWindow.getFocusedWindow() ?? getTargetWindow();
+                  if (win && !win.isDestroyed()) {
+                    win.webContents.send(IPC_CHANNELS.settingsOpen);
+                  }
+                },
+              },
+              { type: "separator" },
               { role: "services" },
               { type: "separator" },
               { role: "hide" },
@@ -133,6 +144,17 @@ export function setApplicationMenu(getTargetWindow: () => BrowserWindow | null):
         ...(process.platform === "darwin"
           ? []
           : ([
+              { type: "separator" },
+              {
+                label: "Settings…",
+                accelerator: "CmdOrCtrl+,",
+                click: () => {
+                  const win = BrowserWindow.getFocusedWindow() ?? getTargetWindow();
+                  if (win && !win.isDestroyed()) {
+                    win.webContents.send(IPC_CHANNELS.settingsOpen);
+                  }
+                },
+              },
               { type: "separator" },
               { role: "quit" },
             ] satisfies Electron.MenuItemConstructorOptions[])),

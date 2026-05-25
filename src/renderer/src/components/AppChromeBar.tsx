@@ -1,5 +1,7 @@
 import { CHROME_TITLE_CLASS } from "../lib/treeTypography";
 import { formatWindowChromeLabel } from "../lib/windowChrome";
+import { IconTooltipButton } from "./IconTooltipButton";
+import { SettingsIcon } from "./icons/SettingsIcon";
 import { PanelToggleButtons } from "./PanelToggleButtons";
 import { SidebarToggleButton } from "./SidebarToggleButton";
 import { WindowControls } from "./WindowControls";
@@ -20,6 +22,7 @@ interface AppChromeBarProps {
   onToggleBottomPanel(): void;
   showAgent: boolean;
   onToggleAgent(): void;
+  onOpenSettings(): void;
 }
 
 /**
@@ -36,6 +39,7 @@ export function AppChromeBar({
   onToggleBottomPanel,
   showAgent,
   onToggleAgent,
+  onOpenSettings,
 }: AppChromeBarProps) {
   const label = formatWindowChromeLabel(projectName, filePath);
   const showWorkspaceLabel = !sidebarOpen || filePath != null;
@@ -72,6 +76,15 @@ export function AppChromeBar({
         className="relative z-10 ml-auto flex shrink-0 items-center gap-0.5"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
+        <IconTooltipButton
+          hint="Settings (⌘,)"
+          tooltipPlacement="left"
+          aria-label="Settings"
+          onClick={onOpenSettings}
+          className="flex items-center justify-center rounded border border-transparent p-1.5 text-text-muted transition-all duration-200 hover:bg-surface-raised/50 hover:text-text-secondary cursor-pointer"
+        >
+          <SettingsIcon />
+        </IconTooltipButton>
         <PanelToggleButtons
           bottomPanelOpen={bottomPanelOpen}
           onToggleBottomPanel={onToggleBottomPanel}

@@ -72,6 +72,19 @@ describe("patch hygiene (repair + paths)", () => {
     expect(normalized).toContain("--- chapters/intro.tex");
     expect(normalized).toContain("+++ chapters/intro.tex");
   });
+
+  it("resolves math.tex to chapters/math.tex in the workshop sample", () => {
+    const workshop = resolve("samples/workshop");
+    expect(resolvePatchPath("samples/workshop/math.tex", workshop)).toBe("chapters/math.tex");
+    expect(resolvePatchPath("math.tex", workshop)).toBe("chapters/math.tex");
+  });
+
+  it("does not return non-existent hint paths", () => {
+    const workshop = resolve("samples/workshop");
+    expect(resolvePatchPath("math.tex", workshop, ["samples/workshop/math.tex"])).toBe(
+      "chapters/math.tex",
+    );
+  });
 });
 
 describe("unifiedDiffFromTexts", () => {
@@ -115,6 +128,24 @@ describe("applyUnifiedPatch", () => {
     expect(after).toContain(marker);
     const { writeFile } = await import("node:fs/promises");
     await writeFile(introPath, current, "utf8");
+  });
+
+  it("reports hunk mismatch instead of a bogus missing-file path for nested workshop files", async () => {
+    const workshop = resolve("samples/workshop");
+    const patch = [
+      "--- a/samples/workshop/math.tex",
+      "+++ b/samples/workshop/math.tex",
+      "@@ -5,3 +5,3 @@",
+      " ",
+      "-The expression a_2 + b^2 should be wrapped as $a_2 + b^2$.",
+      "+The expression $a_2 + b^2$ should be wrapped as $a_2 + b^2$.",
+    ].join("\n");
+
+    const result = await applyUnifiedPatch({ rootPath: workshop, patch });
+    expect(result.applied).toBe(false);
+    expect(result.changedFiles).toEqual(["chapters/math.tex"]);
+    expect(result.message).not.toContain("samples/workshop/math.tex: No such file or directory");
+    expect(result.message).toMatch(/patch failed:.*chapters\/math\.tex/i);
   });
 
   it("applies clean patches, blocks path escape, and repairs bad hunks", async () => {

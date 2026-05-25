@@ -15,6 +15,7 @@ import {
   TREE_LABEL_CLASS,
 } from "../lib/treeTypography";
 import type { AgentChatState } from "../store";
+import { AgentPermissionBanner } from "./AgentPermissionBanner";
 import { AgentComposer } from "./agent/AgentComposer";
 import { AgentMessageReasoningPart } from "./agent/AgentMessageReasoningPart";
 import { AgentMessageTextPart } from "./agent/AgentMessageTextPart";
@@ -145,6 +146,7 @@ function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
       </ThreadPrimitive.Viewport>
 
       <ComposerPrimitive.Root className="border-t border-border/40 bg-surface px-2 pb-2 pt-2">
+        <AgentPermissionBanner />
         <AgentComposerContext activeFile={activeFile} />
         <AgentModelToolbar />
         <AgentComposer />
