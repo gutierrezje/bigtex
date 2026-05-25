@@ -10,12 +10,12 @@ Electron main runtime: window creation, IPC, compile/agent/patch/file services.
 | Task | Location |
 |------|----------|
 | Window creation + IPC handlers | index.ts |
-| Application menu (File → Open Folder) | menu.ts |
+| Application menu (New Project, Open/Close Folder) | menu.ts |
 | Agent ACP runtime + JSON-RPC handling | agents/opencode.ts |
 | Patch application (git apply) | agents/patch.ts |
 | LaTeX compiler runner | compile/latex.ts |
 | Texlab LSP session + IPC proxy | lsp/texlab.ts |
-| Project tree + file IO + path safety | files/project.ts |
+| Project tree + file IO + blank scaffold | files/project.ts, shared/projectScaffold.ts |
 | Performance marks + metrics | performance/marks.ts |
 
 ## CONVENTIONS

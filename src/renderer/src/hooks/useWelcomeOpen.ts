@@ -56,10 +56,10 @@ export function useWelcomeOpen({ hasProject, loadProject }: UseWelcomeOpenOption
     [openProject],
   );
 
-  const onOpenSample = useCallback(
+  const onCreateProject = useCallback(
     () =>
-      void openProject(() => window.bigTex.project.loadSample(), {
-        failureMessage: "Failed to load sample project",
+      void openProject(() => window.bigTex.project.createDialog(), {
+        failureMessage: "Failed to create project",
       }),
     [openProject],
   );
@@ -95,7 +95,7 @@ export function useWelcomeOpen({ hasProject, loadProject }: UseWelcomeOpenOption
     recents,
     opening,
     onOpenFolder,
-    onOpenSample,
+    onCreateProject,
     onOpenRecent,
     onRemoveRecent,
     onClearRecents,

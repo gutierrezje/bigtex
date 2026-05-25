@@ -25,7 +25,8 @@ export const IPC_CHANNELS = {
   projectOpened: "project:opened",
   projectClosed: "project:closed",
   projectLoad: "project:load",
-  projectLoadSample: "project:load-sample",
+  projectOpenPath: "project:open-path",
+  projectCreateDialog: "project:create-dialog",
   fileRead: "file:read",
   fileWrite: "file:write",
   fileCreate: "file:create",
@@ -110,7 +111,9 @@ export interface BigTexApi {
     /** Main process notifies when a folder is closed from the app menu (e.g. File → Close Folder). */
     onClosed(listener: () => void): () => void;
     load(rootPath: string): Promise<ProjectSnapshot>;
-    loadSample(): Promise<ProjectSnapshot>;
+    /** Load a folder and notify the renderer (same as File → Open Folder). */
+    openPath(rootPath: string): Promise<ProjectSnapshot>;
+    createDialog(): Promise<ProjectSnapshot | null>;
   };
   files: {
     read(request: ReadFileRequest): Promise<OpenFile>;

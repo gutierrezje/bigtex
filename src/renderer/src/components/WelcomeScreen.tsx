@@ -5,7 +5,7 @@ interface WelcomeScreenProps {
   recents: RecentProject[];
   opening: boolean;
   onOpenFolder(): void;
-  onOpenSample(): void;
+  onCreateProject(): void;
   onOpenRecent(path: string): void;
   onRemoveRecent(path: string): void;
   onClearRecents(): void;
@@ -15,7 +15,7 @@ export function WelcomeScreen({
   recents,
   opening,
   onOpenFolder,
-  onOpenSample,
+  onCreateProject,
   onOpenRecent,
   onRemoveRecent,
   onClearRecents,
@@ -92,8 +92,8 @@ export function WelcomeScreen({
               </button>
 
               <button
-                data-testid="welcome-open-sample"
-                onClick={onOpenSample}
+                data-testid="welcome-create-project"
+                onClick={onCreateProject}
                 disabled={opening}
                 className="welcome-card-flat text-left p-4 rounded-lg flex items-center gap-4 cursor-pointer group outline-none disabled:opacity-60 disabled:pointer-events-none"
                 type="button"
@@ -107,20 +107,16 @@ export function WelcomeScreen({
                     stroke="currentColor"
                     className="h-5 w-5"
                   >
-                    <title>Sample Document Icon</title>
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"
-                    />
+                    <title>New Project Icon</title>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                   </svg>
                 </div>
                 <div>
                   <h3 className="font-medium text-text-primary text-xs group-hover:text-accent transition-colors duration-150">
-                    Open sample project
+                    New project…
                   </h3>
                   <p className="text-[11px] text-text-muted mt-0.5">
-                    Launch the minimal smoke test workspace
+                    Choose a folder and add starter main.tex and references.bib
                   </p>
                 </div>
               </button>
@@ -231,7 +227,7 @@ export function WelcomeScreen({
                   </svg>
                   <h4 className="text-sm font-semibold text-text-secondary">No recent projects</h4>
                   <p className="text-xs text-text-muted mt-1 max-w-[240px] leading-normal">
-                    Open a folder or choose the sample workspace to start working.
+                    Open a folder or create a new project to start working.
                   </p>
                 </div>
               )}

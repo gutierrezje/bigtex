@@ -50,7 +50,7 @@ pnpm run perf:parse -- perf-traces/cdp-boot-sample-2026-01-01.json
 
 | `BIGTEX_PERF_SCENARIO` | Behavior |
 |------------------------|----------|
-| `boot-sample` (default) | Open sample project, settle |
+| `boot-sample` (default) | Open a temp blank project (`main.tex`), settle |
 | `typing-stress` | Monaco keyboard loop (40 `%` + backspace) |
 | `store-stress` | `window.__BIGTEX_PERF__.stressStoreUpdates(120)` — Zustand-only churn |
 
@@ -88,7 +88,7 @@ pnpm exec playwright show-trace perf-traces/trace-*.zip   # visual timeline
 When `BIGTEX_PERF_PROFILE=1` at build time:
 
 - `PerfProfiler` wraps `App` → `performance.measure('react:App:mount|update', …)`
-- `window.__BIGTEX_PERF__` — automation bridge (`loadSampleProject`, `stressStoreUpdates`)
+- `window.__BIGTEX_PERF__` — automation bridge (`bootstrapBlankProject`, `stressStoreUpdates`)
 
 Production builds omit this (dead-code eliminated via `import.meta.env.VITE_BIGTEX_PERF`).
 

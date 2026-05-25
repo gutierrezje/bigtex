@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, Menu } from "electron";
 import type { ProjectSnapshot } from "../shared/domain";
 import { IPC_CHANNELS } from "../shared/ipc";
-import { loadProject } from "./files/project";
+import { isNewProjectDirectoryEmpty, loadProject, scaffoldBlankProject } from "./files/project";
 import { addRecent } from "./files/recents";
 import { measure } from "./performance/marks";
 import { toggleWindowFullscreen } from "./windowFullscreen";
@@ -23,14 +23,69 @@ export async function openProjectFolderDialog(
   return measure("project:load", () => loadProject(result.filePaths[0]));
 }
 
+export async function createProjectFolderDialog(
+  parentWindow: BrowserWindow | null,
+): Promise<ProjectSnapshot | null> {
+  const options = {
+    properties: ["openDirectory" as const, "createDirectory" as const],
+    title: "New Project",
+    buttonLabel: "Create",
+    message: "Choose a folder for your new LaTeX project",
+  };
+
+  const result = parentWindow
+    ? await dialog.showOpenDialog(parentWindow, options)
+    : await dialog.showOpenDialog(options);
+
+  if (result.canceled || !result.filePaths[0]) return null;
+
+  const rootPath = result.filePaths[0];
+  const empty = await isNewProjectDirectoryEmpty(rootPath);
+  if (!empty) {
+    const { response } = parentWindow
+      ? await dialog.showMessageBox(parentWindow, {
+          type: "warning",
+          buttons: ["Cancel", "Use This Folder"],
+          defaultId: 1,
+          cancelId: 0,
+          title: "Folder Not Empty",
+          message: "This folder already contains files.",
+          detail:
+            "BigTeX will add main.tex and references.bib only if they are missing. Other files will be left as-is. Continue?",
+        })
+      : await dialog.showMessageBox({
+          type: "warning",
+          buttons: ["Cancel", "Use This Folder"],
+          defaultId: 1,
+          cancelId: 0,
+          title: "Folder Not Empty",
+          message: "This folder already contains files.",
+          detail:
+            "BigTeX will add main.tex and references.bib only if they are missing. Other files will be left as-is. Continue?",
+        });
+    if (response !== 1) return null;
+  }
+
+  return measure("project:create", () => scaffoldBlankProject(rootPath));
+}
+
 export function setApplicationMenu(getTargetWindow: () => BrowserWindow | null): void {
-  const onOpenFolder = async (): Promise<void> => {
+  const notifyProjectOpened = async (snapshot: ProjectSnapshot | null): Promise<void> => {
     const win = BrowserWindow.getFocusedWindow() ?? getTargetWindow();
-    const snapshot = await openProjectFolderDialog(win);
     if (snapshot && win && !win.isDestroyed()) {
       await addRecent(snapshot.rootPath);
       win.webContents.send(IPC_CHANNELS.projectOpened, snapshot);
     }
+  };
+
+  const onOpenFolder = async (): Promise<void> => {
+    const win = BrowserWindow.getFocusedWindow() ?? getTargetWindow();
+    await notifyProjectOpened(await openProjectFolderDialog(win));
+  };
+
+  const onNewProject = async (): Promise<void> => {
+    const win = BrowserWindow.getFocusedWindow() ?? getTargetWindow();
+    await notifyProjectOpened(await createProjectFolderDialog(win));
   };
 
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -55,6 +110,11 @@ export function setApplicationMenu(getTargetWindow: () => BrowserWindow | null):
     {
       label: "File",
       submenu: [
+        {
+          label: "New Project…",
+          accelerator: "CmdOrCtrl+Shift+N",
+          click: () => void onNewProject(),
+        },
         {
           label: "Open Folder…",
           accelerator: "CmdOrCtrl+O",

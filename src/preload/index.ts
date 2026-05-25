@@ -24,7 +24,8 @@ const api: BigTexApi = {
       return () => ipcRenderer.off(IPC_CHANNELS.projectClosed, handler);
     },
     load: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.projectLoad, rootPath),
-    loadSample: () => ipcRenderer.invoke(IPC_CHANNELS.projectLoadSample),
+    openPath: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.projectOpenPath, rootPath),
+    createDialog: () => ipcRenderer.invoke(IPC_CHANNELS.projectCreateDialog),
   },
   files: {
     read: (request) => ipcRenderer.invoke(IPC_CHANNELS.fileRead, request),

@@ -13,7 +13,6 @@ Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with
 ├── src/preload/         # window.bigTex IPC bridge
 ├── src/renderer/        # Vite shell; UI in src/renderer/src (AGENTS.md)
 ├── src/shared/          # IPC contracts + domain types
-├── samples/minimal/     # sample LaTeX project for smoke tests
 ├── samples/workshop/  # resettable demo fixture — never commit changes (see NOTES)
 └── electron.vite.config.ts
 ```

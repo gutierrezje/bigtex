@@ -31,7 +31,6 @@ import {
   loadProject,
   readProjectFile,
   renameProjectPath,
-  resolveSampleProjectPath,
   writeProjectFile,
 } from "./files/project";
 import { addRecent, clearRecents, getRecents, removeRecent } from "./files/recents";
@@ -44,7 +43,7 @@ import {
   stopAllTexlabSessions,
   stopTexlabSession,
 } from "./lsp/texlab";
-import { openProjectFolderDialog, setApplicationMenu } from "./menu";
+import { createProjectFolderDialog, openProjectFolderDialog, setApplicationMenu } from "./menu";
 import { getMarks, measure, recordMark } from "./performance/marks";
 import { isWindowFullscreen, toggleWindowFullscreen } from "./windowFullscreen";
 
@@ -148,11 +147,21 @@ function registerIpc(): void {
     return snapshot;
   });
 
-  ipcMain.handle(IPC_CHANNELS.projectLoadSample, async () => {
-    const samplePath = await resolveSampleProjectPath(app.getAppPath());
-    const snapshot = await measure("project:load", () => loadProject(samplePath));
+  ipcMain.handle(IPC_CHANNELS.projectOpenPath, async (_event, rootPath: string) => {
+    const snapshot = await measure("project:load", () => loadProject(rootPath));
     if (snapshot) {
-      await addRecent(samplePath, "Sample Project");
+      await addRecent(rootPath);
+      mainWindow?.webContents.send(IPC_CHANNELS.projectOpened, snapshot);
+    }
+    return snapshot;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.projectCreateDialog, async () => {
+    const snapshot = await createProjectFolderDialog(
+      BrowserWindow.getFocusedWindow() ?? mainWindow,
+    );
+    if (snapshot) {
+      await addRecent(snapshot.rootPath);
     }
     return snapshot;
   });

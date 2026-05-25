@@ -2,11 +2,35 @@ import { access, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "n
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { FileKind, OpenFile, ProjectFile, ProjectSnapshot } from "../../shared/domain";
 import { latexOutputPdfPath, shouldHideProjectTreeEntry } from "../../shared/latexArtifacts";
+
+/** OS clutter in otherwise empty folders — do not prompt "folder not empty". */
+const NEW_PROJECT_EMPTY_IGNORED_NAMES = new Set([".DS_Store", "Thumbs.db", "desktop.ini"]);
+
+function countsAsNewProjectContent(name: string, isDirectory: boolean): boolean {
+  if (NEW_PROJECT_EMPTY_IGNORED_NAMES.has(name)) return false;
+  return !shouldHideProjectTreeEntry(name, isDirectory);
+}
+
+/** True when the folder has no user-visible files (build/aux/git noise ignored). */
+export async function isNewProjectDirectoryEmpty(rootPath: string): Promise<boolean> {
+  const root = resolve(rootPath);
+  try {
+    const info = await stat(root);
+    if (!info.isDirectory()) return false;
+  } catch {
+    return true;
+  }
+
+  const entries = await readdir(root, { withFileTypes: true });
+  return !entries.some((entry) => countsAsNewProjectContent(entry.name, entry.isDirectory()));
+}
+
 import {
   CREATABLE_FILE_EXTENSIONS,
   isCreatableFileName,
   resolveFolderName,
 } from "../../shared/projectFiles";
+import { BLANK_PROJECT_FILES } from "../../shared/projectScaffold";
 
 const MAX_TREE_DEPTH = 8;
 
@@ -134,29 +158,19 @@ export async function writeProjectFile(
   return readProjectFile(rootPath, relative(resolve(rootPath), absolutePath));
 }
 
-export function defaultSampleProjectPath(appRoot: string): string {
-  return resolve(appRoot, "samples/minimal");
-}
+/** Write default LaTeX files into `rootPath` when missing, then load the project tree. */
+export async function scaffoldBlankProject(rootPath: string): Promise<ProjectSnapshot> {
+  const root = resolve(rootPath);
+  await mkdir(root, { recursive: true });
 
-/** Resolve bundled sample when app runs from repo root, `out/`, or asar. */
-export async function resolveSampleProjectPath(
-  appRoot: string,
-  cwd = process.cwd(),
-): Promise<string> {
-  const candidates = [
-    defaultSampleProjectPath(appRoot),
-    defaultSampleProjectPath(resolve(appRoot, "../..")),
-    defaultSampleProjectPath(cwd),
-  ];
-  for (const candidate of candidates) {
-    try {
-      const info = await stat(candidate);
-      if (info.isDirectory()) return candidate;
-    } catch {
-      // try next candidate
+  for (const file of BLANK_PROJECT_FILES) {
+    const absolutePath = join(root, file.name);
+    if (!(await pathExists(absolutePath))) {
+      await writeFile(absolutePath, file.content, "utf8");
     }
   }
-  return candidates[0];
+
+  return loadProject(root);
 }
 
 export function defaultMainFile(rootPath: string, preferred: string | null): string {

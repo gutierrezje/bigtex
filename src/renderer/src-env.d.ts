@@ -9,7 +9,7 @@ interface ImportMeta {
 }
 
 interface BigTexPerfBridge {
-  loadSampleProject(): Promise<void>;
+  bootstrapBlankProject(rootPath: string): Promise<void>;
   stressStoreUpdates(iterations: number): Promise<void>;
   getUserTimingEntries(): PerformanceEntry[];
 }

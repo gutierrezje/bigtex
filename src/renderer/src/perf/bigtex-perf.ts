@@ -1,8 +1,8 @@
 import { getActiveEditor } from "../../../shared/documentTabs";
 import { useAppStore } from "../store";
 
-async function loadSampleProject(): Promise<void> {
-  const snapshot = await window.bigTex.project.loadSample();
+async function bootstrapBlankProject(rootPath: string): Promise<void> {
+  const snapshot = await window.bigTex.project.load(rootPath);
   const state = useAppStore.getState();
   state.setProject(snapshot);
   state.setCompileResult(null);
@@ -20,14 +20,14 @@ async function loadSampleProject(): Promise<void> {
       }),
     );
   }
-  performance.mark("bigtex:sample-loaded");
+  performance.mark("bigtex:project-loaded");
 }
 
 async function stressStoreUpdates(iterations: number): Promise<void> {
   const tabs = useAppStore.getState().editorTabs;
   const active = getActiveEditor(tabs);
   if (!active) {
-    throw new Error("No active editor — load sample project first");
+    throw new Error("No active editor — bootstrap a project first");
   }
 
   performance.mark("bigtex:store-stress-start");
@@ -51,7 +51,7 @@ export function installBigTexPerfBridge(): void {
   if (!import.meta.env.VITE_BIGTEX_PERF) return;
 
   const bridge = {
-    loadSampleProject,
+    bootstrapBlankProject,
     stressStoreUpdates,
     getUserTimingEntries,
   };

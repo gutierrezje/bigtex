@@ -7,8 +7,10 @@ import {
   createProjectFile,
   createProjectFolder,
   deleteProjectPath,
+  isNewProjectDirectoryEmpty,
   loadProject,
   renameProjectPath,
+  scaffoldBlankProject,
 } from "./project";
 
 describe("assertInsideRoot", () => {
@@ -39,6 +41,56 @@ describe("loadProject", () => {
       expect(snapshot.files.some((file) => file.name === "main.out")).toBe(false);
       expect(snapshot.files.some((file) => file.name === "main.synctex.gz")).toBe(false);
       expect(snapshot.files.some((file) => file.name === ".tex-build")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("isNewProjectDirectoryEmpty", () => {
+  it("treats missing, empty, and aux-only folders as empty", async () => {
+    const missing = join(tmpdir(), `bigtex-missing-${Date.now()}`);
+    expect(await isNewProjectDirectoryEmpty(missing)).toBe(true);
+
+    const empty = await mkdtemp(join(tmpdir(), "bigtex-empty-"));
+    try {
+      expect(await isNewProjectDirectoryEmpty(empty)).toBe(true);
+    } finally {
+      await rm(empty, { recursive: true, force: true });
+    }
+
+    const auxOnly = await mkdtemp(join(tmpdir(), "bigtex-aux-"));
+    try {
+      await writeFile(join(auxOnly, "notes.aux"), "aux", "utf8");
+      await mkdir(join(auxOnly, ".tex-build"), { recursive: true });
+      expect(await isNewProjectDirectoryEmpty(auxOnly)).toBe(true);
+    } finally {
+      await rm(auxOnly, { recursive: true, force: true });
+    }
+  });
+
+  it("detects existing source files", async () => {
+    const root = await mkdtemp(join(tmpdir(), "bigtex-has-tex-"));
+    try {
+      await writeFile(join(root, "chapter.tex"), "%", "utf8");
+      expect(await isNewProjectDirectoryEmpty(root)).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("scaffoldBlankProject", () => {
+  it("creates main.tex and references.bib when missing", async () => {
+    const root = await mkdtemp(join(tmpdir(), "bigtex-scaffold-"));
+    try {
+      const snapshot = await scaffoldBlankProject(root);
+      expect(snapshot.mainFile).toBe("main.tex");
+      expect(snapshot.files.some((file) => file.name === "main.tex")).toBe(true);
+      expect(snapshot.files.some((file) => file.name === "references.bib")).toBe(true);
+
+      const again = await scaffoldBlankProject(root);
+      expect(again.files.filter((file) => file.name === "main.tex")).toHaveLength(1);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

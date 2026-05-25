@@ -29,6 +29,7 @@ import {
   loadTraceJson,
   summarizeForLlm,
 } from "../../src/shared/perf/trace-parse.ts";
+import { BLANK_PROJECT_FILES } from "../../src/shared/projectScaffold.ts";
 import { captureCdpChromiumTrace } from "./cdp-chromium-trace.ts";
 import { openPerfSession } from "./launch-session.ts";
 
@@ -105,35 +106,41 @@ async function readLongTasks(page: import("playwright").Page): Promise<
     .catch(() => []);
 }
 
+function createTempBlankProject(): string {
+  const root = mkdtempSync(join(tmpdir(), "bigtex-perf-"));
+  for (const file of BLANK_PROJECT_FILES) {
+    writeFileSync(join(root, file.name), file.content, "utf8");
+  }
+  return root;
+}
+
 async function waitForAppReady(page: import("playwright").Page): Promise<void> {
   await page.waitForLoadState("domcontentloaded", { timeout: 60_000 });
   const ready = page
-    .getByTestId("welcome-open-sample")
+    .getByTestId("welcome-create-project")
     .or(page.getByTestId("editor-root"))
-    .or(page.getByRole("button", { name: /Open Sample Project/i }))
+    .or(page.getByRole("button", { name: /New project/i }))
     .or(page.getByText("BigTeX", { exact: true }));
   await ready.first().waitFor({ state: "visible", timeout: 60_000 });
 }
 
-async function openSampleProject(page: import("playwright").Page): Promise<void> {
-  const sample = page
-    .getByTestId("welcome-open-sample")
-    .or(page.getByRole("button", { name: /Open Sample Project/i }));
-  if (await sample.first().isVisible().catch(() => false)) {
-    await sample.first().click();
-    await page
-      .locator(".monaco-editor")
-      .first()
-      .waitFor({ state: "visible", timeout: 90_000 })
-      .catch(() => {
-        console.warn("[perf] Monaco did not appear after sample load; continuing trace");
-      });
-  }
+async function bootstrapBlankProject(page: import("playwright").Page): Promise<void> {
+  const root = createTempBlankProject();
+  await page.evaluate(async (path) => {
+    await window.bigTex.project.openPath(path);
+  }, root);
+  await page
+    .locator(".monaco-editor")
+    .first()
+    .waitFor({ state: "visible", timeout: 90_000 })
+    .catch(() => {
+      console.warn("[perf] Monaco did not appear after project open; continuing trace");
+    });
 }
 
 async function scenarioBootSample(page: import("playwright").Page): Promise<void> {
   await waitForAppReady(page);
-  await openSampleProject(page);
+  await bootstrapBlankProject(page);
   await page.waitForTimeout(1200);
 }
 
