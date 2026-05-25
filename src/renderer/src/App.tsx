@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { OnPanelResize, PanelImperativeHandle } from "react-resizable-panels";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { getActiveEditor, listDirtyEditorPaths } from "../../shared/documentTabs";
@@ -22,6 +22,7 @@ import { useAgentEvents } from "./hooks/useAgentEvents";
 import { useWelcomeOpen } from "./hooks/useWelcomeOpen";
 
 import { formatWindowChromeLabel } from "./lib/windowChrome";
+import { syncLspEditorTabModels } from "./lsp/editor-documents";
 import { startTexlabLanguageClient, stopTexlabLanguageClient } from "./lsp/texlab-client";
 import { useAppStore } from "./store";
 
@@ -237,6 +238,16 @@ export function App() {
     void refreshMetrics();
   }, [refreshMetrics]);
 
+  const editorTabSyncKey = useMemo(
+    () => editorTabs.files.map((file) => `${file.path}:${file.loadedAt}`).join("|"),
+    [editorTabs.files],
+  );
+
+  useEffect(() => {
+    if (!project) return;
+    syncLspEditorTabModels(editorTabs.files);
+  }, [project, editorTabSyncKey, editorTabs.files]);
+
   async function syncLanguageServer(snapshot: ProjectSnapshot): Promise<void> {
     const availability = await window.bigTex.lsp.check();
     if (!availability.available) {
@@ -264,6 +275,7 @@ export function App() {
         rootPath: snapshot.rootPath,
         mainFile: snapshot.mainFile,
       });
+      syncLspEditorTabModels(useAppStore.getState().editorTabs.files);
     } catch (error) {
       appendOutput(
         error instanceof Error

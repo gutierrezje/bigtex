@@ -5,18 +5,16 @@ import {
   MonacoLanguageClient,
   MonacoServices,
 } from "monaco-languageclient";
+import { disposeAllLspEditorDocuments } from "./editor-documents";
 import { pathToFileUri } from "./file-uri";
 import { createLspIpcBridge } from "./ipc-bridge";
 import { createIpcConnectionProvider } from "./ipc-transport";
 
-let monacoServicesInstalled = false;
 let client: MonacoLanguageClient | null = null;
 let bridge: ReturnType<typeof createLspIpcBridge> | null = null;
 
 function installMonacoServices(rootPath: string): void {
-  if (monacoServicesInstalled) return;
   MonacoServices.install(monaco, { rootUri: pathToFileUri(rootPath) });
-  monacoServicesInstalled = true;
 }
 
 export async function startTexlabLanguageClient(options: {
@@ -59,6 +57,7 @@ export async function stopTexlabLanguageClient(): Promise<void> {
       // Session may already be closed (e.g. project closed while typing).
     }
   }
+  disposeAllLspEditorDocuments();
   bridge?.dispose();
   bridge = null;
 }

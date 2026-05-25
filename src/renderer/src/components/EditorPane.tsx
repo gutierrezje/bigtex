@@ -7,6 +7,8 @@ import type { CompileDiagnostic, OpenFile } from "../../../shared/domain";
 import { normalizeDiagnosticPath } from "../../../shared/problems";
 import { BIGTEX_MONACO_THEME, registerBigTexMonacoTheme } from "../lib/monacoTheme";
 import { CHROME_META_CLASS, CHROME_SECTION_CLASS } from "../lib/treeTypography";
+import { getOrCreateLspEditorModel, isLspEditorPath } from "../lsp/editor-documents";
+import { pathToFileUri } from "../lsp/file-uri";
 
 globalThis.MonacoEnvironment = {
   getWorker() {
@@ -38,7 +40,7 @@ interface LoadedEditorPaneProps {
 }
 
 function languageForPath(path: string): string {
-  if (path.endsWith(".tex")) return "latex";
+  if (path.endsWith(".tex") || path.endsWith(".sty") || path.endsWith(".cls")) return "latex";
   if (path.endsWith(".bib")) return "bibtex";
   if (path.endsWith(".json")) return "json";
   if (path.endsWith(".yml") || path.endsWith(".yaml")) return "yaml";
@@ -157,6 +159,14 @@ function LoadedEditorPane({
   }, [markers]);
 
   useEffect(() => {
+    if (!isLspEditorPath(file.path)) return;
+    const uri = monacoLocal.Uri.parse(pathToFileUri(file.absolutePath));
+    const model = monacoLocal.editor.getModel(uri);
+    if (!model || model.getValue() === file.content) return;
+    model.setValue(file.content);
+  }, [file.absolutePath, file.content, file.loadedAt, file.path]);
+
+  useEffect(() => {
     if (!revealLine || !editorRef.current) return;
     editorRef.current.revealLineInCenter(revealLine);
     onRevealHandled();
@@ -185,14 +195,17 @@ function LoadedEditorPane({
     setDirty(false);
   }
 
+  const usesLspModel = isLspEditorPath(file.path);
+
   return (
     <section className="grid h-full min-h-0 min-w-0 overflow-hidden bg-surface">
       <Editor
-        key={`${file.path}:${file.loadedAt}`}
+        key={file.path}
         height="100%"
         theme={BIGTEX_MONACO_THEME}
         language={languageForPath(file.path)}
-        value={file.content}
+        defaultValue={file.content}
+        value={usesLspModel ? undefined : file.content}
         beforeMount={configureMonaco}
         onChange={(v) => {
           draftContentRef.current = v ?? "";
@@ -204,6 +217,10 @@ function LoadedEditorPane({
           monaco.editor.setTheme(BIGTEX_MONACO_THEME);
           editorRef.current = ed;
           monacoRef.current = monaco;
+          const lspModel = getOrCreateLspEditorModel(file);
+          if (lspModel) {
+            ed.setModel(lspModel);
+          }
           const model = ed.getModel();
           if (model) monaco.editor.setModelMarkers(model, "latex-compiler", markers);
           ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveNow);
@@ -236,7 +253,7 @@ export function EditorPane({
   if (file) {
     return (
       <LoadedEditorPane
-        key={`${file.path}:${file.loadedAt}`}
+        key={file.path}
         file={file}
         diagnostics={diagnostics}
         revealLine={revealLine}
