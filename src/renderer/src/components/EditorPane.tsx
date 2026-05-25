@@ -52,6 +52,20 @@ function configureMonaco(monaco: Monaco): void {
   if (monaco.languages.getLanguages().some((l: { id: string }) => l.id === "latex")) return;
 
   monaco.languages.register({ id: "latex", extensions: [".tex", ".sty", ".cls"] });
+  monaco.languages.setLanguageConfiguration("latex", {
+    comments: { lineComment: "%" },
+    brackets: [
+      ["{", "}"],
+      ["[", "]"],
+      ["(", ")"],
+    ],
+    autoClosingPairs: [
+      { open: "{", close: "}" },
+      { open: "[", close: "]" },
+      { open: "(", close: ")" },
+      { open: "$", close: "$" },
+    ],
+  });
   monaco.languages.setMonarchTokensProvider("latex", {
     tokenizer: {
       root: [
@@ -74,6 +88,20 @@ function configureMonaco(monaco: Monaco): void {
         [/%.*$/, "comment"],
       ],
     },
+  });
+}
+
+function registerLspEditorCommands(editor: editor.IStandaloneCodeEditor, monaco: Monaco): void {
+  const runBuiltin = (actionId: string) => {
+    const action = editor.getAction(actionId);
+    if (action) void action.run();
+  };
+
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.F12, () => {
+    runBuiltin("editor.action.revealDefinition");
+  });
+  editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.F12, () => {
+    runBuiltin("editor.action.goToReferences");
   });
 }
 
@@ -224,6 +252,9 @@ function LoadedEditorPane({
           const model = ed.getModel();
           if (model) monaco.editor.setModelMarkers(model, "latex-compiler", markers);
           ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveNow);
+          if (usesLspModel) {
+            registerLspEditorCommands(ed, monaco);
+          }
         }}
         options={{
           minimap: { enabled: false },

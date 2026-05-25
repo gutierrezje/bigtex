@@ -5,6 +5,7 @@ import {
   MonacoLanguageClient,
   MonacoServices,
 } from "monaco-languageclient";
+import { TEXLAB_DOCUMENT_SELECTOR } from "./document-selector";
 import { disposeAllLspEditorDocuments } from "./editor-documents";
 import { pathToFileUri } from "./file-uri";
 import { createLspIpcBridge } from "./ipc-bridge";
@@ -30,10 +31,7 @@ export async function startTexlabLanguageClient(options: {
   const languageClient = new MonacoLanguageClient({
     name: "Texlab",
     clientOptions: {
-      documentSelector: [
-        { scheme: "file", language: "latex" },
-        { scheme: "file", language: "bibtex" },
-      ],
+      documentSelector: TEXLAB_DOCUMENT_SELECTOR,
       diagnosticCollectionName: LSP_DIAGNOSTIC_OWNER,
       initializationOptions: options.mainFile ? { rootFile: options.mainFile } : {},
       errorHandler: {

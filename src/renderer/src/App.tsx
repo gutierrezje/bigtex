@@ -282,7 +282,6 @@ export function App() {
         rootPath: snapshot.rootPath,
         mainFile: snapshot.mainFile,
       });
-      syncLspEditorTabModels(useAppStore.getState().editorTabs.files);
     } catch (error) {
       appendOutput(
         error instanceof Error

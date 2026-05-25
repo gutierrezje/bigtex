@@ -32,6 +32,7 @@ Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with
 | Renderer layout + flows | src/renderer/src/App.tsx |
 | Editor autosave + diagnostics | src/renderer/src/components/EditorPane.tsx |
 | PDF preview | src/renderer/src/components/PdfPreview.tsx |
+| Texlab LSP (main session + renderer client) | src/main/lsp/texlab.ts, src/renderer/src/lsp/ |
 | Assistant UI runtime | src/renderer/src/components/agent/BigTexAssistantRuntime.tsx |
 
 ## CONVENTIONS
@@ -90,6 +91,7 @@ Single-context: one root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`
 - Project tree hides `.tex-build/` (latexmk outdir) plus build/aux dirs and LaTeX artifact extensions.
 - ACP messages are parsed for fenced diff blocks; extracted patches emit via IPC.
 - Compiler diagnostics merged from latexmk console output and `.tex-build/{main}.log`; capped at 100 entries.
+- Texlab language-server assist (completion, hover, go-to-definition, find references) for `.tex`, `.bib`, `.sty`, `.cls` via `file://` Monaco models; Problems lists compile + static rows with badges.
 - Performance marks recorded in main via measure()/recordMark; renderer shows latest.
 
 ## NOTES

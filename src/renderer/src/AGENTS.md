@@ -26,7 +26,8 @@ src/renderer/src/
 | Agent event subscription | hooks/useAgentEvents.ts |
 | Welcome open + recents IPC | hooks/useWelcomeOpen.ts |
 | Monaco editor + autosave + diagnostics markers | components/EditorPane.tsx |
-| Diagnostics list + compile button | components/DiagnosticsPanel.tsx |
+| Texlab LSP client + editor document models | lsp/texlab-client.ts, lsp/editor-documents.ts |
+| Problems (compile + static) | components/ProblemsPanel.tsx, hooks/useStaticDiagnostics.ts |
 | PDF rendering + paging | components/PdfPreview.tsx |
 | Agent chat UI + patch actions | components/AgentPanel.tsx |
 | Assistant runtime adapter | components/agent/BigTexAssistantRuntime.tsx |
