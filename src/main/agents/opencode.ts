@@ -66,7 +66,19 @@ interface ActiveAcpRun {
   stopWatch: () => void;
 }
 
+interface PersistentSession {
+  child: ChildProcessWithoutNullStreams;
+  connection: AcpConnection;
+  sessionId: string;
+  sessionConfig: AgentSessionConfig;
+  /** Called when the process exits unexpectedly while a run is in progress. */
+  onUnexpectedClose: ((exitCode: number | null) => void) | null;
+}
+
 const activeRuns = new Map<string, ActiveAcpRun>();
+const persistentSessions = new Map<string, PersistentSession>();
+/** runIds that were cancelled — used to suppress finished/patch emission. */
+const cancelledRuns = new Set<string>();
 
 function splitCommand(commandLine: string): string[] {
   const tokens = commandLine.match(/(?:[^\s"]+|"[^"]*")+/g) ?? [];
@@ -110,10 +122,24 @@ class AcpConnection {
       this.consume(chunk.toString("utf8"));
     });
 
+    // Use this.* so updateRunContext() reroutes stderr to the active run.
     child.stderr.on("data", (chunk: Buffer) => {
       const text = chunk.toString("utf8");
-      emit({ type: "stderr", runId, chunk: text, at: Date.now() });
+      this.emit({ type: "stderr", runId: this.runId, chunk: text, at: Date.now() });
     });
+  }
+
+  /** Swap run-specific context for a new turn on the same persistent session. */
+  updateRunContext(
+    runId: string,
+    emit: (event: AgentEvent) => void,
+    appendTranscript: (text: string) => void,
+  ): void {
+    this.runId = runId;
+    this.emit = emit;
+    this.appendTranscript = appendTranscript;
+    // Per-run semantics: permission grants do not reset across turns —
+    // "allow for session" carries through the conversation intentionally.
   }
 
   request<T>(method: string, params?: unknown): Promise<T> {
@@ -458,46 +484,83 @@ export async function runOpencode(
   emit: (event: AgentEvent) => void,
 ): Promise<AgentRunSummary> {
   const runId = randomUUID();
-  const command = OPENCODE_ACP_COMMAND;
-  const args = [...OPENCODE_ACP_ARGS];
   const startedAt = performance.now();
   let transcript = "";
+  const appendTranscript = (text: string) => {
+    transcript += text;
+  };
 
   for (const file of input.selectedFiles) {
     assertInsideRoot(input.rootPath, file);
   }
 
-  const child = spawn(command, args, {
-    cwd: input.rootPath,
-    shell: false,
-    env: opencodeShellEnv(),
-  });
+  // ── Reuse or create persistent session ───────────────────────────────────
+  let persistent = persistentSessions.get(input.rootPath);
 
-  const stopWatch = startProjectWatch(input.rootPath, runId, emit);
-  activeRuns.set(runId, { child, sessionId: null, stopWatch });
+  if (!persistent) {
+    const child = spawn(OPENCODE_ACP_COMMAND, [...OPENCODE_ACP_ARGS], {
+      cwd: input.rootPath,
+      shell: false,
+      env: opencodeShellEnv(),
+    });
 
-  emit({
-    type: "started",
-    runId,
-    command: `${command} ${args.join(" ")}`,
-    at: Date.now(),
-  });
+    // Unexpected process death — fire the active run's completion handler.
+    child.on("close", (exitCode) => {
+      const dead = persistentSessions.get(input.rootPath);
+      if (dead?.child === child) {
+        persistentSessions.delete(input.rootPath);
+        dead.onUnexpectedClose?.(exitCode);
+      }
+    });
 
-  const connection = new AcpConnection(child, runId, input.rootPath, emit, (text) => {
-    transcript += text;
-  });
+    const connection = new AcpConnection(child, runId, input.rootPath, emit, appendTranscript);
 
-  child.on("error", (error) => {
-    emit({ type: "error", runId, message: error.message, at: Date.now() });
-  });
-
-  child.on("close", (exitCode) => {
-    activeRuns.get(runId)?.stopWatch();
-    activeRuns.delete(runId);
-    const patch = extractPatch(transcript);
-    if (patch) {
-      emit({ type: "patch", runId, patch, at: Date.now() });
+    let sessionConfig: AgentSessionConfig;
+    let sessionId: string;
+    try {
+      await connection.request("initialize", ACP_INITIALIZE_PARAMS);
+      const session = await connection.request<AcpSessionNewResult>("session/new", {
+        cwd: input.rootPath,
+        mcpServers: [],
+      });
+      sessionId = session.sessionId;
+      sessionConfig = parseAgentSessionConfig(session);
+    } catch (error) {
+      child.kill("SIGTERM");
+      emit({
+        type: "error",
+        runId,
+        message: error instanceof Error ? error.message : "ACP init failed",
+        at: Date.now(),
+      });
+      emit({
+        type: "finished",
+        runId,
+        exitCode: null,
+        durationMs: Math.round(performance.now() - startedAt),
+        at: Date.now(),
+      });
+      return { runId };
     }
+
+    persistent = { child, connection, sessionId, sessionConfig, onUnexpectedClose: null };
+    persistentSessions.set(input.rootPath, persistent);
+  } else {
+    // Existing session — swap the run context so events route to this turn.
+    persistent.connection.updateRunContext(runId, emit, appendTranscript);
+  }
+
+  // ── Active run tracking ───────────────────────────────────────────────────
+  const stopWatch = startProjectWatch(input.rootPath, runId, emit);
+  activeRuns.set(runId, { child: persistent.child, sessionId: persistent.sessionId, stopWatch });
+
+  // Called if the process exits while this run is in progress.
+  const capturePersistent = persistent;
+  capturePersistent.onUnexpectedClose = (exitCode) => {
+    const patch = extractPatch(transcript);
+    if (patch) emit({ type: "patch", runId, patch, at: Date.now() });
+    stopWatch();
+    activeRuns.delete(runId);
     emit({
       type: "finished",
       runId,
@@ -505,42 +568,74 @@ export async function runOpencode(
       durationMs: Math.round(performance.now() - startedAt),
       at: Date.now(),
     });
+  };
+
+  emit({
+    type: "started",
+    runId,
+    command: `${OPENCODE_ACP_COMMAND} ${OPENCODE_ACP_ARGS.join(" ")}`,
+    at: Date.now(),
   });
 
+  // ── Prompt (async — returns immediately so IPC handler can respond) ───────
   void (async () => {
     try {
-      await connection.request("initialize", ACP_INITIALIZE_PARAMS);
-
-      const session = await connection.request<AcpSessionNewResult>("session/new", {
-        cwd: input.rootPath,
-        mcpServers: [],
-      });
-
-      const active = activeRuns.get(runId);
-      if (active) active.sessionId = session.sessionId;
-
-      const sessionConfig = parseAgentSessionConfig(session);
-      const modelId = resolveModelIdForRun(sessionConfig, input.modelId, input.reasoningLevel);
-      if (modelId && modelId !== sessionConfig.currentModelId) {
-        await applySessionModel(connection, session.sessionId, modelId);
+      // Apply model preference if it changed since the session was created.
+      const modelId = resolveModelIdForRun(
+        capturePersistent.sessionConfig,
+        input.modelId,
+        input.reasoningLevel,
+      );
+      if (modelId && modelId !== capturePersistent.sessionConfig.currentModelId) {
+        await applySessionModel(capturePersistent.connection, capturePersistent.sessionId, modelId);
+        capturePersistent.sessionConfig = {
+          ...capturePersistent.sessionConfig,
+          currentModelId: modelId,
+        };
       }
 
-      await connection.request("session/prompt", {
-        sessionId: session.sessionId,
+      await capturePersistent.connection.request("session/prompt", {
+        sessionId: capturePersistent.sessionId,
         prompt: acpPrompt(input),
       });
 
-      // OpenCode may emit session/update notifications after the prompt RPC returns.
-      await new Promise((resolve) => setTimeout(resolve, 750));
-      child.stdin.end();
+      // Wait for trailing session/update notifications to flush.
+      await new Promise<void>((resolve) => setTimeout(resolve, 750));
+
+      // Silently stop if the run was cancelled.
+      if (!activeRuns.has(runId)) return;
+
+      // Normal completion — session stays alive for the next turn.
+      capturePersistent.onUnexpectedClose = null;
+      const patch = extractPatch(transcript);
+      if (patch) emit({ type: "patch", runId, patch, at: Date.now() });
+      stopWatch();
+      activeRuns.delete(runId);
+      emit({
+        type: "finished",
+        runId,
+        exitCode: 0,
+        durationMs: Math.round(performance.now() - startedAt),
+        at: Date.now(),
+      });
     } catch (error) {
+      if (!activeRuns.has(runId)) return; // already cancelled
+      capturePersistent.onUnexpectedClose = null;
       emit({
         type: "error",
         runId,
         message: error instanceof Error ? error.message : "ACP run failed",
         at: Date.now(),
       });
-      child.kill("SIGTERM");
+      stopWatch();
+      activeRuns.delete(runId);
+      emit({
+        type: "finished",
+        runId,
+        exitCode: null,
+        durationMs: Math.round(performance.now() - startedAt),
+        at: Date.now(),
+      });
     }
   })();
 
@@ -551,7 +646,21 @@ export async function cancelOpencode(runId: string): Promise<void> {
   const active = activeRuns.get(runId);
   if (!active) return;
 
+  // Stop the file watcher and mark as cancelled — do NOT kill the process so
+  // the persistent session and conversation history survive.
   active.stopWatch();
-  active.child.kill("SIGTERM");
   activeRuns.delete(runId);
+  cancelledRuns.add(runId);
+  // Prevent unbounded growth of cancelled set.
+  setTimeout(() => cancelledRuns.delete(runId), 10_000);
+}
+
+/** Kill the persistent session for a project root (e.g. on project close or user-initiated clear). */
+export function clearSession(rootPath: string): void {
+  const session = persistentSessions.get(rootPath);
+  if (!session) return;
+  persistentSessions.delete(rootPath);
+  session.onUnexpectedClose = null; // suppress the in-flight run callback
+  session.child.stdin.end();
+  session.child.kill("SIGTERM");
 }

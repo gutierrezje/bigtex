@@ -45,6 +45,7 @@ export const IPC_CHANNELS = {
   agentCheck: "agent:check",
   agentRun: "agent:run",
   agentCancel: "agent:cancel",
+  agentClearSession: "agent:clear-session",
   agentConfig: "agent:config",
   agentProbeModel: "agent:probe-model",
   agentEvent: "agent:event",
@@ -176,6 +177,7 @@ export interface BigTexApi {
     probeModelVariants(rootPath: string, modelId: string): Promise<string[]>;
     run(request: AgentRunInput): Promise<AgentRunSummary>;
     cancel(request: AgentCancelRequest): Promise<void>;
+    clearSession(rootPath: string): Promise<void>;
     onEvent(listener: (event: AgentEvent) => void): () => void;
   };
   patch: {

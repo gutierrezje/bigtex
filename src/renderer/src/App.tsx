@@ -363,7 +363,10 @@ export function App() {
       const rootPath = useAppStore.getState().project?.rootPath;
       void (async () => {
         await stopTexlabLanguageClient();
-        if (rootPath) await window.bigTex.lsp.stopSession(rootPath);
+        if (rootPath) {
+          await window.bigTex.lsp.stopSession(rootPath);
+          await window.bigTex.agent.clearSession(rootPath);
+        }
       })();
       setProject(null);
       setOpeningMainFilePath(null);
@@ -408,7 +411,7 @@ export function App() {
       editorTabs.files
         .find((f) => f.path === activeEditor.path)
         ?.content.includes("\\documentclass");
-    const mainFile = (activeIsRoot ? activeEditor.path : null) ?? project.mainFile;
+    const mainFile = (activeIsRoot && activeEditor ? activeEditor.path : null) ?? project.mainFile;
     if (!mainFile) return;
 
     setCompiling(true);
@@ -760,6 +763,10 @@ export function App() {
                 chat={agentChat}
                 onRun={runAgent}
                 onCancel={(runId) => window.bigTex.agent.cancel({ runId })}
+                onClearChat={() => {
+                  if (project) void window.bigTex.agent.clearSession(project.rootPath);
+                  clearAgent();
+                }}
                 onApplyPatch={applyPatch}
               />
             </Panel>

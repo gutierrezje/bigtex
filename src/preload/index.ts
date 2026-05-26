@@ -60,6 +60,7 @@ const api: BigTexApi = {
       ipcRenderer.invoke(IPC_CHANNELS.agentProbeModel, rootPath, modelId),
     run: (request) => ipcRenderer.invoke(IPC_CHANNELS.agentRun, request),
     cancel: (request) => ipcRenderer.invoke(IPC_CHANNELS.agentCancel, request),
+    clearSession: (rootPath) => ipcRenderer.invoke(IPC_CHANNELS.agentClearSession, rootPath),
     onEvent: (listener) => {
       const handler = (_event: Electron.IpcRendererEvent, agentEvent: AgentEvent) => {
         listener(agentEvent);

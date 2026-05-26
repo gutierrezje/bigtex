@@ -36,6 +36,7 @@ interface AgentPanelProps {
   chat: AgentChatState;
   onRun(prompt: string, modelId: string, reasoningLevel: string | null): Promise<void>;
   onCancel(runId: string): Promise<void>;
+  onClearChat(): void;
   onApplyPatch(patch: string): Promise<void>;
 }
 
@@ -107,6 +108,7 @@ function ChatMessage() {
 interface ChatThreadProps {
   activeFile: string | null;
   onApplyPatch(patch: string): Promise<void>;
+  onClearChat(): void;
 }
 
 function AgentComposerContext({ activeFile }: { activeFile: string | null }) {
@@ -121,7 +123,7 @@ function AgentComposerContext({ activeFile }: { activeFile: string | null }) {
   );
 }
 
-function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
+function ChatThread({ activeFile, onApplyPatch, onClearChat }: ChatThreadProps) {
   return (
     <PatchApplyContext.Provider value={onApplyPatch}>
       <ThreadPrimitive.Root className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
@@ -152,6 +154,7 @@ export function AgentPanel({
   chat,
   onRun,
   onCancel,
+  onClearChat,
   onApplyPatch,
 }: AgentPanelProps) {
   return (
@@ -171,11 +174,19 @@ export function AgentPanel({
           >
             cancel
           </button>
+        ) : chat.messages.length > 0 ? (
+          <button
+            type="button"
+            className={`shrink-0 rounded border border-border/60 bg-transparent px-2 py-0.5 ${TREE_LABEL_CLASS} text-text-muted transition-colors duration-100 hover:border-border hover:text-text-secondary cursor-pointer`}
+            onClick={onClearChat}
+          >
+            clear
+          </button>
         ) : null}
       </header>
 
       <BigTexAssistantRuntime disabled={!rootPath} onRun={onRun} onCancel={onCancel}>
-        <ChatThread activeFile={activeFile} onApplyPatch={onApplyPatch} />
+        <ChatThread activeFile={activeFile} onApplyPatch={onApplyPatch} onClearChat={onClearChat} />
       </BigTexAssistantRuntime>
     </aside>
   );

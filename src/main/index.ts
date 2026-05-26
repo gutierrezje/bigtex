@@ -22,6 +22,7 @@ import { mergeEffectiveSettings } from "../shared/settings";
 import {
   cancelOpencode,
   checkOpencode,
+  clearSession,
   loadOpencodeSessionConfig,
   probeOpencodeModelVariants,
   runOpencode,
@@ -271,6 +272,10 @@ function registerIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.agentCancel, (_event, request: { runId: string }) =>
     cancelOpencode(request.runId),
+  );
+
+  ipcMain.handle(IPC_CHANNELS.agentClearSession, (_event, rootPath: string) =>
+    clearSession(rootPath),
   );
 
   ipcMain.handle(IPC_CHANNELS.patchApply, (_event, request: PatchApplyRequest) =>
