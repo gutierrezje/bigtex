@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isProjectCompileSourcePath,
   mergeCompileDiagnostics,
   normalizeCompileDiagnosticPath,
   parseDiagnostics,
@@ -42,6 +43,19 @@ describe("normalizeCompileDiagnosticPath", () => {
   });
 });
 
+describe("isProjectCompileSourcePath", () => {
+  it("rejects TeX Live paths and accepts project-relative sources", () => {
+    expect(
+      isProjectCompileSourcePath(
+        "/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/color.sty",
+        "/home/user/resume",
+      ),
+    ).toBe(false);
+    expect(isProjectCompileSourcePath("./JesusGutierrezCPP.tex", "/home/user/resume")).toBe(true);
+    expect(isProjectCompileSourcePath("resume.cls", "/home/user/resume")).toBe(true);
+  });
+});
+
 describe("resolveCompileLogPath", () => {
   it("points at the build-dir log for the main file stem", () => {
     expect(resolveCompileLogPath("/proj", "main.tex")).toBe("/proj/.tex-build/main.log");
@@ -75,6 +89,15 @@ describe("parseDiagnostics", () => {
   it("normalizes paths when rootPath is provided", () => {
     const parsed = parseDiagnostics("./chapters/a.tex:1: error x", "/proj");
     expect(parsed[0]?.file).toBe("chapters/a.tex");
+  });
+
+  it("drops file:line rows that point at TeX Live paths when rootPath is set", () => {
+    expect(
+      parseDiagnostics(
+        "/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/color.sty:12: Overfull \\hbox\n",
+        "/home/user/resume",
+      ),
+    ).toEqual([]);
   });
 });
 
@@ -142,6 +165,27 @@ Package refcheck Warning: Unused label \`sec:duplicate' on input line 8.
         }),
       ]),
     );
+  });
+
+  it("attributes overfull hbox to the project tex file, not the last TeX Live sty opened", () => {
+    const log = `
+(./JesusGutierrezCPP.tex
+(/usr/local/texlive/2026/texmf-dist/tex/latex/graphics/color.sty
+Overfull \\hbox (30.0pt too wide) in paragraph at lines 12--12
+)`;
+    const parsed = parseDiagnosticsFromLog(log, {
+      rootPath: "/home/user/JesusGutierrezResume",
+      mainFile: "JesusGutierrezCPP.tex",
+    });
+    expect(parsed).toEqual([
+      expect.objectContaining({
+        file: "JesusGutierrezCPP.tex",
+        line: 12,
+        severity: "warning",
+        message: expect.stringContaining("Overfull \\hbox"),
+      }),
+    ]);
+    expect(parsed.some((d) => d.file?.includes("color.sty"))).toBe(false);
   });
 });
 

@@ -86,6 +86,7 @@ function compileWithProcess(
 
       const diagnostics = resolveCompileDiagnostics(output, logText, {
         rootPath: request.rootPath,
+        mainFile: request.mainFile,
       });
 
       resolve({

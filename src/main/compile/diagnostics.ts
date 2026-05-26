@@ -39,6 +39,18 @@ export function normalizeCompileDiagnosticPath(
   return normalizeDiagnosticPath(normalized) ?? normalized;
 }
 
+/** True when the path refers to a user project source, not TeX Live / absolute vendor files. */
+export function isProjectCompileSourcePath(file: string | null, rootPath?: string): boolean {
+  if (!file) return false;
+  const raw = file.replace(/\\/g, "/");
+  if (/texmf-dist|\/texlive\//i.test(raw)) return false;
+
+  const normalized = normalizeCompileDiagnosticPath(file, rootPath);
+  if (!normalized) return false;
+  if (normalized.startsWith("/")) return false;
+  return true;
+}
+
 function diagnosticKey(diagnostic: CompileDiagnostic): string {
   const file = normalizeCompileDiagnosticPath(diagnostic.file) ?? "";
   return `${diagnostic.severity}|${file}|${diagnostic.line ?? ""}|${diagnostic.message}`;
@@ -65,6 +77,7 @@ function pushDiagnostic(
   rootPath?: string,
 ): void {
   if (diagnostics.length >= MAX_DIAGNOSTICS) return;
+  if (diagnostic.file && !isProjectCompileSourcePath(diagnostic.file, rootPath)) return;
   diagnostics.push({
     ...diagnostic,
     file: normalizeCompileDiagnosticPath(diagnostic.file, rootPath),
@@ -124,23 +137,47 @@ export function parseDiagnostics(output: string, rootPath?: string): CompileDiag
 
 export function parseDiagnosticsFromLog(
   logText: string,
-  options?: { rootPath?: string },
+  options?: { rootPath?: string; mainFile?: string },
 ): CompileDiagnostic[] {
   const diagnostics: CompileDiagnostic[] = [];
   const rootPath = options?.rootPath;
+  const mainFile = options?.mainFile
+    ? normalizeCompileDiagnosticPath(options.mainFile, rootPath)
+    : null;
   let currentFile: string | null = null;
+  const projectFileStack: string[] = [];
   let pendingErrorMessage: string | null = null;
 
+  const activeProjectFile = (): string | null => {
+    const top = projectFileStack[projectFileStack.length - 1];
+    if (top) return top;
+    if (currentFile && isProjectCompileSourcePath(currentFile, rootPath)) {
+      return normalizeCompileDiagnosticPath(currentFile, rootPath);
+    }
+    return mainFile;
+  };
+
+  const trackInputFile = (rawPath: string): void => {
+    currentFile = rawPath;
+    if (!isProjectCompileSourcePath(rawPath, rootPath)) return;
+    const normalized = normalizeCompileDiagnosticPath(rawPath, rootPath);
+    if (normalized) projectFileStack.push(normalized);
+  };
+
   for (const line of logText.split(/\r?\n/)) {
+    if (/^\s*\)\s*$/.test(line)) {
+      projectFileStack.pop();
+    }
+
     const inputMatch = line.match(INPUT_FILE_PATTERN);
     if (inputMatch) {
-      currentFile = inputMatch[1];
+      trackInputFile(inputMatch[1]);
     }
 
     const fileLine = line.match(FILE_LINE_PATTERN);
     if (fileLine) {
       pendingErrorMessage = null;
-      currentFile = fileLine[1];
+      trackInputFile(fileLine[1]);
       pushDiagnostic(
         diagnostics,
         {
@@ -154,13 +191,15 @@ export function parseDiagnosticsFromLog(
       continue;
     }
 
+    const contextualFile = activeProjectFile();
+
     const latexWarning = line.match(LATEX_WARNING_LINE_PATTERN);
-    if (latexWarning && currentFile) {
+    if (latexWarning && contextualFile) {
       pendingErrorMessage = null;
       pushDiagnostic(
         diagnostics,
         {
-          file: currentFile,
+          file: contextualFile,
           line: Number(latexWarning[2]),
           severity: "warning",
           message: latexWarning[1].trim(),
@@ -171,12 +210,12 @@ export function parseDiagnosticsFromLog(
     }
 
     const packageWarning = line.match(PACKAGE_WARNING_LINE_PATTERN);
-    if (packageWarning && currentFile) {
+    if (packageWarning && contextualFile) {
       pendingErrorMessage = null;
       pushDiagnostic(
         diagnostics,
         {
-          file: currentFile,
+          file: contextualFile,
           line: Number(packageWarning[2]),
           severity: "warning",
           message: line.trim(),
@@ -187,11 +226,11 @@ export function parseDiagnosticsFromLog(
     }
 
     const overfull = line.match(OVERFULL_HBOX_PATTERN);
-    if (overfull && currentFile) {
+    if (overfull && contextualFile) {
       pushDiagnostic(
         diagnostics,
         {
-          file: currentFile,
+          file: contextualFile,
           line: Number(overfull[1]),
           severity: "warning",
           message: line.trim(),
@@ -204,11 +243,11 @@ export function parseDiagnosticsFromLog(
     if (line.startsWith("! ")) {
       pendingErrorMessage = line.slice(2).trim();
       const lineMatch = line.match(/^l\.(\d+)\s/);
-      if (lineMatch && currentFile) {
+      if (lineMatch && contextualFile) {
         pushDiagnostic(
           diagnostics,
           {
-            file: currentFile,
+            file: contextualFile,
             line: Number(lineMatch[1]),
             severity: "error",
             message: pendingErrorMessage,
@@ -221,11 +260,11 @@ export function parseDiagnosticsFromLog(
     }
 
     const texLine = line.match(/^l\.(\d+)\s/);
-    if (texLine && pendingErrorMessage && currentFile) {
+    if (texLine && pendingErrorMessage && contextualFile) {
       pushDiagnostic(
         diagnostics,
         {
-          file: currentFile,
+          file: contextualFile,
           line: Number(texLine[1]),
           severity: "error",
           message: pendingErrorMessage,
@@ -250,10 +289,12 @@ function dedupeDiagnostics(diagnostics: CompileDiagnostic[]): CompileDiagnostic[
 export function resolveCompileDiagnostics(
   output: string,
   logText: string | null,
-  options?: { rootPath?: string },
+  options?: { rootPath?: string; mainFile?: string },
 ): CompileDiagnostic[] {
   const rootPath = options?.rootPath;
   const consoleDiagnostics = parseDiagnostics(output, rootPath);
-  const logDiagnostics = logText ? parseDiagnosticsFromLog(logText, { rootPath }) : [];
+  const logDiagnostics = logText
+    ? parseDiagnosticsFromLog(logText, { rootPath, mainFile: options?.mainFile })
+    : [];
   return mergeCompileDiagnostics(consoleDiagnostics, logDiagnostics);
 }
