@@ -1,7 +1,8 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ShikiHighlighter from "react-shiki/core";
 import type { HighlighterCore } from "shiki/core";
 import { getAgentHighlighter, normalizeAgentLanguage } from "../../lib/shiki";
+import { AgentDiffBlock, parsePatch } from "./AgentDiffBlock";
 
 function languageFromClassName(className: string | undefined): string {
   const match = className?.match(/language-(\w+)/);
@@ -21,6 +22,12 @@ export function AgentCodeBlock({ className, children, streaming }: AgentCodeBloc
   const code = String(children).replace(/\n$/, "");
   const isBlock = Boolean(className) || code.includes("\n");
 
+  // Parse diff hunks when not streaming — renders as card UI instead of raw Shiki.
+  const diffFiles = useMemo(
+    () => (!streaming && language === "diff" ? parsePatch(code) : []),
+    [language, code, streaming],
+  );
+
   useEffect(() => {
     if (!isBlock || streaming) return;
 
@@ -33,6 +40,11 @@ export function AgentCodeBlock({ className, children, streaming }: AgentCodeBloc
       cancelled = true;
     };
   }, [className, isBlock, streaming]);
+
+  // Render diff card when we have valid parsed files.
+  if (diffFiles.length > 0) {
+    return <AgentDiffBlock files={diffFiles} fullPatch={code} />;
+  }
 
   if (!isBlock) {
     return <code className="agent-inline-code">{children}</code>;

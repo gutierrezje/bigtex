@@ -6,6 +6,7 @@ import {
   useAuiState,
 } from "@assistant-ui/react";
 import { CREATABLE_FILE_EXTENSIONS } from "../../../shared/projectFiles";
+import { PatchApplyContext } from "../context/PatchApplyContext";
 import {
   AGENT_MESSAGE_CLASS,
   CHROME_META_CLASS,
@@ -57,10 +58,9 @@ function EmptyThread() {
   );
 }
 
-function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<void> }) {
+function ChatMessage() {
   const message = useAuiState((state) => state.message);
-  const custom = message.metadata?.custom as { patch?: unknown; activity?: unknown } | undefined;
-  const patch = typeof custom?.patch === "string" ? custom.patch : null;
+  const custom = message.metadata?.custom as { activity?: unknown } | undefined;
   const activity = typeof custom?.activity === "string" ? custom.activity.trim() : "";
   const isAssistant = message.role === "assistant";
 
@@ -98,15 +98,6 @@ function ChatMessage({ onApplyPatch }: { onApplyPatch(patch: string): Promise<vo
               Copy
             </ActionBarPrimitive.Copy>
           </ActionBarPrimitive.Root>
-          {patch ? (
-            <button
-              type="button"
-              className={`rounded border border-accent/20 bg-accent/8 px-2.5 py-0.5 ${TREE_LABEL_CLASS} text-accent transition-colors duration-100 hover:bg-accent/15 cursor-pointer`}
-              onClick={() => onApplyPatch(patch)}
-            >
-              Apply detected patch
-            </button>
-          ) : null}
         </div>
       ) : null}
     </MessagePrimitive.Root>
@@ -132,26 +123,26 @@ function AgentComposerContext({ activeFile }: { activeFile: string | null }) {
 
 function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
   return (
-    <ThreadPrimitive.Root className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
-      <ThreadPrimitive.Viewport
-        autoScroll
-        turnAnchor="bottom"
-        className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain bg-surface py-2"
-      >
-        <EmptyThread />
-        <ThreadPrimitive.Messages>
-          {() => <ChatMessage onApplyPatch={onApplyPatch} />}
-        </ThreadPrimitive.Messages>
-        <ThreadPrimitive.ViewportFooter />
-      </ThreadPrimitive.Viewport>
+    <PatchApplyContext.Provider value={onApplyPatch}>
+      <ThreadPrimitive.Root className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
+        <ThreadPrimitive.Viewport
+          autoScroll
+          turnAnchor="bottom"
+          className="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain bg-surface py-2"
+        >
+          <EmptyThread />
+          <ThreadPrimitive.Messages>{() => <ChatMessage />}</ThreadPrimitive.Messages>
+          <ThreadPrimitive.ViewportFooter />
+        </ThreadPrimitive.Viewport>
 
-      <ComposerPrimitive.Root className="border-t border-border/40 bg-surface px-2 pb-2 pt-2">
-        <AgentPermissionBanner />
-        <AgentComposerContext activeFile={activeFile} />
-        <AgentModelToolbar />
-        <AgentComposer />
-      </ComposerPrimitive.Root>
-    </ThreadPrimitive.Root>
+        <ComposerPrimitive.Root className="border-t border-border/40 bg-surface px-2 pb-2 pt-2">
+          <AgentPermissionBanner />
+          <AgentComposerContext activeFile={activeFile} />
+          <AgentModelToolbar />
+          <AgentComposer />
+        </ComposerPrimitive.Root>
+      </ThreadPrimitive.Root>
+    </PatchApplyContext.Provider>
   );
 }
 
