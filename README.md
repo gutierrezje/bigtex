@@ -1,6 +1,6 @@
 # BigTeX
 
-Agent-first Electron LaTeX editor prototype focused on local performance.
+Agent-first Electron LaTeX editor: local compile and preview, with an assistant for proofreading, writing suggestions, and project edits—not only build fixes.
 
 ![BigTeX workbench: project tree, LaTeX editor, PDF preview, problems panel, and assistant](docs/images/SCR-20260523-topk.png)
 
@@ -35,3 +35,7 @@ On macOS, a fresh TeX install sometimes needs a new terminal session (or IDE res
 pnpm install
 pnpm run dev
 ```
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE).

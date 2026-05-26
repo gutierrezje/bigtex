@@ -3,6 +3,7 @@
   "productName": "BigTeX",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Agent-first Electron LaTeX editor prototype.",
   "type": "module",
   "packageManager": "pnpm@10.15.1",

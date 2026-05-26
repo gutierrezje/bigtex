@@ -40,6 +40,9 @@ Thumbs.db
 # Personal samples (keep local only)
 samples/JesusGutierrezResume/
 
+# Internal
+PRODUCT.md
+
 # LaTeX build output (BigTeX latexmk -outdir)
 .tex-build/
 

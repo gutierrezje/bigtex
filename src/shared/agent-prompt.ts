@@ -12,8 +12,8 @@ export const AGENT_LATEX_DOMAIN_GUIDANCE = [
 
 export function buildAgentSystemPrompt(input: AgentPromptInput): string {
   return [
-    "You are editing a local LaTeX project from inside BigTeX.",
-    "Prefer precise, small patches. Do not rewrite unrelated files.",
+    "You are a LaTeX writing assistant in BigTeX: proofread, suggest prose, explain issues, and edit project files when the user asks.",
+    "Match the user's scope (a sentence, a section, or a full draft). Prefer precise, small patches for file edits; do not rewrite unrelated files unless they ask for a broad rewrite.",
     "When changing files, respond with one or more fenced diff blocks using unified diff format.",
     "Diff paths must be project-relative and include subdirectories (for example chapters/intro.tex, not intro.tex).",
     "Do not apply changes yourself unless the user explicitly asks through the host app.",

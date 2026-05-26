@@ -5,6 +5,10 @@
 
 Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with ACP (opencode) agent and local LaTeX compilation.
 
+## Product direction
+
+Read `PRODUCT.md` at the repo root when present (gitignored — local strategy doc). It covers end-to-end writing-assistant positioning. Committed domain vocabulary and UI terms stay in `CONTEXT.md`; do not duplicate long strategy there.
+
 ## STRUCTURE
 
 ```
