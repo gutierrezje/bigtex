@@ -270,7 +270,10 @@ function summarizeGitApplyOutput(output: string): string {
   const lines = output.split(/\r?\n/).filter(Boolean);
   const errorLines = lines.filter((line) => line.startsWith("error:"));
   const patchFailed = errorLines.find((line) => /patch failed/i.test(line));
-  if (patchFailed) return patchFailed.replace(/^error:\s*/i, "").trim();
+  if (patchFailed) {
+    const location = patchFailed.replace(/^error:\s*/i, "").trim();
+    return `${location} — file content has changed since the patch was generated. Save your changes and ask the agent to try again.`;
+  }
   const rejected = lines.find((line) => /Rejected hunk/i.test(line));
   if (rejected) return rejected.trim();
   const errorLine = errorLines[0];
@@ -281,12 +284,25 @@ function summarizeGitApplyOutput(output: string): string {
   return output.length > 240 ? `${output.slice(0, 240)}…` : output;
 }
 
+/** Remove any .rej files left by previous git apply --reject runs. */
+function cleanupRejFiles(rootPath: string, changedFiles: string[]): void {
+  const root = resolve(rootPath);
+  for (const file of changedFiles) {
+    const rejPath = join(root, `${file}.rej`);
+    try {
+      rmSync(rejPath, { force: true });
+    } catch {
+      // Best-effort cleanup — ignore errors.
+    }
+  }
+}
+
 async function runGitApply(
   rootPath: string,
   patch: string,
   strip: number,
 ): Promise<{ exitCode: number | null; output: string }> {
-  const args = ["apply", "--whitespace=nowarn", "--reject", `-p${strip}`, "-"];
+  const args = ["apply", "--whitespace=nowarn", `-p${strip}`, "-"];
 
   return new Promise((resolve) => {
     const child = spawn("git", args, {
@@ -333,6 +349,7 @@ export async function applyUnifiedPatch(request: PatchApplyRequest): Promise<Pat
     };
   }
 
+  cleanupRejFiles(request.rootPath, changedFiles);
   return {
     applied: false,
     changedFiles,

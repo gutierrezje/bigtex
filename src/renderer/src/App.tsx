@@ -469,6 +469,7 @@ export function App() {
     reasoningLevel: string | null,
   ): Promise<void> {
     if (!project) return;
+    await flushDirtyEditorTabs();
     const mainFile = project.mainFile ?? activeEditor?.path ?? null;
     const compileSummary =
       compileResult && mainFile ? formatCompileSummary(compileResult, mainFile) : null;
