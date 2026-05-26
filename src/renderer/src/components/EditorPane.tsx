@@ -96,6 +96,44 @@ function configureMonaco(monaco: Monaco): void {
   });
 }
 
+const EDITOR_RESIZE_REFLOW_MS = 50;
+
+/** Monaco can keep unwrapped line geometry after the host shrinks; refresh wrap on narrow. */
+function attachEditorResizeReflow(
+  editor: editor.IStandaloneCodeEditor,
+  host: HTMLElement,
+): () => void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let lastWidth = host.clientWidth;
+
+  const reflow = (): void => {
+    editor.layout();
+    const width = host.clientWidth;
+    if (width < lastWidth - 0.5) {
+      editor.updateOptions({ wordWrap: "off" });
+      editor.updateOptions({ wordWrap: "on" });
+    }
+    lastWidth = width;
+  };
+
+  const schedule = (): void => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      reflow();
+    }, EDITOR_RESIZE_REFLOW_MS);
+  };
+
+  const observer = new ResizeObserver(schedule);
+  observer.observe(host);
+  reflow();
+
+  return () => {
+    if (timer) clearTimeout(timer);
+    observer.disconnect();
+  };
+}
+
 function registerLspEditorCommands(editor: editor.IStandaloneCodeEditor, monaco: Monaco): void {
   const runBuiltin = (actionId: string) => {
     const action = editor.getAction(actionId);
@@ -154,6 +192,8 @@ function LoadedEditorPane({
   onSave,
 }: LoadedEditorPaneProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const editorHostRef = useRef<HTMLDivElement | null>(null);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const draftContentRef = useRef(file.content);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -208,6 +248,8 @@ function LoadedEditorPane({
   useEffect(
     () => () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      resizeCleanupRef.current?.();
+      resizeCleanupRef.current = null;
     },
     [],
   );
@@ -232,47 +274,52 @@ function LoadedEditorPane({
 
   return (
     <section className="grid h-full min-h-0 min-w-0 overflow-hidden bg-surface">
-      <Editor
-        key={file.path}
-        height="100%"
-        theme={BIGTEX_MONACO_THEME}
-        language={languageForPath(file.path)}
-        defaultValue={file.content}
-        value={usesLspModel ? undefined : file.content}
-        beforeMount={configureMonaco}
-        onChange={(v) => {
-          draftContentRef.current = v ?? "";
-          setDirty(true);
-          scheduleAutosave(draftContentRef.current);
-        }}
-        onMount={(ed, monaco) => {
-          registerBigTexMonacoTheme(monaco);
-          monaco.editor.setTheme(BIGTEX_MONACO_THEME);
-          editorRef.current = ed;
-          monacoRef.current = monaco;
-          const lspModel = getOrCreateLspEditorModel(file);
-          if (lspModel) {
-            ed.setModel(lspModel);
-          }
-          const model = ed.getModel();
-          if (model) monaco.editor.setModelMarkers(model, "latex-compiler", markers);
-          ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveNow);
-          if (usesLspModel) {
-            registerLspEditorCommands(ed, monaco);
-          }
-        }}
-        options={{
-          minimap: { enabled: false },
-          fontSize: 14,
-          fontFamily: "Geist Mono, ui-monospace, SFMono-Regular, Menlo, monospace",
-          lineHeight: 22,
-          padding: { top: 14, bottom: 14 },
-          scrollBeyondLastLine: false,
-          smoothScrolling: true,
-          automaticLayout: true,
-          wordWrap: "on",
-        }}
-      />
+      <div ref={editorHostRef} className="h-full min-h-0 min-w-0 overflow-hidden">
+        <Editor
+          key={file.path}
+          height="100%"
+          theme={BIGTEX_MONACO_THEME}
+          language={languageForPath(file.path)}
+          defaultValue={file.content}
+          value={usesLspModel ? undefined : file.content}
+          beforeMount={configureMonaco}
+          onChange={(v) => {
+            draftContentRef.current = v ?? "";
+            setDirty(true);
+            scheduleAutosave(draftContentRef.current);
+          }}
+          onMount={(ed, monaco) => {
+            registerBigTexMonacoTheme(monaco);
+            monaco.editor.setTheme(BIGTEX_MONACO_THEME);
+            editorRef.current = ed;
+            monacoRef.current = monaco;
+            const lspModel = getOrCreateLspEditorModel(file);
+            if (lspModel) {
+              ed.setModel(lspModel);
+            }
+            const model = ed.getModel();
+            if (model) monaco.editor.setModelMarkers(model, "latex-compiler", markers);
+            ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveNow);
+            if (usesLspModel) {
+              registerLspEditorCommands(ed, monaco);
+            }
+            resizeCleanupRef.current?.();
+            const host = editorHostRef.current;
+            resizeCleanupRef.current = host ? attachEditorResizeReflow(ed, host) : null;
+          }}
+          options={{
+            minimap: { enabled: false },
+            fontSize: 14,
+            fontFamily: "Geist Mono, ui-monospace, SFMono-Regular, Menlo, monospace",
+            lineHeight: 22,
+            padding: { top: 14, bottom: 14 },
+            scrollBeyondLastLine: false,
+            smoothScrolling: true,
+            automaticLayout: true,
+            wordWrap: "on",
+          }}
+        />
+      </div>
     </section>
   );
 }
