@@ -403,7 +403,12 @@ export function App() {
 
   async function compile(): Promise<void> {
     if (!project) return;
-    const mainFile = project.mainFile ?? activeEditor?.path;
+    const activeIsRoot =
+      activeEditor?.path?.endsWith(".tex") &&
+      editorTabs.files
+        .find((f) => f.path === activeEditor.path)
+        ?.content.includes("\\documentclass");
+    const mainFile = (activeIsRoot ? activeEditor.path : null) ?? project.mainFile;
     if (!mainFile) return;
 
     setCompiling(true);
