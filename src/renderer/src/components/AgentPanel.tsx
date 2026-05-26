@@ -108,7 +108,6 @@ function ChatMessage() {
 interface ChatThreadProps {
   activeFile: string | null;
   onApplyPatch(patch: string): Promise<void>;
-  onClearChat(): void;
 }
 
 function AgentComposerContext({ activeFile }: { activeFile: string | null }) {
@@ -123,7 +122,7 @@ function AgentComposerContext({ activeFile }: { activeFile: string | null }) {
   );
 }
 
-function ChatThread({ activeFile, onApplyPatch, onClearChat }: ChatThreadProps) {
+function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
   return (
     <PatchApplyContext.Provider value={onApplyPatch}>
       <ThreadPrimitive.Root className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
@@ -186,7 +185,7 @@ export function AgentPanel({
       </header>
 
       <BigTexAssistantRuntime disabled={!rootPath} onRun={onRun} onCancel={onCancel}>
-        <ChatThread activeFile={activeFile} onApplyPatch={onApplyPatch} onClearChat={onClearChat} />
+        <ChatThread activeFile={activeFile} onApplyPatch={onApplyPatch} />
       </BigTexAssistantRuntime>
     </aside>
   );
