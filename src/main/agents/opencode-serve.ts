@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { relative, sep } from "node:path";
 import {
   baseModelId,
   filterAgentModels,
@@ -16,9 +17,11 @@ import type {
   AgentSessionConfig,
 } from "../../shared/domain";
 import type { AgentPermissionOption } from "../../shared/settings";
+import { assertInsideRoot } from "../files/project";
 import { resolveAgentPermission } from "../settings/permission-bridge";
 import type { AgentBackend } from "./backend";
 import { opencodeShellEnv, startOpencodeServe, stopOpencodeServe } from "./opencode-providers";
+import { unifiedDiffFromTexts } from "./patch";
 
 function notImplemented(): Error {
   return new Error("OpenCode serve backend is not implemented yet");
@@ -54,6 +57,7 @@ export interface ServeService {
     permissionId: string,
     response: ServePermissionResponse,
   ) => Promise<void>;
+  fetchSessionDiff: (sessionId: string) => Promise<ServeFileDiff[]>;
 }
 
 interface ServeActiveRun {
@@ -62,6 +66,16 @@ interface ServeActiveRun {
   startedAt: number;
   emit: (event: AgentEvent) => void;
   textParts: Map<string, string>;
+  emittedPatches: Set<string>;
+}
+
+interface ServeFileDiff {
+  file?: string;
+  path?: string;
+  before?: string;
+  after?: string;
+  oldText?: string;
+  newText?: string;
 }
 
 const serveServices = new Map<string, ServeService>();
@@ -171,6 +185,15 @@ async function ensureServeService(rootPath: string): Promise<ServeService> {
         { response },
       );
     },
+    fetchSessionDiff: async (sessionId) => {
+      const response = await fetch(
+        serveUrl(service, `/session/${encodeURIComponent(sessionId)}/diff`, rootPath),
+      );
+      if (!response.ok) {
+        throw new Error(`OpenCode diff request failed (${response.status})`);
+      }
+      return (await response.json()) as ServeFileDiff[];
+    },
   };
   serveServices.set(rootPath, service);
   child.on("exit", () => {
@@ -252,6 +275,21 @@ function permissionId(properties: Record<string, unknown>): string | null {
   if (!permission || typeof permission !== "object") return null;
   const nested = (permission as Record<string, unknown>).id;
   return typeof nested === "string" ? nested : null;
+}
+
+function eventFilePath(properties: Record<string, unknown>): string | null {
+  const file = properties.file;
+  if (typeof file === "string") return file;
+  if (file && typeof file === "object") {
+    const path = stringField(file as Record<string, unknown>, ["path", "file"]);
+    if (path) return path;
+  }
+  return stringField(properties, ["path", "file"]);
+}
+
+function normalizeServeFilePath(rootPath: string, filePath: string): string {
+  const absolute = assertInsideRoot(rootPath, filePath);
+  return relative(rootPath, absolute).split(sep).join("/");
 }
 
 function stringField(record: Record<string, unknown>, fields: string[]): string | null {
@@ -374,6 +412,28 @@ async function handleServePermission(
   await service.postPermissionResponse(run.sessionId, id, response);
 }
 
+export function unifiedPatchFromServeDiffs(diffs: ServeFileDiff[]): string | null {
+  const patches = diffs
+    .map((diff) => {
+      const file = diff.file ?? diff.path;
+      if (!file) return "";
+      return unifiedDiffFromTexts(
+        file,
+        diff.before ?? diff.oldText ?? "",
+        diff.after ?? diff.newText ?? "",
+      );
+    })
+    .filter(Boolean);
+  return patches.length > 0 ? patches.join("\n\n") : null;
+}
+
+async function emitServePatch(service: ServeService, run: ServeActiveRun): Promise<void> {
+  const patch = unifiedPatchFromServeDiffs(await service.fetchSessionDiff(run.sessionId));
+  if (!patch || run.emittedPatches.has(patch)) return;
+  run.emittedPatches.add(patch);
+  run.emit({ type: "patch", runId: run.runId, patch, at: Date.now() });
+}
+
 export function handleServeEvent(service: ServeService, event: Record<string, unknown>): void {
   const type = eventType(event);
   const run = service.activeRun;
@@ -408,6 +468,48 @@ export function handleServeEvent(service: ServeService, event: Record<string, un
         run,
         error instanceof Error ? error.message : "OpenCode permission response failed",
       );
+    });
+    return;
+  }
+
+  if (type === "file.edited") {
+    const path = eventFilePath(properties);
+    if (path) {
+      try {
+        run.emit({
+          type: "filesChanged",
+          runId: run.runId,
+          paths: [normalizeServeFilePath(service.rootPath, path)],
+          at: Date.now(),
+        });
+      } catch (error) {
+        run.emit({
+          type: "stderr",
+          runId: run.runId,
+          chunk: `${error instanceof Error ? error.message : "Invalid edited file path"}\n`,
+          at: Date.now(),
+        });
+      }
+    }
+    void emitServePatch(service, run).catch((error) => {
+      run.emit({
+        type: "stderr",
+        runId: run.runId,
+        chunk: `${error instanceof Error ? error.message : "OpenCode diff request failed"}\n`,
+        at: Date.now(),
+      });
+    });
+    return;
+  }
+
+  if (type === "session.diff") {
+    void emitServePatch(service, run).catch((error) => {
+      run.emit({
+        type: "stderr",
+        runId: run.runId,
+        chunk: `${error instanceof Error ? error.message : "OpenCode diff request failed"}\n`,
+        at: Date.now(),
+      });
     });
     return;
   }
@@ -545,7 +647,14 @@ export const serveAgentBackend: AgentBackend & { id: "serve" } = {
 
     const runId = randomUUID();
     const startedAt = performance.now();
-    service.activeRun = { runId, sessionId, startedAt, emit, textParts: new Map() };
+    service.activeRun = {
+      runId,
+      sessionId,
+      startedAt,
+      emit,
+      textParts: new Map(),
+      emittedPatches: new Set(),
+    };
     emit({ type: "started", runId, command: "opencode serve", at: Date.now() });
 
     const model = splitServeModelId(concreteModelId(input.modelId, input.reasoningLevel));

@@ -6,6 +6,7 @@ import {
   type ServeService,
   servePermissionResponseForChoice,
   splitServeModelId,
+  unifiedPatchFromServeDiffs,
 } from "./opencode-serve";
 
 describe("opencode serve config", () => {
@@ -80,12 +81,14 @@ describe("opencode serve run events", () => {
       permissionSessionAllowed: false,
       resolvePermission: async () => "once",
       postPermissionResponse: async () => {},
+      fetchSessionDiff: async () => [],
       activeRun: {
         runId: "run-1",
         sessionId: "session-1",
         startedAt: performance.now(),
         emit: (event) => events.push(event),
         textParts: new Map(),
+        emittedPatches: new Set(),
       },
     };
   }
@@ -226,5 +229,65 @@ describe("opencode serve run events", () => {
       { sessionId: "session-1", permissionId: "perm-1", response: "always" },
     ]);
     expect(service.permissionSessionAllowed).toBe(true);
+  });
+
+  it("converts serve diffs into unified patches", () => {
+    const patch = unifiedPatchFromServeDiffs([
+      {
+        file: "main.tex",
+        before: "old\n",
+        after: "new\n",
+      },
+    ]);
+
+    expect(patch).toContain("--- a/main.tex");
+    expect(patch).toContain("+++ b/main.tex");
+    expect(patch).toContain("-old");
+    expect(patch).toContain("+new");
+  });
+
+  it("emits changed files and a deduped patch for edited files", async () => {
+    const events: AgentEvent[] = [];
+    const service = serviceWithRun(events);
+    service.fetchSessionDiff = async () => [{ file: "main.tex", before: "old\n", after: "new\n" }];
+
+    handleServeEvent(service, {
+      type: "file.edited",
+      properties: {
+        sessionID: "session-1",
+        file: { path: "main.tex" },
+      },
+    });
+    handleServeEvent(service, {
+      type: "session.diff",
+      properties: {
+        sessionID: "session-1",
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(events.find((event) => event.type === "filesChanged")).toMatchObject({
+      type: "filesChanged",
+      paths: ["main.tex"],
+    });
+    expect(events.filter((event) => event.type === "patch")).toHaveLength(1);
+  });
+
+  it("rejects edited file paths outside the project root", () => {
+    const events: AgentEvent[] = [];
+    const service = serviceWithRun(events);
+
+    handleServeEvent(service, {
+      type: "file.edited",
+      properties: {
+        sessionID: "session-1",
+        file: { path: "../outside.tex" },
+      },
+    });
+
+    expect(events).toMatchObject([{ type: "stderr", runId: "run-1" }]);
+    if (events[0]?.type === "stderr") {
+      expect(events[0].chunk).toContain("outside the project");
+    }
   });
 });
