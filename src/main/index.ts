@@ -19,14 +19,7 @@ import {
 } from "../shared/ipc";
 import type { LspSendRequest } from "../shared/lsp";
 import { mergeEffectiveSettings } from "../shared/settings";
-import {
-  cancelOpencode,
-  checkOpencode,
-  clearSession,
-  loadOpencodeSessionConfig,
-  probeOpencodeModelVariants,
-  runOpencode,
-} from "./agents/opencode";
+import { getAgentBackend } from "./agents/backend";
 import { applyUnifiedPatch } from "./agents/patch";
 import { compileLatex } from "./compile/latex";
 import {
@@ -64,6 +57,7 @@ import { isWindowFullscreen, toggleWindowFullscreen } from "./windowFullscreen";
 
 const appStartedAt = performance.now();
 let mainWindow: BrowserWindow | null = null;
+const agentBackend = getAgentBackend();
 
 if (process.env.BIGTEX_PERF_CDP === "1") {
   const port = process.env.BIGTEX_PERF_CDP_PORT ?? "9333";
@@ -253,29 +247,29 @@ function registerIpc(): void {
   });
 
   ipcMain.handle(IPC_CHANNELS.agentCheck, (_event, request: AgentCheckRequest) =>
-    checkOpencode(request.command),
+    agentBackend.check(request.command),
   );
 
   ipcMain.handle(IPC_CHANNELS.agentConfig, (_event, rootPath: string) =>
-    loadOpencodeSessionConfig(rootPath),
+    agentBackend.loadConfig(rootPath),
   );
 
   ipcMain.handle(IPC_CHANNELS.agentProbeModel, (_event, rootPath: string, modelId: string) =>
-    probeOpencodeModelVariants(rootPath, modelId),
+    agentBackend.probeModelVariants(rootPath, modelId),
   );
 
   ipcMain.handle(IPC_CHANNELS.agentRun, (_event, request: AgentRunInput) =>
-    runOpencode(request, (agentEvent) => {
+    agentBackend.run(request, (agentEvent) => {
       mainWindow?.webContents.send(IPC_CHANNELS.agentEvent, agentEvent);
     }),
   );
 
   ipcMain.handle(IPC_CHANNELS.agentCancel, (_event, request: { runId: string }) =>
-    cancelOpencode(request.runId),
+    agentBackend.cancel(request.runId),
   );
 
   ipcMain.handle(IPC_CHANNELS.agentClearSession, (_event, rootPath: string) =>
-    clearSession(rootPath),
+    agentBackend.clearSession(rootPath),
   );
 
   ipcMain.handle(IPC_CHANNELS.patchApply, (_event, request: PatchApplyRequest) =>

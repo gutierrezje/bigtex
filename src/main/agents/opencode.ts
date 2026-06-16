@@ -664,3 +664,13 @@ export function clearSession(rootPath: string): void {
   session.child.stdin.end();
   session.child.kill("SIGTERM");
 }
+
+export const acpAgentBackend = {
+  id: "acp" as const,
+  check: checkOpencode,
+  loadConfig: loadOpencodeSessionConfig,
+  probeModelVariants: probeOpencodeModelVariants,
+  run: runOpencode,
+  cancel: cancelOpencode,
+  clearSession,
+};
