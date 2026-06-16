@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { parseServeProvidersConfig } from "./opencode-serve";
+import type { AgentEvent } from "../../shared/domain";
+import {
+  handleServeEvent,
+  parseServeProvidersConfig,
+  type ServeService,
+  splitServeModelId,
+} from "./opencode-serve";
 
 describe("opencode serve config", () => {
   it("parses supported providers into AgentSessionConfig", () => {
@@ -59,5 +65,77 @@ describe("opencode serve config", () => {
     });
 
     expect(config.currentModelId).toBe("opencode-go/glm-5");
+  });
+});
+
+describe("opencode serve run events", () => {
+  function serviceWithRun(events: AgentEvent[] = []): ServeService {
+    return {
+      baseUrl: "http://127.0.0.1:1234",
+      child: {} as ServeService["child"],
+      sessionId: "session-1",
+      eventAbort: null,
+      activeRun: {
+        runId: "run-1",
+        sessionId: "session-1",
+        startedAt: performance.now(),
+        emit: (event) => events.push(event),
+        textParts: new Map(),
+      },
+    };
+  }
+
+  it("splits BigTeX model ids into serve provider and model ids", () => {
+    expect(splitServeModelId("opencode/deepseek-v4-flash-free/high")).toEqual({
+      providerID: "opencode",
+      modelID: "deepseek-v4-flash-free/high",
+    });
+  });
+
+  it("emits only new text for repeated message part snapshots", () => {
+    const events: AgentEvent[] = [];
+    const service = serviceWithRun(events);
+
+    handleServeEvent(service, {
+      type: "message.part.updated",
+      properties: {
+        sessionID: "session-1",
+        messageID: "message-1",
+        part: { id: "part-1", type: "text", text: "Hel" },
+      },
+    });
+    handleServeEvent(service, {
+      type: "message.part.updated",
+      properties: {
+        sessionID: "session-1",
+        messageID: "message-1",
+        part: { id: "part-1", type: "text", text: "Hello" },
+      },
+    });
+
+    expect(events).toMatchObject([
+      { type: "message", runId: "run-1", chunk: "Hel" },
+      { type: "message", runId: "run-1", chunk: "lo" },
+    ]);
+  });
+
+  it("ignores events for other sessions and finishes on idle", () => {
+    const events: AgentEvent[] = [];
+    const service = serviceWithRun(events);
+
+    handleServeEvent(service, {
+      type: "message.part.updated",
+      properties: {
+        sessionID: "session-2",
+        part: { id: "part-1", type: "text", text: "wrong" },
+      },
+    });
+    handleServeEvent(service, {
+      type: "session.idle",
+      properties: { sessionID: "session-1" },
+    });
+
+    expect(events).toMatchObject([{ type: "finished", runId: "run-1", exitCode: 0 }]);
+    expect(service.activeRun).toBeNull();
   });
 });
