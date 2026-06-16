@@ -2,7 +2,7 @@ import { useAuiState, useMessagePartReasoning } from "@assistant-ui/react";
 import { useEffect, useState } from "react";
 import { CHROME_META_CLASS, CHROME_SECTION_CLASS } from "../../lib/treeTypography";
 
-/** Collapsible thinking block for ACP agent_thought_chunk streams. */
+/** Collapsible thinking block for OpenCode reasoning streams. */
 export function AgentMessageReasoningPart() {
   const part = useMessagePartReasoning();
   const messageStatus = useAuiState((state) => state.message.status);

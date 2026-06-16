@@ -16,8 +16,8 @@ const REASONING_LEVEL_ORDER = [
 
 const HIDDEN_VARIANTS = new Set(["default"]);
 
-/** Candidate suffixes probed via ACP when OpenCode omits variant metadata. */
-/** Fallback when OpenCode serve providers API is unavailable. */
+/** Candidate suffixes probed through legacy ACP when OpenCode omits variant metadata. */
+/** Fallback when OpenCode serve provider metadata is unavailable. */
 export const REASONING_VARIANT_PROBE_CANDIDATES = [
   "max",
   "xhigh",
@@ -85,7 +85,7 @@ function hasBaseModelsInGroup(config: AgentSessionConfig, group: AgentProviderGr
   return config.models.some((model) => model.providerGroup === group && model.variant === null);
 }
 
-/** Map ACP current model to a supported provider-group selection for the toolbar. */
+/** Map the active OpenCode model to a supported provider-group selection for the toolbar. */
 export function resolveAgentUiSelection(config: AgentSessionConfig): {
   providerGroup: AgentProviderGroup;
   modelId: string;

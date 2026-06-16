@@ -41,7 +41,7 @@ describe("reduceAgentChat", () => {
   it("streams chunks onto the active assistant and marks the run started", () => {
     let chat = reduceAgentChat(
       chatWithAssistant(),
-      eventAt("started", { runId: RUN_ID, command: "opencode acp" }),
+      eventAt("started", { runId: RUN_ID, command: "opencode serve" }),
     );
     expect(chat.running).toBe(true);
     expect(chat.runId).toBe(RUN_ID);

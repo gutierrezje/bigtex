@@ -21,7 +21,7 @@ export interface AgentBackend {
 export type AgentBackendId = "acp" | "serve";
 
 export function resolveAgentBackendId(value = process.env.BIGTEX_AGENT_BACKEND): AgentBackendId {
-  return value === "serve" ? "serve" : "acp";
+  return value === "acp" ? "acp" : "serve";
 }
 
 export function getAgentBackend(value = process.env.BIGTEX_AGENT_BACKEND): AgentBackend {

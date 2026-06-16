@@ -1,6 +1,6 @@
 # BigTeX
 
-Agentic LaTeX desktop editor: local compile, editor, PDF viewer, and an ACP-backed assistant in one project workspace.
+Agentic LaTeX desktop editor: local compile, editor, PDF viewer, and an OpenCode-backed assistant in one project workspace.
 
 ## Language
 
@@ -108,7 +108,7 @@ The assistant model family shown in the agent toolbar: Free, Go, or Copilot — 
 _Avoid_: Provider (ambiguous with LLM vendor or Copilot product name alone).
 
 **Agent permission**:
-A mid-run request from the assistant runtime to read or write project files (surfaced via ACP `session/request_permission`).
+A mid-run request from the assistant runtime to read or write project files (surfaced via OpenCode serve `permission.updated` or legacy ACP `session/request_permission`).
 _Avoid_: Patch (file edits delivered as a unified diff are separate); Composer send (user still chooses when to run the agent).
 
 **Agent permission mode**:
@@ -141,7 +141,7 @@ _Avoid_: Patch approval ( **Patch apply** is separate); system dialog (native OS
 
 **Agent model preference**:
 The chosen **Agent provider group**, base model id, and optional reasoning level for the assistant.
-_Avoid_: Model config (collides with ACP session catalog); provider (use **Agent provider group**).
+_Avoid_: Model config (collides with live agent session catalog); provider (use **Agent provider group**).
 
 **Effective agent model preference**:
 The **Agent model preference** in force for the open project: workspace value when set, otherwise **User settings** default, otherwise app fallback.
@@ -230,7 +230,7 @@ _Avoid_: `.bigtex` project config (not in repo in v1); renderer **Settings** UI 
 - Open project; resolved: one **editor tab** for `mainFile` when set; no auto PDF tab.
 - "Performance testing" meaning CI gate vs dev workflow; resolved: **Render profiling run** is developer-only (A), ephemeral baselines (A), normal vs **Perf build** tracks (C).
 - Settings scope (user vs project); resolved: two tiers — **User settings** (global) and **Workspace settings** (per `project.rootPath`); agent permission mode is user-global in v1.
-- “Auto vs prompt” for the agent; resolved: **Agent permission mode** (ACP permissions during a run), plus separate **Patch apply mode** for **Detected patch**es — not confirm-before-every-composer-send.
+- “Auto vs prompt” for the agent; resolved: **Agent permission mode** (OpenCode permissions during a run), plus separate **Patch apply mode** for **Detected patch**es — not confirm-before-every-composer-send.
 - Agent autonomy UI; resolved: two independent **User settings** toggles under **Agent** — permission (Ask default) and patches (Review before apply default); no single combined autonomy switch in v1.
 - Settings shell; resolved: **Settings** overlay (VS Code–like categories + detail, **User** \| **Workspace** **Settings scope** tabs); gear + menu + `Cmd+,`; Agent and PDF viewer categories in v1.
 - Agent toolbar vs workspace prefs; resolved: mirror + persist — toolbar and **Settings** (workspace scope) stay in sync; **User settings** defaults only when workspace has no entry.
