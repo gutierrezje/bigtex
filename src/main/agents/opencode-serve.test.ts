@@ -4,6 +4,7 @@ import {
   handleServeEvent,
   parseServeProvidersConfig,
   type ServeService,
+  servePermissionResponseForChoice,
   splitServeModelId,
 } from "./opencode-serve";
 
@@ -71,10 +72,14 @@ describe("opencode serve config", () => {
 describe("opencode serve run events", () => {
   function serviceWithRun(events: AgentEvent[] = []): ServeService {
     return {
+      rootPath: "/tmp/project",
       baseUrl: "http://127.0.0.1:1234",
       child: {} as ServeService["child"],
       sessionId: "session-1",
       eventAbort: null,
+      permissionSessionAllowed: false,
+      resolvePermission: async () => "once",
+      postPermissionResponse: async () => {},
       activeRun: {
         runId: "run-1",
         sessionId: "session-1",
@@ -181,5 +186,45 @@ describe("opencode serve run events", () => {
       { type: "finished", runId: "run-1", exitCode: null },
     ]);
     expect(service.activeRun).toBeNull();
+  });
+
+  it("maps permission choices to serve responses", () => {
+    expect(servePermissionResponseForChoice("once")).toBe("once");
+    expect(servePermissionResponseForChoice("always")).toBe("always");
+    expect(servePermissionResponseForChoice("allow-session")).toBe("always");
+    expect(servePermissionResponseForChoice("reject")).toBe("reject");
+    expect(servePermissionResponseForChoice(null)).toBe("reject");
+  });
+
+  it("responds to serve permission events through the existing permission bridge choice", async () => {
+    const posted: Array<{ sessionId: string; permissionId: string; response: string }> = [];
+    const service = serviceWithRun();
+    service.resolvePermission = async (_runId, params) => {
+      expect(params.path).toBe("main.tex");
+      expect(params.options?.map((option) => option.optionId)).toEqual([
+        "once",
+        "always",
+        "reject",
+      ]);
+      return "always";
+    };
+    service.postPermissionResponse = async (sessionId, permissionId, response) => {
+      posted.push({ sessionId, permissionId, response });
+    };
+
+    handleServeEvent(service, {
+      type: "permission.updated",
+      properties: {
+        sessionID: "session-1",
+        permissionID: "perm-1",
+        permission: { path: "main.tex" },
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(posted).toEqual([
+      { sessionId: "session-1", permissionId: "perm-1", response: "always" },
+    ]);
+    expect(service.permissionSessionAllowed).toBe(true);
   });
 });

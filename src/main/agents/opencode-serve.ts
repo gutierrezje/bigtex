@@ -15,6 +15,8 @@ import type {
   AgentRunSummary,
   AgentSessionConfig,
 } from "../../shared/domain";
+import type { AgentPermissionOption } from "../../shared/settings";
+import { resolveAgentPermission } from "../settings/permission-bridge";
 import type { AgentBackend } from "./backend";
 import { opencodeShellEnv, startOpencodeServe, stopOpencodeServe } from "./opencode-providers";
 
@@ -39,11 +41,19 @@ interface ServeProvidersResponse {
 }
 
 export interface ServeService {
+  rootPath: string;
   baseUrl: string;
   child: Parameters<typeof stopOpencodeServe>[0];
   sessionId: string | null;
   eventAbort: AbortController | null;
   activeRun: ServeActiveRun | null;
+  permissionSessionAllowed: boolean;
+  resolvePermission: typeof resolveAgentPermission;
+  postPermissionResponse: (
+    sessionId: string,
+    permissionId: string,
+    response: ServePermissionResponse,
+  ) => Promise<void>;
 }
 
 interface ServeActiveRun {
@@ -55,6 +65,14 @@ interface ServeActiveRun {
 }
 
 const serveServices = new Map<string, ServeService>();
+
+const SERVE_PERMISSION_OPTIONS: AgentPermissionOption[] = [
+  { optionId: "once", kind: "allow_once", name: "Allow once" },
+  { optionId: "always", kind: "allow_session", name: "Allow for session" },
+  { optionId: "reject", kind: "reject", name: "Deny" },
+];
+
+type ServePermissionResponse = "once" | "always" | "reject";
 
 function splitCommand(commandLine: string): string[] {
   const tokens = commandLine.match(/(?:[^\s"]+|"[^"]*")+/g) ?? [];
@@ -137,11 +155,22 @@ async function ensureServeService(rootPath: string): Promise<ServeService> {
 
   const { port, child } = await startOpencodeServe(rootPath);
   const service: ServeService = {
+    rootPath,
     baseUrl: `http://127.0.0.1:${port}`,
     child,
     sessionId: null,
     eventAbort: null,
     activeRun: null,
+    permissionSessionAllowed: false,
+    resolvePermission: resolveAgentPermission,
+    postPermissionResponse: async (sessionId, permissionId, response) => {
+      await postJson(
+        service,
+        rootPath,
+        `/session/${encodeURIComponent(sessionId)}/permissions/${encodeURIComponent(permissionId)}`,
+        { response },
+      );
+    },
   };
   serveServices.set(rootPath, service);
   child.on("exit", () => {
@@ -214,6 +243,15 @@ function eventSessionId(event: Record<string, unknown>): string | null {
   const properties = eventProperties(event);
   const sessionID = properties.sessionID ?? properties.sessionId;
   return typeof sessionID === "string" ? sessionID : null;
+}
+
+function permissionId(properties: Record<string, unknown>): string | null {
+  const direct = properties.permissionID ?? properties.permissionId;
+  if (typeof direct === "string") return direct;
+  const permission = properties.permission;
+  if (!permission || typeof permission !== "object") return null;
+  const nested = (permission as Record<string, unknown>).id;
+  return typeof nested === "string" ? nested : null;
 }
 
 function stringField(record: Record<string, unknown>, fields: string[]): string | null {
@@ -296,6 +334,46 @@ function emitServeError(service: ServeService, run: ServeActiveRun, message: str
   });
 }
 
+export function servePermissionResponseForChoice(choice: string | null): ServePermissionResponse {
+  if (choice === "always" || choice === "allow-session" || choice === "session") return "always";
+  if (choice === "reject" || choice === "deny" || choice === null) return "reject";
+  return "once";
+}
+
+async function handleServePermission(
+  service: ServeService,
+  run: ServeActiveRun,
+  properties: Record<string, unknown>,
+): Promise<void> {
+  const id = permissionId(properties);
+  if (!id) return;
+
+  const permission = properties.permission;
+  const permissionRecord =
+    permission && typeof permission === "object" ? (permission as Record<string, unknown>) : {};
+  const toolName =
+    stringField(permissionRecord, ["tool", "toolName", "title", "name"]) ??
+    stringField(properties, ["tool", "toolName", "title", "name"]) ??
+    undefined;
+  const path =
+    stringField(permissionRecord, ["path", "file"]) ??
+    stringField(properties, ["path", "file"]) ??
+    undefined;
+
+  const choice = await service.resolvePermission(
+    run.runId,
+    {
+      options: SERVE_PERMISSION_OPTIONS,
+      toolName,
+      path,
+    },
+    service.permissionSessionAllowed,
+  );
+  const response = servePermissionResponseForChoice(choice);
+  if (response === "always") service.permissionSessionAllowed = true;
+  await service.postPermissionResponse(run.sessionId, id, response);
+}
+
 export function handleServeEvent(service: ServeService, event: Record<string, unknown>): void {
   const type = eventType(event);
   const run = service.activeRun;
@@ -320,6 +398,17 @@ export function handleServeEvent(service: ServeService, event: Record<string, un
   if (type === "message.updated" || type === "session.error") {
     const message = eventErrorMessage(properties);
     if (message) emitServeError(service, run, message);
+    return;
+  }
+
+  if (type === "permission.updated") {
+    void handleServePermission(service, run, properties).catch((error) => {
+      emitServeError(
+        service,
+        run,
+        error instanceof Error ? error.message : "OpenCode permission response failed",
+      );
+    });
     return;
   }
 
