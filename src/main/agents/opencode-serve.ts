@@ -23,10 +23,6 @@ import type { AgentBackend } from "./backend";
 import { opencodeShellEnv, startOpencodeServe, stopOpencodeServe } from "./opencode-providers";
 import { unifiedDiffFromTexts } from "./patch";
 
-function notImplemented(): Error {
-  return new Error("OpenCode serve backend is not implemented yet");
-}
-
 interface ServeModelInfo {
   name?: string;
   variants?: Record<string, unknown>;
