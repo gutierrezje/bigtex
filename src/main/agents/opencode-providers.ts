@@ -39,12 +39,12 @@ export function opencodeShellEnv(): NodeJS.ProcessEnv {
   return { ...process.env, PATH: parts.join(":") };
 }
 
-function parseServePort(text: string): number | null {
+export function parseServePort(text: string): number | null {
   const match = text.match(/listening on https?:\/\/127\.0\.0\.1:(\d+)/);
   return match ? Number(match[1]) : null;
 }
 
-async function startOpencodeServe(
+export async function startOpencodeServe(
   rootPath: string,
 ): Promise<{ port: number; child: ChildProcess }> {
   const child = spawn(OPENCODE_COMMAND, ["serve", "--port", "0", "--hostname", "127.0.0.1"], {
@@ -83,7 +83,7 @@ async function startOpencodeServe(
   return { port, child };
 }
 
-function stopOpencodeServe(child: ChildProcess): void {
+export function stopOpencodeServe(child: ChildProcess): void {
   child.kill("SIGTERM");
 }
 
