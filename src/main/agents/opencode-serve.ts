@@ -216,20 +216,39 @@ function eventSessionId(event: Record<string, unknown>): string | null {
   return typeof sessionID === "string" ? sessionID : null;
 }
 
-function textDeltaForPart(run: ServeActiveRun, properties: Record<string, unknown>): string | null {
+function stringField(record: Record<string, unknown>, fields: string[]): string | null {
+  for (const field of fields) {
+    const value = record[field];
+    if (typeof value === "string") return value;
+  }
+  return null;
+}
+
+function deltaText(properties: Record<string, unknown>): string | null {
+  const delta = properties.delta;
+  if (!delta || typeof delta !== "object") return null;
+  return stringField(delta as Record<string, unknown>, ["text", "content"]);
+}
+
+function partText(record: Record<string, unknown>): string | null {
+  const direct = stringField(record, ["text", "content"]);
+  if (direct) return direct;
+
+  const title = stringField(record, ["title", "name"]);
+  const state = stringField(record, ["state", "status"]);
+  if (!title && !state) return null;
+  return `\n[tool${state ? `:${state}` : ""}] ${title ?? "Tool call"}\n`;
+}
+
+function chunkForPart(run: ServeActiveRun, properties: Record<string, unknown>): string | null {
   const part = properties.part;
   if (!part || typeof part !== "object") return null;
   const record = part as Record<string, unknown>;
-  if (record.type !== "text") return null;
+  const delta = deltaText(properties);
+  if (delta) return delta;
 
-  const delta = properties.delta;
-  if (delta && typeof delta === "object") {
-    const text = (delta as Record<string, unknown>).text;
-    if (typeof text === "string") return text;
-  }
-
-  const text = record.text;
-  if (typeof text !== "string") return null;
+  const text = partText(record);
+  if (!text) return null;
 
   const key =
     typeof record.id === "string"
@@ -238,6 +257,43 @@ function textDeltaForPart(run: ServeActiveRun, properties: Record<string, unknow
   const previous = run.textParts.get(key) ?? "";
   run.textParts.set(key, text);
   return text.startsWith(previous) ? text.slice(previous.length) : text;
+}
+
+function eventForPartType(partType: unknown): "message" | "thought" | "activity" | null {
+  if (partType === "text") return "message";
+  if (typeof partType !== "string") return null;
+
+  const normalized = partType.toLowerCase();
+  if (normalized.includes("reason") || normalized.includes("think")) return "thought";
+  if (normalized.includes("tool")) return "activity";
+  return null;
+}
+
+function errorMessageFrom(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  return stringField(record, ["message", "description", "name"]);
+}
+
+function eventErrorMessage(properties: Record<string, unknown>): string | null {
+  return (
+    errorMessageFrom(properties.error) ??
+    errorMessageFrom((properties.message as Record<string, unknown> | undefined)?.error) ??
+    errorMessageFrom(properties)
+  );
+}
+
+function emitServeError(service: ServeService, run: ServeActiveRun, message: string): void {
+  service.activeRun = null;
+  run.emit({ type: "error", runId: run.runId, message, at: Date.now() });
+  run.emit({
+    type: "finished",
+    runId: run.runId,
+    exitCode: null,
+    durationMs: Math.round(performance.now() - run.startedAt),
+    at: Date.now(),
+  });
 }
 
 export function handleServeEvent(service: ServeService, event: Record<string, unknown>): void {
@@ -250,10 +306,20 @@ export function handleServeEvent(service: ServeService, event: Record<string, un
 
   const properties = eventProperties(event);
   if (type === "message.part.updated") {
-    const chunk = textDeltaForPart(run, properties);
-    if (chunk) {
-      run.emit({ type: "message", runId: run.runId, chunk, at: Date.now() });
+    const part = properties.part;
+    const partType =
+      part && typeof part === "object" ? (part as Record<string, unknown>).type : null;
+    const eventKind = eventForPartType(partType);
+    const chunk = chunkForPart(run, properties);
+    if (eventKind && chunk) {
+      run.emit({ type: eventKind, runId: run.runId, chunk, at: Date.now() } as AgentEvent);
     }
+    return;
+  }
+
+  if (type === "message.updated" || type === "session.error") {
+    const message = eventErrorMessage(properties);
+    if (message) emitServeError(service, run, message);
     return;
   }
 

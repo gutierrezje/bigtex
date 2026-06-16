@@ -138,4 +138,48 @@ describe("opencode serve run events", () => {
     expect(events).toMatchObject([{ type: "finished", runId: "run-1", exitCode: 0 }]);
     expect(service.activeRun).toBeNull();
   });
+
+  it("maps reasoning and tool parts to existing agent events", () => {
+    const events: AgentEvent[] = [];
+    const service = serviceWithRun(events);
+
+    handleServeEvent(service, {
+      type: "message.part.updated",
+      properties: {
+        sessionID: "session-1",
+        part: { id: "reason-1", type: "reasoning", text: "thinking" },
+      },
+    });
+    handleServeEvent(service, {
+      type: "message.part.updated",
+      properties: {
+        sessionID: "session-1",
+        part: { id: "tool-1", type: "tool", title: "Read file", state: "running" },
+      },
+    });
+
+    expect(events).toMatchObject([
+      { type: "thought", runId: "run-1", chunk: "thinking" },
+      { type: "activity", runId: "run-1", chunk: "\n[tool:running] Read file\n" },
+    ]);
+  });
+
+  it("turns serve errors into terminal agent events", () => {
+    const events: AgentEvent[] = [];
+    const service = serviceWithRun(events);
+
+    handleServeEvent(service, {
+      type: "session.error",
+      properties: {
+        sessionID: "session-1",
+        error: { message: "provider failed" },
+      },
+    });
+
+    expect(events).toMatchObject([
+      { type: "error", runId: "run-1", message: "provider failed" },
+      { type: "finished", runId: "run-1", exitCode: null },
+    ]);
+    expect(service.activeRun).toBeNull();
+  });
 });
