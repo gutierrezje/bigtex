@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgentEvent } from "../../shared/domain";
 import {
+  cancelServeRunInService,
   handleServeEvent,
   parseServeProvidersConfig,
   type ServeService,
@@ -82,6 +83,7 @@ describe("opencode serve run events", () => {
       resolvePermission: async () => "once",
       postPermissionResponse: async () => {},
       fetchSessionDiff: async () => [],
+      abortSession: async () => {},
       activeRun: {
         runId: "run-1",
         sessionId: "session-1",
@@ -289,5 +291,20 @@ describe("opencode serve run events", () => {
     if (events[0]?.type === "stderr") {
       expect(events[0].chunk).toContain("outside the project");
     }
+  });
+
+  it("aborts the serve session and finishes the active run on cancel", async () => {
+    const events: AgentEvent[] = [];
+    const aborted: string[] = [];
+    const service = serviceWithRun(events);
+    service.abortSession = async (sessionId) => {
+      aborted.push(sessionId);
+    };
+
+    await cancelServeRunInService(service, "run-1");
+
+    expect(aborted).toEqual(["session-1"]);
+    expect(events).toMatchObject([{ type: "finished", runId: "run-1", exitCode: null }]);
+    expect(service.activeRun).toBeNull();
   });
 });

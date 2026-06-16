@@ -58,6 +58,7 @@ export interface ServeService {
     response: ServePermissionResponse,
   ) => Promise<void>;
   fetchSessionDiff: (sessionId: string) => Promise<ServeFileDiff[]>;
+  abortSession: (sessionId: string) => Promise<void>;
 }
 
 interface ServeActiveRun {
@@ -194,11 +195,17 @@ async function ensureServeService(rootPath: string): Promise<ServeService> {
       }
       return (await response.json()) as ServeFileDiff[];
     },
+    abortSession: async (sessionId) => {
+      await postJson(service, rootPath, `/session/${encodeURIComponent(sessionId)}/abort`);
+    },
   };
   serveServices.set(rootPath, service);
   child.on("exit", () => {
     const current = serveServices.get(rootPath);
-    if (current?.child === child) serveServices.delete(rootPath);
+    if (current?.child === child) {
+      serveServices.delete(rootPath);
+      finishServeRunWithError(current, "OpenCode serve exited");
+    }
   });
   return service;
 }
@@ -372,6 +379,35 @@ function emitServeError(service: ServeService, run: ServeActiveRun, message: str
   });
 }
 
+function finishServeRunWithError(service: ServeService, message: string): void {
+  const run = service.activeRun;
+  if (!run) return;
+  emitServeError(service, run, message);
+}
+
+function finishServeRun(service: ServeService, run: ServeActiveRun, exitCode: number | null): void {
+  if (service.activeRun === run) service.activeRun = null;
+  run.emit({
+    type: "finished",
+    runId: run.runId,
+    exitCode,
+    durationMs: Math.round(performance.now() - run.startedAt),
+    at: Date.now(),
+  });
+}
+
+export async function cancelServeRunInService(
+  service: ServeService,
+  runId: string,
+): Promise<boolean> {
+  const run = service.activeRun;
+  if (!run || run.runId !== runId) return false;
+  service.activeRun = null;
+  await service.abortSession(run.sessionId);
+  finishServeRun(service, run, null);
+  return true;
+}
+
 export function servePermissionResponseForChoice(choice: string | null): ServePermissionResponse {
   if (choice === "always" || choice === "allow-session" || choice === "session") return "always";
   if (choice === "reject" || choice === "deny" || choice === null) return "reject";
@@ -515,14 +551,7 @@ export function handleServeEvent(service: ServeService, event: Record<string, un
   }
 
   if (type === "session.idle") {
-    service.activeRun = null;
-    run.emit({
-      type: "finished",
-      runId: run.runId,
-      exitCode: 0,
-      durationMs: Math.round(performance.now() - run.startedAt),
-      at: Date.now(),
-    });
+    finishServeRun(service, run, 0);
   }
 }
 
@@ -680,8 +709,10 @@ export const serveAgentBackend: AgentBackend & { id: "serve" } = {
     return { runId };
   },
 
-  async cancel(_runId: string): Promise<void> {
-    throw notImplemented();
+  async cancel(runId: string): Promise<void> {
+    for (const service of serveServices.values()) {
+      if (await cancelServeRunInService(service, runId)) return;
+    }
   },
 
   clearSession(rootPath: string): void {
@@ -689,6 +720,10 @@ export const serveAgentBackend: AgentBackend & { id: "serve" } = {
     if (!service) return;
     serveServices.delete(rootPath);
     service.eventAbort?.abort();
+    if (service.activeRun) {
+      void service.abortSession(service.activeRun.sessionId).catch(() => {});
+      finishServeRun(service, service.activeRun, null);
+    }
     stopOpencodeServe(service.child);
   },
 };
