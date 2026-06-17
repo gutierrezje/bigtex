@@ -61,3 +61,5 @@ PRODUCT.md
 *.toc
 *.tex.bak
 *.tex.rej
+
+.diffowl/

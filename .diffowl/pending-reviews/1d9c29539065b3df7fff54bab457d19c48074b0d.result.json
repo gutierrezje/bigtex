@@ -1,6 +1,0 @@
-{
-  "commit": "1d9c29539065b3df7fff54bab457d19c48074b0d",
-  "exitCode": 1,
-  "timestamp": "2026-06-17T04:09:31.972Z",
-  "message": "OpenCode request failed (phase=agent-wait, server=http://127.0.0.1:4096, session=ses_12c3ae15cffekFLjdZ10ixLluv, cause=Error: Provider quota or rate limit reached: weekly usage limit reached. It will reset in 4 days 19 hours. To continue using this model now, enable usage from your available balance - https://opencode.ai/workspace/wrk_01KRFM1FSHWP4MSXX5CDYJ81ZW/go)."
-}
