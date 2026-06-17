@@ -76,6 +76,7 @@ describe("opencode serve run events", () => {
     return {
       rootPath: "/tmp/project",
       baseUrl: "http://127.0.0.1:1234",
+      client: {} as ServeService["client"],
       child: {} as ServeService["child"],
       sessionId: "session-1",
       eventAbort: null,
@@ -127,6 +128,24 @@ describe("opencode serve run events", () => {
       { type: "message", runId: "run-1", chunk: "Hel" },
       { type: "message", runId: "run-1", chunk: "lo" },
     ]);
+  });
+
+  it("accepts SDK event wrappers", () => {
+    const events: AgentEvent[] = [];
+    const service = serviceWithRun(events);
+
+    handleServeEvent(service, {
+      payload: {
+        type: "message.part.updated",
+        properties: {
+          sessionID: "session-1",
+          messageID: "message-1",
+          part: { id: "part-1", type: "text", text: "Hello from SDK" },
+        },
+      },
+    });
+
+    expect(events).toMatchObject([{ type: "message", runId: "run-1", chunk: "Hello from SDK" }]);
   });
 
   it("ignores events for other sessions and finishes on idle", () => {
@@ -239,6 +258,8 @@ describe("opencode serve run events", () => {
         file: "main.tex",
         before: "old\n",
         after: "new\n",
+        additions: 1,
+        deletions: 1,
       },
     ]);
 
@@ -251,7 +272,9 @@ describe("opencode serve run events", () => {
   it("emits changed files and a deduped patch for edited files", async () => {
     const events: AgentEvent[] = [];
     const service = serviceWithRun(events);
-    service.fetchSessionDiff = async () => [{ file: "main.tex", before: "old\n", after: "new\n" }];
+    service.fetchSessionDiff = async () => [
+      { file: "main.tex", before: "old\n", after: "new\n", additions: 1, deletions: 1 },
+    ];
 
     handleServeEvent(service, {
       type: "file.edited",

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { relative, sep } from "node:path";
+import { createOpencodeClient, type FileDiff, type OpencodeClient } from "@opencode-ai/sdk";
 import {
   baseModelId,
   filterAgentModels,
@@ -23,6 +24,8 @@ import type { AgentBackend } from "./backend";
 import { opencodeShellEnv, startOpencodeServe, stopOpencodeServe } from "./opencode-providers";
 import { unifiedDiffFromTexts } from "./patch";
 
+type OpenCodeResult<T> = { data?: T; error?: unknown };
+
 interface ServeModelInfo {
   name?: string;
   variants?: Record<string, unknown>;
@@ -42,6 +45,7 @@ interface ServeProvidersResponse {
 export interface ServeService {
   rootPath: string;
   baseUrl: string;
+  client: OpencodeClient;
   child: Parameters<typeof stopOpencodeServe>[0];
   sessionId: string | null;
   eventAbort: AbortController | null;
@@ -53,7 +57,7 @@ export interface ServeService {
     permissionId: string,
     response: ServePermissionResponse,
   ) => Promise<void>;
-  fetchSessionDiff: (sessionId: string) => Promise<ServeFileDiff[]>;
+  fetchSessionDiff: (sessionId: string) => Promise<FileDiff[]>;
   abortSession: (sessionId: string) => Promise<void>;
 }
 
@@ -64,15 +68,6 @@ interface ServeActiveRun {
   emit: (event: AgentEvent) => void;
   textParts: Map<string, string>;
   emittedPatches: Set<string>;
-}
-
-interface ServeFileDiff {
-  file?: string;
-  path?: string;
-  before?: string;
-  after?: string;
-  oldText?: string;
-  newText?: string;
 }
 
 const serveServices = new Map<string, ServeService>();
@@ -101,10 +96,6 @@ function modelName(modelId: string, model: ServeModelInfo): string {
 
 function providerModelId(providerId: string, modelId: string): string {
   return `${providerId}/${modelId}`;
-}
-
-function serveUrl(service: ServeService, path: string, rootPath: string): string {
-  return `${service.baseUrl}${path}?directory=${encodeURIComponent(rootPath)}`;
 }
 
 function buildModelOption(
@@ -165,9 +156,12 @@ async function ensureServeService(rootPath: string): Promise<ServeService> {
   if (existing) return existing;
 
   const { port, child } = await startOpencodeServe(rootPath);
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const client = createOpencodeClient({ baseUrl });
   const service: ServeService = {
     rootPath,
-    baseUrl: `http://127.0.0.1:${port}`,
+    baseUrl,
+    client,
     child,
     sessionId: null,
     eventAbort: null,
@@ -175,24 +169,31 @@ async function ensureServeService(rootPath: string): Promise<ServeService> {
     permissionSessionAllowed: false,
     resolvePermission: resolveAgentPermission,
     postPermissionResponse: async (sessionId, permissionId, response) => {
-      await postJson(
-        service,
-        rootPath,
-        `/session/${encodeURIComponent(sessionId)}/permissions/${encodeURIComponent(permissionId)}`,
-        { response },
+      await unwrapOpenCodeResult(
+        await client.postSessionIdPermissionsPermissionId({
+          path: { id: sessionId, permissionID: permissionId },
+          body: { response },
+        }),
+        "OpenCode permission response",
       );
     },
     fetchSessionDiff: async (sessionId) => {
-      const response = await fetch(
-        serveUrl(service, `/session/${encodeURIComponent(sessionId)}/diff`, rootPath),
+      return unwrapOpenCodeResult(
+        await client.session.diff({
+          path: { id: sessionId },
+          query: { directory: rootPath },
+        }),
+        "OpenCode diff request",
       );
-      if (!response.ok) {
-        throw new Error(`OpenCode diff request failed (${response.status})`);
-      }
-      return (await response.json()) as ServeFileDiff[];
     },
     abortSession: async (sessionId) => {
-      await postJson(service, rootPath, `/session/${encodeURIComponent(sessionId)}/abort`);
+      await unwrapOpenCodeResult(
+        await client.session.abort({
+          path: { id: sessionId },
+          query: { directory: rootPath },
+        }),
+        "OpenCode abort request",
+      );
     },
   };
   serveServices.set(rootPath, service);
@@ -208,38 +209,46 @@ async function ensureServeService(rootPath: string): Promise<ServeService> {
 
 async function fetchServeProviders(rootPath: string): Promise<ServeProvidersResponse> {
   const service = await ensureServeService(rootPath);
-  const url = serveUrl(service, "/config/providers", rootPath);
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`OpenCode providers request failed (${response.status})`);
-  }
-  return (await response.json()) as ServeProvidersResponse;
+  return unwrapOpenCodeResult(
+    await service.client.config.providers({ query: { directory: rootPath } }),
+    "OpenCode providers request",
+  );
 }
 
-async function postJson<T>(
-  service: ServeService,
-  rootPath: string,
-  path: string,
-  body?: unknown,
-): Promise<T | null> {
-  const response = await fetch(serveUrl(service, path, rootPath), {
-    method: "POST",
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw new Error(`OpenCode serve request failed (${response.status})`);
+function unwrapOpenCodeResult<T>(result: OpenCodeResult<T>, label: string): T {
+  if (result.error) {
+    throw new Error(`${label} failed: ${describeOpenCodeError(result.error)}`);
   }
-  if (response.status === 204) return null;
-  return (await response.json()) as T;
+  if (result.data === undefined) {
+    throw new Error(`${label} returned no data`);
+  }
+  return result.data;
+}
+
+function describeOpenCodeError(error: unknown): string {
+  if (typeof error === "string" && error.trim() !== "") return error;
+  if (!error || typeof error !== "object") return "unknown error";
+  const record = error as Record<string, unknown>;
+  const data = record.data && typeof record.data === "object" ? record.data : undefined;
+  return (
+    stringField((data as Record<string, unknown> | undefined) ?? record, [
+      "message",
+      "description",
+      "name",
+    ]) ?? "unknown error"
+  );
 }
 
 async function ensureServeSession(service: ServeService, rootPath: string): Promise<string> {
   if (service.sessionId) return service.sessionId;
-  const session = await postJson<{ id?: string }>(service, rootPath, "/session", {
-    title: "BigTeX",
-  });
-  if (!session?.id) throw new Error("OpenCode serve did not return a session id");
+  const session = unwrapOpenCodeResult(
+    await service.client.session.create({
+      query: { directory: rootPath },
+      body: { title: "BigTeX" },
+    }),
+    "OpenCode session creation",
+  );
+  if (!session.id) throw new Error("OpenCode serve did not return a session id");
   service.sessionId = session.id;
   return session.id;
 }
@@ -256,6 +265,14 @@ export function splitServeModelId(modelId: string): { providerID: string; modelI
 
 function eventType(event: Record<string, unknown>): string | null {
   return typeof event.type === "string" ? event.type : null;
+}
+
+function serveEventPayload(event: unknown): Record<string, unknown> | null {
+  if (!event || typeof event !== "object") return null;
+  const record = event as Record<string, unknown>;
+  const payload = record.payload;
+  if (payload && typeof payload === "object") return payload as Record<string, unknown>;
+  return record;
 }
 
 function eventProperties(event: Record<string, unknown>): Record<string, unknown> {
@@ -444,16 +461,12 @@ async function handleServePermission(
   await service.postPermissionResponse(run.sessionId, id, response);
 }
 
-export function unifiedPatchFromServeDiffs(diffs: ServeFileDiff[]): string | null {
+export function unifiedPatchFromServeDiffs(diffs: FileDiff[]): string | null {
   const patches = diffs
     .map((diff) => {
-      const file = diff.file ?? diff.path;
+      const file = diff.file;
       if (!file) return "";
-      return unifiedDiffFromTexts(
-        file,
-        diff.before ?? diff.oldText ?? "",
-        diff.after ?? diff.newText ?? "",
-      );
+      return unifiedDiffFromTexts(file, diff.before, diff.after);
     })
     .filter(Boolean);
   return patches.length > 0 ? patches.join("\n\n") : null;
@@ -466,15 +479,18 @@ async function emitServePatch(service: ServeService, run: ServeActiveRun): Promi
   run.emit({ type: "patch", runId: run.runId, patch, at: Date.now() });
 }
 
-export function handleServeEvent(service: ServeService, event: Record<string, unknown>): void {
-  const type = eventType(event);
+export function handleServeEvent(service: ServeService, event: unknown): void {
+  const payload = serveEventPayload(event);
+  if (!payload) return;
+
+  const type = eventType(payload);
   const run = service.activeRun;
   if (!type || !run) return;
 
-  const sessionId = eventSessionId(event);
+  const sessionId = eventSessionId(payload);
   if (sessionId && sessionId !== run.sessionId) return;
 
-  const properties = eventProperties(event);
+  const properties = eventProperties(payload);
   if (type === "message.part.updated") {
     const part = properties.part;
     const partType =
@@ -558,38 +574,13 @@ async function subscribeServeEvents(service: ServeService, rootPath: string): Pr
 
   void (async () => {
     try {
-      const response = await fetch(serveUrl(service, "/event", rootPath), {
+      const sse = await service.client.event.subscribe({
         signal: abort.signal,
-        headers: { Accept: "text/event-stream" },
+        query: { directory: rootPath },
       });
-      if (!response.ok || !response.body) {
-        throw new Error(`OpenCode event stream failed (${response.status})`);
-      }
 
-      const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
-      let buffer = "";
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) return;
-        buffer += value;
-
-        while (true) {
-          const separator = buffer.indexOf("\n\n");
-          if (separator === -1) break;
-          const rawEvent = buffer.slice(0, separator);
-          buffer = buffer.slice(separator + 2);
-          const data = rawEvent
-            .split(/\r?\n/)
-            .filter((line) => line.startsWith("data:"))
-            .map((line) => line.slice(5).trimStart())
-            .join("\n");
-          if (!data) continue;
-          try {
-            handleServeEvent(service, JSON.parse(data) as Record<string, unknown>);
-          } catch {
-            // Ignore malformed stream events; later slices will surface stream errors.
-          }
-        }
+      for await (const event of sse.stream) {
+        handleServeEvent(service, event);
       }
     } catch (error) {
       if (!abort.signal.aborted) {
@@ -683,23 +674,25 @@ export const serveAgentBackend: AgentBackend & { id: "serve" } = {
     emit({ type: "started", runId, command: "opencode serve", at: Date.now() });
 
     const model = splitServeModelId(concreteModelId(input.modelId, input.reasoningLevel));
-    await postJson(
-      service,
-      input.rootPath,
-      `/session/${encodeURIComponent(sessionId)}/prompt_async`,
-      {
-        model,
-        parts: [
-          {
-            type: "text",
-            text: buildAgentSystemPrompt({
-              selectedFiles: input.selectedFiles,
-              compileSummary: input.compileSummary,
-              prompt: input.prompt,
-            }),
-          },
-        ],
-      },
+    await unwrapOpenCodeResult(
+      await service.client.session.promptAsync({
+        path: { id: sessionId },
+        query: { directory: input.rootPath },
+        body: {
+          model,
+          parts: [
+            {
+              type: "text",
+              text: buildAgentSystemPrompt({
+                selectedFiles: input.selectedFiles,
+                compileSummary: input.compileSummary,
+                prompt: input.prompt,
+              }),
+            },
+          ],
+        },
+      }),
+      "OpenCode prompt request",
     );
 
     return { runId };
