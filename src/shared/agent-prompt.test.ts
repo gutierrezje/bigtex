@@ -48,6 +48,8 @@ describe("buildAgentSystemPrompt", () => {
     expect(prompt).toContain("inspect files, search the project");
     expect(prompt).toContain("context hint files are starting points, not hard limits");
     expect(prompt).toContain("prefer the host app's BigTeX compile flow");
+    expect(prompt).toContain("```bigtex-action");
+    expect(prompt).toContain('"kind":"compile"');
     expect(prompt).toContain("You may edit files directly");
     expect(prompt).not.toContain("Do not apply changes yourself");
   });

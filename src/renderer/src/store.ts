@@ -109,6 +109,7 @@ interface AppState {
   renamePdfTabPath(oldPath: string, newPath: string): void;
   setCompileResult(result: CompileResult | null): void;
   addAgentUserMessage(content: string): void;
+  addAgentSystemMessage(content: string): void;
   createPendingAgentMessage(): string;
   appendAgentEvent(event: AgentEvent): void;
   clearAgentMessagePatch(patch: string): void;
@@ -207,6 +208,25 @@ export const useAppStore = create<AppState>((set) => ({
           {
             id: createMessageId("user"),
             role: "user",
+            content,
+            reasoning: "",
+            activity: "",
+            createdAt: new Date(),
+            patch: null,
+            status: "ready",
+          },
+        ],
+      },
+    })),
+  addAgentSystemMessage: (content) =>
+    set((state) => ({
+      agentChat: {
+        ...state.agentChat,
+        messages: [
+          ...state.agentChat.messages,
+          {
+            id: createMessageId("system"),
+            role: "system",
             content,
             reasoning: "",
             activity: "",
