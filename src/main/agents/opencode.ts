@@ -90,6 +90,9 @@ function acpPrompt(input: AgentRunInput): Array<{ type: "text"; text: string }> 
     {
       type: "text",
       text: buildAgentSystemPrompt({
+        projectName: input.projectName,
+        activeEditorPath: input.activeEditorPath,
+        activePdfPath: input.activePdfPath,
         selectedFiles: input.selectedFiles,
         compileSummary: input.compileSummary,
         prompt: input.prompt,

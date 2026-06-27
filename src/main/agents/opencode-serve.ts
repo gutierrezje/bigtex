@@ -684,6 +684,9 @@ export const serveAgentBackend: AgentBackend & { id: "serve" } = {
             {
               type: "text",
               text: buildAgentSystemPrompt({
+                projectName: input.projectName,
+                activeEditorPath: input.activeEditorPath,
+                activePdfPath: input.activePdfPath,
                 selectedFiles: input.selectedFiles,
                 compileSummary: input.compileSummary,
                 prompt: input.prompt,

@@ -485,6 +485,9 @@ export function App() {
     await window.bigTex.agent.run({
       rootPath: project.rootPath,
       prompt,
+      projectName: project.name,
+      activeEditorPath: activeEditor?.path ?? null,
+      activePdfPath: pdfTabs.activePath,
       selectedFiles: mergeAgentSelectedFiles(activeEditor?.path ?? null, agentHandoffFiles),
       compileSummary,
       modelId,
