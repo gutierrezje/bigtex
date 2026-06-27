@@ -99,7 +99,17 @@ function fileBasename(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
-function DiffFileCard({ file, fullPatch }: { file: ParsedDiffFile; fullPatch: string }) {
+function DiffFileCard({
+  file,
+  fullPatch,
+  applyable = true,
+  badge,
+}: {
+  file: ParsedDiffFile;
+  fullPatch: string;
+  applyable?: boolean;
+  badge?: string;
+}) {
   const onApply = usePatchApply();
   const [applyState, setApplyState] = useState<ApplyState>("idle");
 
@@ -128,7 +138,8 @@ function DiffFileCard({ file, fullPatch }: { file: ParsedDiffFile; fullPatch: st
           {file.adds > 0 && <span className="agent-diff-stat-add">+{file.adds}</span>}
           {file.dels > 0 && <span className="agent-diff-stat-del">−{file.dels}</span>}
         </div>
-        {onApply ? (
+        {badge ? <span className="agent-diff-status-badge">{badge}</span> : null}
+        {onApply && applyable ? (
           <button
             type="button"
             disabled={applyState !== "idle"}
@@ -185,14 +196,24 @@ function DiffFileCard({ file, fullPatch }: { file: ParsedDiffFile; fullPatch: st
 export function AgentDiffBlock({
   files,
   fullPatch,
+  applyable = true,
+  badge,
 }: {
   files: ParsedDiffFile[];
   fullPatch: string;
+  applyable?: boolean;
+  badge?: string;
 }) {
   return (
     <div className="agent-diff-stack">
       {files.map((file) => (
-        <DiffFileCard key={file.path} file={file} fullPatch={fullPatch} />
+        <DiffFileCard
+          key={file.path}
+          file={file}
+          fullPatch={fullPatch}
+          applyable={applyable}
+          badge={badge}
+        />
       ))}
     </div>
   );

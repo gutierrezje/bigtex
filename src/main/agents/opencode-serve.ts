@@ -476,7 +476,14 @@ async function emitServePatch(service: ServeService, run: ServeActiveRun): Promi
   const patch = unifiedPatchFromServeDiffs(await service.fetchSessionDiff(run.sessionId));
   if (!patch || run.emittedPatches.has(patch)) return;
   run.emittedPatches.add(patch);
-  run.emit({ type: "patch", runId: run.runId, patch, at: Date.now() });
+  run.emit({
+    type: "patch",
+    runId: run.runId,
+    patch,
+    status: "applied",
+    source: "opencode-session",
+    at: Date.now(),
+  });
 }
 
 export function handleServeEvent(service: ServeService, event: unknown): void {

@@ -1,5 +1,10 @@
 import type { AgentEvent } from "../../shared/domain";
 
+export type AgentMessagePatch = Pick<
+  Extract<AgentEvent, { type: "patch" }>,
+  "patch" | "status" | "source"
+>;
+
 export interface AgentChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -8,7 +13,7 @@ export interface AgentChatMessage {
   activity: string;
   createdAt: Date;
   runId?: string;
-  patch: string | null;
+  patch: AgentMessagePatch | null;
   status: "ready" | "running" | "error";
 }
 
@@ -98,7 +103,11 @@ export function reduceAgentChat(chat: AgentChatState, event: AgentEvent): AgentC
       messages: updateActiveAssistantMessage((message) => ({
         ...message,
         runId: event.runId,
-        patch: event.patch,
+        patch: {
+          patch: event.patch,
+          status: event.status,
+          source: event.source,
+        },
       })),
     };
   }
@@ -140,7 +149,7 @@ export function clearAgentChatPatch(chat: AgentChatState, patch: string): AgentC
   return {
     ...chat,
     messages: chat.messages.map((message) =>
-      message.patch === patch ? { ...message, patch: null } : message,
+      message.patch?.patch === patch ? { ...message, patch: null } : message,
     ),
   };
 }

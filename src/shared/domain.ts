@@ -149,6 +149,8 @@ export type AgentEvent =
       type: "patch";
       runId: string;
       patch: string;
+      status: "proposed" | "applied";
+      source: "assistant" | "opencode-session";
       at: number;
     }
   | {

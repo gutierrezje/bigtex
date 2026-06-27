@@ -39,6 +39,7 @@ import type {
 } from "../../shared/settings";
 import { DEFAULT_USER_SETTINGS, reconcileAgentModelPreference } from "../../shared/settings";
 import {
+  type AgentMessagePatch,
   type AgentChatMessage,
   type AgentChatState,
   clearAgentChatPatch,
@@ -50,7 +51,7 @@ import { schedulePersistWorkspaceAgentModel } from "./lib/persistWorkspaceAgent"
 export type SettingsScope = "user" | "workspace";
 export type SettingsCategory = "agent" | "pdf" | "general";
 
-export type { AgentChatMessage, AgentChatState };
+export type { AgentChatMessage, AgentChatState, AgentMessagePatch };
 
 export type OutputLevel = "info" | "success" | "warning" | "error";
 

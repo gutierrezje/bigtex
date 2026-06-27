@@ -15,9 +15,10 @@ import {
   PANEL_CHROME_ROW_CLASS,
   TREE_LABEL_CLASS,
 } from "../lib/treeTypography";
-import type { AgentChatState } from "../store";
+import type { AgentChatState, AgentMessagePatch } from "../store";
 import { AgentPermissionBanner } from "./AgentPermissionBanner";
 import { AgentComposer } from "./agent/AgentComposer";
+import { AgentDiffBlock, parsePatch } from "./agent/AgentDiffBlock";
 import { AgentMessageReasoningPart } from "./agent/AgentMessageReasoningPart";
 import { AgentMessageTextPart } from "./agent/AgentMessageTextPart";
 import { AgentModelToolbar } from "./agent/AgentModelToolbar";
@@ -46,6 +47,26 @@ const agentMessagePartComponents = {
   Reasoning: AgentMessageReasoningPart,
 };
 
+function patchBadge(patch: AgentMessagePatch): string {
+  if (patch.status === "applied") return "Applied by agent";
+  return "Detected patch";
+}
+
+function MessagePatchBlock({ patch }: { patch: AgentMessagePatch }) {
+  const files = parsePatch(patch.patch);
+  if (files.length === 0) return null;
+  return (
+    <div className="mt-2 w-full">
+      <AgentDiffBlock
+        files={files}
+        fullPatch={patch.patch}
+        applyable={patch.status === "proposed"}
+        badge={patchBadge(patch)}
+      />
+    </div>
+  );
+}
+
 function EmptyThread() {
   return (
     <ThreadPrimitive.Empty>
@@ -61,7 +82,9 @@ function EmptyThread() {
 
 function ChatMessage() {
   const message = useAuiState((state) => state.message);
-  const custom = message.metadata?.custom as { activity?: unknown } | undefined;
+  const custom = message.metadata?.custom as
+    | { activity?: unknown; patch?: AgentMessagePatch | null }
+    | undefined;
   const activity = typeof custom?.activity === "string" ? custom.activity.trim() : "";
   const isAssistant = message.role === "assistant";
 
@@ -88,6 +111,9 @@ function ChatMessage() {
           </div>
         ) : null}
         <MessagePrimitive.Parts components={agentMessagePartComponents} />
+        {isAssistant && custom?.patch ? (
+          <MessagePatchBlock patch={custom.patch as AgentMessagePatch} />
+        ) : null}
       </div>
 
       {isAssistant ? (

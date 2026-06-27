@@ -530,6 +530,7 @@ export function App() {
       void refreshProjectFiles();
     },
     onPatch: (event) => {
+      if (event.status !== "proposed") return;
       if (effectiveSettings.patchApplyMode !== "auto") return;
       void applyPatchRef.current(event.patch);
     },
