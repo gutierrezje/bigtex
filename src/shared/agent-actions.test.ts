@@ -36,5 +36,8 @@ describe("agent actions", () => {
     expect(promptRequestsCompile("verify the PDF after editing")).toBe(true);
     expect(promptRequestsCompile("fix until green")).toBe(true);
     expect(promptRequestsCompile("rewrite the abstract")).toBe(false);
+    expect(promptRequestsCompile("don't compile, just explain the error")).toBe(false);
+    expect(promptRequestsCompile("build out the introduction")).toBe(false);
+    expect(promptRequestsCompile("build the pdf after edits")).toBe(true);
   });
 });

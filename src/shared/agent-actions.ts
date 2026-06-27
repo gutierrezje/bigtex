@@ -32,12 +32,15 @@ export function stripBigTexAgentActions(text: string): string {
   return text.replace(ACTION_FENCE_RE, "").trim();
 }
 
+const COMPILE_NEGATION_RE =
+  /\b(?:don't|do not|without|no need to|not)\b[^.!?]{0,80}\b(?:compile|build|verify)\b/;
+
 export function promptRequestsCompile(prompt: string): boolean {
   const normalized = prompt.toLowerCase();
+  if (COMPILE_NEGATION_RE.test(normalized)) return false;
   return (
     /\bcompile\b/.test(normalized) ||
-    /\bbuild\b/.test(normalized) ||
-    /\bverify\b/.test(normalized) ||
+    /\b(?:build|verify)\b.*\b(?:pdf|latex|tex|document|project)\b/.test(normalized) ||
     /\bcheck\b.*\bpdf\b/.test(normalized) ||
     /\bfix\b.*\bgreen\b/.test(normalized)
   );

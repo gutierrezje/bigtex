@@ -69,6 +69,12 @@ describe("opencode serve config", () => {
 
     expect(config.currentModelId).toBe("opencode-go/glm-5");
   });
+
+  it("rejects malformed provider payloads", () => {
+    expect(() => parseServeProvidersConfig({ providers: null as unknown as [] })).toThrow(
+      /providers array/,
+    );
+  });
 });
 
 describe("opencode serve run events", () => {
@@ -329,5 +335,54 @@ describe("opencode serve run events", () => {
     expect(aborted).toEqual(["session-1"]);
     expect(events).toMatchObject([{ type: "finished", runId: "run-1", exitCode: null }]);
     expect(service.activeRun).toBeNull();
+  });
+
+  it("still finishes the run when abortSession fails", async () => {
+    const events: AgentEvent[] = [];
+    const service = serviceWithRun(events);
+    service.abortSession = async () => {
+      throw new Error("network down");
+    };
+
+    await cancelServeRunInService(service, "run-1");
+
+    expect(events).toMatchObject([{ type: "finished", runId: "run-1", exitCode: null }]);
+    expect(service.activeRun).toBeNull();
+  });
+
+  it("terminates the run when permission.updated has no permission id", async () => {
+    const events: AgentEvent[] = [];
+    const service = serviceWithRun(events);
+
+    handleServeEvent(service, {
+      type: "permission.updated",
+      properties: {
+        sessionID: "session-1",
+        permission: { path: "main.tex" },
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(events).toMatchObject([
+      { type: "error", runId: "run-1", message: /permission id/i },
+      { type: "finished", runId: "run-1", exitCode: null },
+    ]);
+    expect(service.activeRun).toBeNull();
+  });
+
+  it("does not treat benign message.updated payloads as fatal errors", () => {
+    const events: AgentEvent[] = [];
+    const service = serviceWithRun(events);
+
+    handleServeEvent(service, {
+      type: "message.updated",
+      properties: {
+        sessionID: "session-1",
+        message: { content: "still working" },
+      },
+    });
+
+    expect(events).toEqual([]);
+    expect(service.activeRun).not.toBeNull();
   });
 });

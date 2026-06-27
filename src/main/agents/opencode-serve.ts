@@ -71,6 +71,7 @@ interface ServeActiveRun {
 }
 
 const serveServices = new Map<string, ServeService>();
+const serveStartPromises = new Map<string, Promise<ServeService>>();
 
 const SERVE_PERMISSION_OPTIONS: AgentPermissionOption[] = [
   { optionId: "once", kind: "allow_once", name: "Allow once" },
@@ -123,6 +124,9 @@ function defaultModelId(data: ServeProvidersResponse, models: AgentModelOption[]
 }
 
 export function parseServeProvidersConfig(data: ServeProvidersResponse): AgentSessionConfig {
+  if (!Array.isArray(data.providers)) {
+    throw new Error("OpenCode providers response is missing a providers array");
+  }
   const models = filterAgentModels(
     data.providers.flatMap((provider) =>
       Object.entries(provider.models ?? {})
@@ -151,10 +155,7 @@ export function parseServeProvidersConfig(data: ServeProvidersResponse): AgentSe
   };
 }
 
-async function ensureServeService(rootPath: string): Promise<ServeService> {
-  const existing = serveServices.get(rootPath);
-  if (existing) return existing;
-
+async function startServeService(rootPath: string): Promise<ServeService> {
   const { port, child } = await startOpencodeServe(rootPath);
   const baseUrl = `http://127.0.0.1:${port}`;
   const client = createOpencodeClient({ baseUrl });
@@ -175,6 +176,7 @@ async function ensureServeService(rootPath: string): Promise<ServeService> {
           body: { response },
         }),
         "OpenCode permission response",
+        { allowEmptyData: true },
       );
     },
     fetchSessionDiff: async (sessionId) => {
@@ -193,6 +195,7 @@ async function ensureServeService(rootPath: string): Promise<ServeService> {
           query: { directory: rootPath },
         }),
         "OpenCode abort request",
+        { allowEmptyData: true },
       );
     },
   };
@@ -207,6 +210,20 @@ async function ensureServeService(rootPath: string): Promise<ServeService> {
   return service;
 }
 
+async function ensureServeService(rootPath: string): Promise<ServeService> {
+  const existing = serveServices.get(rootPath);
+  if (existing) return existing;
+
+  const inFlight = serveStartPromises.get(rootPath);
+  if (inFlight) return inFlight;
+
+  const startPromise = startServeService(rootPath).finally(() => {
+    serveStartPromises.delete(rootPath);
+  });
+  serveStartPromises.set(rootPath, startPromise);
+  return startPromise;
+}
+
 async function fetchServeProviders(rootPath: string): Promise<ServeProvidersResponse> {
   const service = await ensureServeService(rootPath);
   return unwrapOpenCodeResult(
@@ -215,14 +232,18 @@ async function fetchServeProviders(rootPath: string): Promise<ServeProvidersResp
   );
 }
 
-function unwrapOpenCodeResult<T>(result: OpenCodeResult<T>, label: string): T {
+function unwrapOpenCodeResult<T>(
+  result: OpenCodeResult<T>,
+  label: string,
+  options?: { allowEmptyData?: boolean },
+): T {
   if (result.error) {
     throw new Error(`${label} failed: ${describeOpenCodeError(result.error)}`);
   }
-  if (result.data === undefined) {
+  if (result.data === undefined && !options?.allowEmptyData) {
     throw new Error(`${label} returned no data`);
   }
-  return result.data;
+  return result.data as T;
 }
 
 function describeOpenCodeError(error: unknown): string {
@@ -372,11 +393,11 @@ function errorMessageFrom(value: unknown): string | null {
   return stringField(record, ["message", "description", "name"]);
 }
 
-function eventErrorMessage(properties: Record<string, unknown>): string | null {
+function eventErrorMessage(eventType: string, properties: Record<string, unknown>): string | null {
   return (
     errorMessageFrom(properties.error) ??
     errorMessageFrom((properties.message as Record<string, unknown> | undefined)?.error) ??
-    errorMessageFrom(properties)
+    (eventType === "session.error" ? errorMessageFrom(properties) : null)
   );
 }
 
@@ -416,7 +437,11 @@ export async function cancelServeRunInService(
   const run = service.activeRun;
   if (!run || run.runId !== runId) return false;
   service.activeRun = null;
-  await service.abortSession(run.sessionId);
+  try {
+    await service.abortSession(run.sessionId);
+  } catch {
+    // Still finish the run so the UI does not hang when abort fails.
+  }
   finishServeRun(service, run, null);
   return true;
 }
@@ -433,7 +458,9 @@ async function handleServePermission(
   properties: Record<string, unknown>,
 ): Promise<void> {
   const id = permissionId(properties);
-  if (!id) return;
+  if (!id) {
+    throw new Error("OpenCode permission.updated event is missing a permission id");
+  }
 
   const permission = properties.permission;
   const permissionRecord =
@@ -457,8 +484,8 @@ async function handleServePermission(
     service.permissionSessionAllowed,
   );
   const response = servePermissionResponseForChoice(choice);
-  if (response === "always") service.permissionSessionAllowed = true;
   await service.postPermissionResponse(run.sessionId, id, response);
+  if (response === "always") service.permissionSessionAllowed = true;
 }
 
 export function unifiedPatchFromServeDiffs(diffs: FileDiff[]): string | null {
@@ -511,7 +538,7 @@ export function handleServeEvent(service: ServeService, event: unknown): void {
   }
 
   if (type === "message.updated" || type === "session.error") {
-    const message = eventErrorMessage(properties);
+    const message = eventErrorMessage(type, properties);
     if (message) emitServeError(service, run, message);
     return;
   }
