@@ -16,7 +16,9 @@ export const AGENT_LATEX_DOMAIN_GUIDANCE = [
 export function buildAgentSystemPrompt(input: AgentPromptInput): string {
   const workspaceContext = [
     input.projectName ? `Project: ${input.projectName}` : "Project: unknown",
-    input.activeEditorPath ? `Active editor file: ${input.activeEditorPath}` : "Active editor file: none",
+    input.activeEditorPath
+      ? `Active editor file: ${input.activeEditorPath}`
+      : "Active editor file: none",
     input.activePdfPath ? `Active PDF: ${input.activePdfPath}` : "Active PDF: none",
     input.selectedFiles.length > 0
       ? `Context hint files:\n${input.selectedFiles.map((file) => `- ${file}`).join("\n")}`

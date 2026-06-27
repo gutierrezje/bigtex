@@ -31,3 +31,14 @@ export function extractBigTexAgentAction(text: string): BigTexAgentAction | null
 export function stripBigTexAgentActions(text: string): string {
   return text.replace(ACTION_FENCE_RE, "").trim();
 }
+
+export function promptRequestsCompile(prompt: string): boolean {
+  const normalized = prompt.toLowerCase();
+  return (
+    /\bcompile\b/.test(normalized) ||
+    /\bbuild\b/.test(normalized) ||
+    /\bverify\b/.test(normalized) ||
+    /\bcheck\b.*\bpdf\b/.test(normalized) ||
+    /\bfix\b.*\bgreen\b/.test(normalized)
+  );
+}

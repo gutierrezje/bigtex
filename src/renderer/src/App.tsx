@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { OnPanelResize, PanelImperativeHandle } from "react-resizable-panels";
 import { Group, Panel, Separator } from "react-resizable-panels";
+import { extractBigTexAgentAction, promptRequestsCompile } from "../../shared/agent-actions";
 import { getActiveEditor, listDirtyEditorPaths } from "../../shared/documentTabs";
-import { extractBigTexAgentAction } from "../../shared/agent-actions";
-import type { CompileDiagnostic, CompileResult, ProjectFile, ProjectSnapshot } from "../../shared/domain";
+import type {
+  CompileDiagnostic,
+  CompileResult,
+  ProjectFile,
+  ProjectSnapshot,
+} from "../../shared/domain";
 import {
   countDiagnosticsBySeverity,
   findProjectFileByPath,
@@ -495,7 +500,9 @@ export function App() {
     const currentCompileResult = compileResultRef.current;
     const mainFile = project.mainFile ?? currentActiveEditor?.path ?? null;
     const compileSummary =
-      currentCompileResult && mainFile ? formatCompileSummary(currentCompileResult, mainFile) : null;
+      currentCompileResult && mainFile
+        ? formatCompileSummary(currentCompileResult, mainFile)
+        : null;
 
     await window.bigTex.agent.run({
       rootPath: project.rootPath,
@@ -510,7 +517,10 @@ export function App() {
     });
   }
 
-  async function continueAgentWithCompileResult(result: CompileResult, mainFile: string): Promise<void> {
+  async function continueAgentWithCompileResult(
+    result: CompileResult,
+    mainFile: string,
+  ): Promise<void> {
     const summary = formatCompileSummary(result, mainFile);
     const diagnostics = result.diagnostics
       .slice(0, 20)
@@ -519,7 +529,9 @@ export function App() {
     const prompt = [
       `BigTeX host compile result: ${summary}`,
       diagnostics ? `Compile diagnostics:\n${diagnostics}` : "Compile diagnostics: none",
-      result.pdfPath ? `PDF path: ${toProjectRelativePath(projectRef.current?.rootPath ?? "", result.pdfPath)}` : "PDF path: none",
+      result.pdfPath
+        ? `PDF path: ${toProjectRelativePath(projectRef.current?.rootPath ?? "", result.pdfPath)}`
+        : "PDF path: none",
       "Continue from this result. If more edits are needed, make them. If the PDF is ready, summarize the outcome.",
     ].join("\n\n");
 
@@ -534,8 +546,13 @@ export function App() {
 
     const messages = useAppStore.getState().agentChat.messages;
     const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+    const lastUser = [...messages].reverse().find((message) => message.role === "user");
     const action = lastAssistant ? extractBigTexAgentAction(lastAssistant.content) : null;
-    if (action?.kind !== "compile") {
+    const fallbackCompile =
+      hostActionContinuationsRef.current === 0 &&
+      !action &&
+      Boolean(lastUser?.content && promptRequestsCompile(lastUser.content));
+    if (action?.kind !== "compile" && !fallbackCompile) {
       hostActionContinuationsRef.current = 0;
       return;
     }
@@ -822,6 +839,8 @@ export function App() {
               <AgentPanel
                 rootPath={project?.rootPath ?? null}
                 activeFile={activeEditor?.path ?? null}
+                activePdf={pdfTabs.activePath}
+                compileResult={compileResult}
                 chat={agentChat}
                 onRun={runAgent}
                 onCancel={(runId) => window.bigTex.agent.cancel({ runId })}

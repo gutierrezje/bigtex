@@ -39,9 +39,9 @@ import type {
 } from "../../shared/settings";
 import { DEFAULT_USER_SETTINGS, reconcileAgentModelPreference } from "../../shared/settings";
 import {
-  type AgentMessagePatch,
   type AgentChatMessage,
   type AgentChatState,
+  type AgentMessagePatch,
   clearAgentChatPatch,
   reduceAgentChat,
 } from "./agent-chat-reducer";

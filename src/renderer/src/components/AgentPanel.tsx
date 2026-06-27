@@ -5,6 +5,7 @@ import {
   ThreadPrimitive,
   useAuiState,
 } from "@assistant-ui/react";
+import type { CompileResult } from "../../../shared/domain";
 import { CREATABLE_FILE_EXTENSIONS } from "../../../shared/projectFiles";
 import { PatchApplyContext } from "../context/PatchApplyContext";
 import {
@@ -34,6 +35,8 @@ const SUPPORTED_SOURCE_FILES = formatSupportedExtensions(CREATABLE_FILE_EXTENSIO
 interface AgentPanelProps {
   rootPath: string | null;
   activeFile: string | null;
+  activePdf: string | null;
+  compileResult: CompileResult | null;
   chat: AgentChatState;
   onRun(prompt: string, modelId: string, reasoningLevel: string | null): Promise<void>;
   onCancel(runId: string): Promise<void>;
@@ -133,22 +136,51 @@ function ChatMessage() {
 
 interface ChatThreadProps {
   activeFile: string | null;
+  activePdf: string | null;
+  compileResult: CompileResult | null;
   onApplyPatch(patch: string): Promise<void>;
 }
 
-function AgentComposerContext({ activeFile }: { activeFile: string | null }) {
+function compileContextLabel(compileResult: CompileResult | null): string {
+  if (!compileResult) return "not run";
+  return compileResult.success
+    ? `clean · ${compileResult.durationMs}ms`
+    : `needs attention · ${compileResult.durationMs}ms`;
+}
+
+function AgentComposerContext({
+  activeFile,
+  activePdf,
+  compileResult,
+}: {
+  activeFile: string | null;
+  activePdf: string | null;
+  compileResult: CompileResult | null;
+}) {
+  const title = [
+    `source: ${activeFile ?? "none"}`,
+    `pdf: ${activePdf ?? "none"}`,
+    `compile: ${compileContextLabel(compileResult)}`,
+  ].join(" · ");
+
   return (
     <div
       className={`min-w-0 truncate px-1 pt-0.5 pb-1 ${CHROME_META_CLASS} text-text-muted select-none`}
-      title={activeFile ?? undefined}
+      title={title}
     >
-      <span className="text-text-muted/80">context: </span>
+      <span className="text-text-muted/80">source: </span>
       <span className="font-mono text-text-secondary">{activeFile ?? "none"}</span>
+      <span className="px-1.5 text-text-muted/60">·</span>
+      <span className="text-text-muted/80">pdf: </span>
+      <span className="font-mono text-text-secondary">{activePdf ?? "none"}</span>
+      <span className="px-1.5 text-text-muted/60">·</span>
+      <span className="text-text-muted/80">compile: </span>
+      <span className="text-text-secondary">{compileContextLabel(compileResult)}</span>
     </div>
   );
 }
 
-function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
+function ChatThread({ activeFile, activePdf, compileResult, onApplyPatch }: ChatThreadProps) {
   return (
     <PatchApplyContext.Provider value={onApplyPatch}>
       <ThreadPrimitive.Root className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
@@ -164,7 +196,11 @@ function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
 
         <ComposerPrimitive.Root className="border-t border-border/40 bg-surface px-2 pb-2 pt-2">
           <AgentPermissionBanner />
-          <AgentComposerContext activeFile={activeFile} />
+          <AgentComposerContext
+            activeFile={activeFile}
+            activePdf={activePdf}
+            compileResult={compileResult}
+          />
           <AgentModelToolbar />
           <AgentComposer />
         </ComposerPrimitive.Root>
@@ -176,6 +212,8 @@ function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
 export function AgentPanel({
   rootPath,
   activeFile,
+  activePdf,
+  compileResult,
   chat,
   onRun,
   onCancel,
@@ -211,7 +249,12 @@ export function AgentPanel({
       </header>
 
       <BigTexAssistantRuntime disabled={!rootPath} onRun={onRun} onCancel={onCancel}>
-        <ChatThread activeFile={activeFile} onApplyPatch={onApplyPatch} />
+        <ChatThread
+          activeFile={activeFile}
+          activePdf={activePdf}
+          compileResult={compileResult}
+          onApplyPatch={onApplyPatch}
+        />
       </BigTexAssistantRuntime>
     </aside>
   );
