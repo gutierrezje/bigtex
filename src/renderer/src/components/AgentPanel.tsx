@@ -5,6 +5,7 @@ import {
   ThreadPrimitive,
   useAuiState,
 } from "@assistant-ui/react";
+import type { CompileResult } from "../../../shared/domain";
 import { CREATABLE_FILE_EXTENSIONS } from "../../../shared/projectFiles";
 import { PatchApplyContext } from "../context/PatchApplyContext";
 import {
@@ -15,9 +16,10 @@ import {
   PANEL_CHROME_ROW_CLASS,
   TREE_LABEL_CLASS,
 } from "../lib/treeTypography";
-import type { AgentChatState } from "../store";
+import type { AgentChatState, AgentMessagePatch } from "../store";
 import { AgentPermissionBanner } from "./AgentPermissionBanner";
 import { AgentComposer } from "./agent/AgentComposer";
+import { AgentDiffBlock, parsePatch } from "./agent/AgentDiffBlock";
 import { AgentMessageReasoningPart } from "./agent/AgentMessageReasoningPart";
 import { AgentMessageTextPart } from "./agent/AgentMessageTextPart";
 import { AgentModelToolbar } from "./agent/AgentModelToolbar";
@@ -33,6 +35,8 @@ const SUPPORTED_SOURCE_FILES = formatSupportedExtensions(CREATABLE_FILE_EXTENSIO
 interface AgentPanelProps {
   rootPath: string | null;
   activeFile: string | null;
+  activePdf: string | null;
+  compileResult: CompileResult | null;
   chat: AgentChatState;
   onRun(prompt: string, modelId: string, reasoningLevel: string | null): Promise<void>;
   onCancel(runId: string): Promise<void>;
@@ -45,6 +49,26 @@ const agentMessagePartComponents = {
   Text: AgentMessageTextPart,
   Reasoning: AgentMessageReasoningPart,
 };
+
+function patchBadge(patch: AgentMessagePatch): string {
+  if (patch.status === "applied") return "Applied by agent";
+  return "Detected patch";
+}
+
+function MessagePatchBlock({ patch }: { patch: AgentMessagePatch }) {
+  const files = parsePatch(patch.patch);
+  if (files.length === 0) return null;
+  return (
+    <div className="mt-2 w-full">
+      <AgentDiffBlock
+        files={files}
+        fullPatch={patch.patch}
+        applyable={patch.status === "proposed"}
+        badge={patchBadge(patch)}
+      />
+    </div>
+  );
+}
 
 function EmptyThread() {
   return (
@@ -61,7 +85,9 @@ function EmptyThread() {
 
 function ChatMessage() {
   const message = useAuiState((state) => state.message);
-  const custom = message.metadata?.custom as { activity?: unknown } | undefined;
+  const custom = message.metadata?.custom as
+    | { activity?: unknown; patch?: AgentMessagePatch | null }
+    | undefined;
   const activity = typeof custom?.activity === "string" ? custom.activity.trim() : "";
   const isAssistant = message.role === "assistant";
 
@@ -88,6 +114,9 @@ function ChatMessage() {
           </div>
         ) : null}
         <MessagePrimitive.Parts components={agentMessagePartComponents} />
+        {isAssistant && custom?.patch ? (
+          <MessagePatchBlock patch={custom.patch as AgentMessagePatch} />
+        ) : null}
       </div>
 
       {isAssistant ? (
@@ -107,22 +136,51 @@ function ChatMessage() {
 
 interface ChatThreadProps {
   activeFile: string | null;
+  activePdf: string | null;
+  compileResult: CompileResult | null;
   onApplyPatch(patch: string): Promise<void>;
 }
 
-function AgentComposerContext({ activeFile }: { activeFile: string | null }) {
+function compileContextLabel(compileResult: CompileResult | null): string {
+  if (!compileResult) return "not run";
+  return compileResult.success
+    ? `clean · ${compileResult.durationMs}ms`
+    : `needs attention · ${compileResult.durationMs}ms`;
+}
+
+function AgentComposerContext({
+  activeFile,
+  activePdf,
+  compileResult,
+}: {
+  activeFile: string | null;
+  activePdf: string | null;
+  compileResult: CompileResult | null;
+}) {
+  const title = [
+    `source: ${activeFile ?? "none"}`,
+    `pdf: ${activePdf ?? "none"}`,
+    `compile: ${compileContextLabel(compileResult)}`,
+  ].join(" · ");
+
   return (
     <div
       className={`min-w-0 truncate px-1 pt-0.5 pb-1 ${CHROME_META_CLASS} text-text-muted select-none`}
-      title={activeFile ?? undefined}
+      title={title}
     >
-      <span className="text-text-muted/80">context: </span>
+      <span className="text-text-muted/80">source: </span>
       <span className="font-mono text-text-secondary">{activeFile ?? "none"}</span>
+      <span className="px-1.5 text-text-muted/60">·</span>
+      <span className="text-text-muted/80">pdf: </span>
+      <span className="font-mono text-text-secondary">{activePdf ?? "none"}</span>
+      <span className="px-1.5 text-text-muted/60">·</span>
+      <span className="text-text-muted/80">compile: </span>
+      <span className="text-text-secondary">{compileContextLabel(compileResult)}</span>
     </div>
   );
 }
 
-function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
+function ChatThread({ activeFile, activePdf, compileResult, onApplyPatch }: ChatThreadProps) {
   return (
     <PatchApplyContext.Provider value={onApplyPatch}>
       <ThreadPrimitive.Root className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
@@ -138,7 +196,11 @@ function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
 
         <ComposerPrimitive.Root className="border-t border-border/40 bg-surface px-2 pb-2 pt-2">
           <AgentPermissionBanner />
-          <AgentComposerContext activeFile={activeFile} />
+          <AgentComposerContext
+            activeFile={activeFile}
+            activePdf={activePdf}
+            compileResult={compileResult}
+          />
           <AgentModelToolbar />
           <AgentComposer />
         </ComposerPrimitive.Root>
@@ -150,6 +212,8 @@ function ChatThread({ activeFile, onApplyPatch }: ChatThreadProps) {
 export function AgentPanel({
   rootPath,
   activeFile,
+  activePdf,
+  compileResult,
   chat,
   onRun,
   onCancel,
@@ -185,7 +249,12 @@ export function AgentPanel({
       </header>
 
       <BigTexAssistantRuntime disabled={!rootPath} onRun={onRun} onCancel={onCancel}>
-        <ChatThread activeFile={activeFile} onApplyPatch={onApplyPatch} />
+        <ChatThread
+          activeFile={activeFile}
+          activePdf={activePdf}
+          compileResult={compileResult}
+          onApplyPatch={onApplyPatch}
+        />
       </BigTexAssistantRuntime>
     </aside>
   );

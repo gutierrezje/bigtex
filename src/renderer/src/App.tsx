@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { OnPanelResize, PanelImperativeHandle } from "react-resizable-panels";
 import { Group, Panel, Separator } from "react-resizable-panels";
+import { extractBigTexAgentAction, promptRequestsCompile } from "../../shared/agent-actions";
 import { getActiveEditor, listDirtyEditorPaths } from "../../shared/documentTabs";
-import type { CompileDiagnostic, ProjectFile, ProjectSnapshot } from "../../shared/domain";
+import type {
+  CompileDiagnostic,
+  CompileResult,
+  ProjectFile,
+  ProjectSnapshot,
+} from "../../shared/domain";
 import {
   countDiagnosticsBySeverity,
   findProjectFileByPath,
@@ -28,6 +34,8 @@ import { formatWindowChromeLabel } from "./lib/windowChrome";
 import { syncLspEditorTabModels } from "./lsp/editor-documents";
 import { startTexlabLanguageClient, stopTexlabLanguageClient } from "./lsp/texlab-client";
 import { useAppStore } from "./store";
+
+const MAX_AGENT_HOST_ACTION_CONTINUATIONS = 3;
 
 function selectable(file: ProjectFile): boolean {
   return file.kind !== "folder";
@@ -67,6 +75,7 @@ export function App() {
     renameEditorTabPath,
     renamePdfTabPath,
     setCompileResult,
+    addAgentSystemMessage,
     clearAgent,
     clearOutputLog,
     refreshMetrics,
@@ -104,6 +113,13 @@ export function App() {
 
   const projectRef = useRef(project);
   projectRef.current = project;
+  const activeEditorRef = useRef(activeEditor);
+  activeEditorRef.current = activeEditor;
+  const pdfTabsRef = useRef(pdfTabs);
+  pdfTabsRef.current = pdfTabs;
+  const compileResultRef = useRef(compileResult);
+  compileResultRef.current = compileResult;
+  const hostActionContinuationsRef = useRef(0);
 
   const usesCustomWindowControls = window.bigTex.window.usesCustomWindowControls;
 
@@ -404,15 +420,15 @@ export function App() {
     closeEditorTabAt(path);
   }
 
-  async function compile(): Promise<void> {
-    if (!project) return;
+  async function compile(): Promise<{ result: CompileResult; mainFile: string } | null> {
+    if (!project) return null;
     const activeIsRoot =
       activeEditor?.path?.endsWith(".tex") &&
       editorTabs.files
         .find((f) => f.path === activeEditor.path)
         ?.content.includes("\\documentclass");
     const mainFile = (activeIsRoot && activeEditor ? activeEditor.path : null) ?? project.mainFile;
-    if (!mainFile) return;
+    if (!mainFile) return null;
 
     setCompiling(true);
     try {
@@ -441,6 +457,7 @@ export function App() {
           setIsBottomPanelCollapsed(false);
         }
       }
+      return { result, mainFile };
     } finally {
       setCompiling(false);
       await refreshMetrics();
@@ -478,18 +495,79 @@ export function App() {
   ): Promise<void> {
     if (!project) return;
     await flushDirtyEditorTabs();
-    const mainFile = project.mainFile ?? activeEditor?.path ?? null;
+    const currentActiveEditor = activeEditorRef.current;
+    const currentPdfTabs = pdfTabsRef.current;
+    const currentCompileResult = compileResultRef.current;
+    const mainFile = project.mainFile ?? currentActiveEditor?.path ?? null;
     const compileSummary =
-      compileResult && mainFile ? formatCompileSummary(compileResult, mainFile) : null;
+      currentCompileResult && mainFile
+        ? formatCompileSummary(currentCompileResult, mainFile)
+        : null;
 
     await window.bigTex.agent.run({
       rootPath: project.rootPath,
       prompt,
-      selectedFiles: mergeAgentSelectedFiles(activeEditor?.path ?? null, agentHandoffFiles),
+      projectName: project.name,
+      activeEditorPath: currentActiveEditor?.path ?? null,
+      activePdfPath: currentPdfTabs.activePath,
+      selectedFiles: mergeAgentSelectedFiles(currentActiveEditor?.path ?? null, agentHandoffFiles),
       compileSummary,
       modelId,
       reasoningLevel,
     });
+  }
+
+  async function continueAgentWithCompileResult(
+    result: CompileResult,
+    mainFile: string,
+  ): Promise<void> {
+    const summary = formatCompileSummary(result, mainFile);
+    const diagnostics = result.diagnostics
+      .slice(0, 20)
+      .map((diagnostic) => formatAgentHandoffLine({ ...diagnostic, source: "compile" }))
+      .join("\n");
+    const prompt = [
+      `BigTeX host compile result: ${summary}`,
+      diagnostics ? `Compile diagnostics:\n${diagnostics}` : "Compile diagnostics: none",
+      result.pdfPath
+        ? `PDF path: ${toProjectRelativePath(projectRef.current?.rootPath ?? "", result.pdfPath)}`
+        : "PDF path: none",
+      "Continue from this result. If more edits are needed, make them. If the PDF is ready, summarize the outcome.",
+    ].join("\n\n");
+
+    addAgentSystemMessage(prompt);
+    useAppStore.getState().createPendingAgentMessage();
+    const { modelId, reasoningLevel } = useAppStore.getState().agentSettings;
+    await runAgent(prompt, modelId, reasoningLevel);
+  }
+
+  async function handleAgentFinished(): Promise<void> {
+    await refreshProjectFiles();
+
+    const messages = useAppStore.getState().agentChat.messages;
+    const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+    const lastUser = [...messages].reverse().find((message) => message.role === "user");
+    const action = lastAssistant ? extractBigTexAgentAction(lastAssistant.content) : null;
+    const fallbackCompile =
+      hostActionContinuationsRef.current === 0 &&
+      !action &&
+      Boolean(lastUser?.content && promptRequestsCompile(lastUser.content));
+    if (action?.kind !== "compile" && !fallbackCompile) {
+      hostActionContinuationsRef.current = 0;
+      return;
+    }
+    if (hostActionContinuationsRef.current >= MAX_AGENT_HOST_ACTION_CONTINUATIONS) {
+      appendOutput("Stopped agent host-action loop after 3 compile continuations.", "warning");
+      return;
+    }
+
+    hostActionContinuationsRef.current += 1;
+    const compiled = await compile();
+    if (!compiled) {
+      appendOutput("Agent requested compile, but no main TeX file is available.", "warning");
+      return;
+    }
+    await continueAgentWithCompileResult(compiled.result, compiled.mainFile);
   }
 
   async function applyPatch(patch: string): Promise<void> {
@@ -524,9 +602,10 @@ export function App() {
       );
     },
     onFinished: () => {
-      void refreshProjectFiles();
+      void handleAgentFinished();
     },
     onPatch: (event) => {
+      if (event.status !== "proposed") return;
       if (effectiveSettings.patchApplyMode !== "auto") return;
       void applyPatchRef.current(event.patch);
     },
@@ -760,6 +839,8 @@ export function App() {
               <AgentPanel
                 rootPath={project?.rootPath ?? null}
                 activeFile={activeEditor?.path ?? null}
+                activePdf={pdfTabs.activePath}
+                compileResult={compileResult}
                 chat={agentChat}
                 onRun={runAgent}
                 onCancel={(runId) => window.bigTex.agent.cancel({ runId })}

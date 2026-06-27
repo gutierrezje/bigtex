@@ -90,6 +90,9 @@ function acpPrompt(input: AgentRunInput): Array<{ type: "text"; text: string }> 
     {
       type: "text",
       text: buildAgentSystemPrompt({
+        projectName: input.projectName,
+        activeEditorPath: input.activeEditorPath,
+        activePdfPath: input.activePdfPath,
         selectedFiles: input.selectedFiles,
         compileSummary: input.compileSummary,
         prompt: input.prompt,
@@ -558,7 +561,16 @@ export async function runOpencode(
   const capturePersistent = persistent;
   capturePersistent.onUnexpectedClose = (exitCode) => {
     const patch = extractPatch(transcript);
-    if (patch) emit({ type: "patch", runId, patch, at: Date.now() });
+    if (patch) {
+      emit({
+        type: "patch",
+        runId,
+        patch,
+        status: "proposed",
+        source: "assistant",
+        at: Date.now(),
+      });
+    }
     stopWatch();
     activeRuns.delete(runId);
     emit({
@@ -608,7 +620,16 @@ export async function runOpencode(
       // Normal completion — session stays alive for the next turn.
       capturePersistent.onUnexpectedClose = null;
       const patch = extractPatch(transcript);
-      if (patch) emit({ type: "patch", runId, patch, at: Date.now() });
+      if (patch) {
+        emit({
+          type: "patch",
+          runId,
+          patch,
+          status: "proposed",
+          source: "assistant",
+          at: Date.now(),
+        });
+      }
       stopWatch();
       activeRuns.delete(runId);
       emit({

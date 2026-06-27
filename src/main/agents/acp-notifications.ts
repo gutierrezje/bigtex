@@ -102,7 +102,14 @@ export function handleAcpNotification(
     if (status === "completed") {
       const patch = patchFromToolCallUpdate(update, rootPath);
       if (patch) {
-        emit({ type: "patch", runId, patch, at: Date.now() });
+        emit({
+          type: "patch",
+          runId,
+          patch,
+          status: "applied",
+          source: "opencode-session",
+          at: Date.now(),
+        });
       }
     }
     return;

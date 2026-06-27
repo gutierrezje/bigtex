@@ -1,4 +1,5 @@
 import { useMessagePartText } from "@assistant-ui/react";
+import { stripBigTexAgentActions } from "../../../../shared/agent-actions";
 import { prepareAgentMarkdown } from "../../lib/agent-markdown";
 import { AgentMarkdown } from "../AgentMarkdown";
 
@@ -11,7 +12,10 @@ export function AgentMessageTextPart() {
     <div
       className={`agent-output-markdown min-w-0 w-full max-w-full${streaming ? " agent-output-markdown--streaming" : ""}`}
     >
-      <AgentMarkdown text={prepareAgentMarkdown(part.text, streaming)} streaming={streaming} />
+      <AgentMarkdown
+        text={prepareAgentMarkdown(stripBigTexAgentActions(part.text), streaming)}
+        streaming={streaming}
+      />
     </div>
   );
 }

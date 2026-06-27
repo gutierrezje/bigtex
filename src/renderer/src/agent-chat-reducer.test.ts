@@ -63,9 +63,18 @@ describe("reduceAgentChat", () => {
     const patchText = "--- a/main.tex\n+++ b/main.tex\n";
     const patched = reduceAgentChat(
       chatWithAssistant(),
-      eventAt("patch", { runId: RUN_ID, patch: patchText }),
+      eventAt("patch", {
+        runId: RUN_ID,
+        patch: patchText,
+        status: "proposed",
+        source: "assistant",
+      }),
     );
-    expect(assistant(patched)?.patch).toBe(patchText);
+    expect(assistant(patched)?.patch).toEqual({
+      patch: patchText,
+      status: "proposed",
+      source: "assistant",
+    });
   });
 
   it("surfaces fatal errors and maps finish exit codes", () => {
@@ -101,12 +110,36 @@ describe("reduceAgentChat", () => {
     const patchText = "--- a/main.tex\n+++ b/main.tex\n";
     const withPatch = reduceAgentChat(
       chatWithAssistant(),
-      eventAt("patch", { runId: RUN_ID, patch: patchText }),
+      eventAt("patch", {
+        runId: RUN_ID,
+        patch: patchText,
+        status: "proposed",
+        source: "assistant",
+      }),
     );
-    expect(assistant(withPatch)?.patch).toBe(patchText);
+    expect(assistant(withPatch)?.patch?.patch).toBe(patchText);
 
     const cleared = clearAgentChatPatch(withPatch, patchText);
     expect(assistant(cleared)?.patch).toBeNull();
+  });
+
+  it("records already-applied OpenCode session diffs as audit patches", () => {
+    const patchText = "--- a/main.tex\n+++ b/main.tex\n";
+    const patched = reduceAgentChat(
+      chatWithAssistant(),
+      eventAt("patch", {
+        runId: RUN_ID,
+        patch: patchText,
+        status: "applied",
+        source: "opencode-session",
+      }),
+    );
+
+    expect(assistant(patched)?.patch).toEqual({
+      patch: patchText,
+      status: "applied",
+      source: "opencode-session",
+    });
   });
 
   it("falls back to the last assistant when none is active", () => {

@@ -105,6 +105,9 @@ export interface AgentSessionConfig {
 export interface AgentRunInput {
   rootPath: string;
   prompt: string;
+  projectName: string | null;
+  activeEditorPath: string | null;
+  activePdfPath: string | null;
   selectedFiles: string[];
   compileSummary: string | null;
   modelId: string;
@@ -146,6 +149,8 @@ export type AgentEvent =
       type: "patch";
       runId: string;
       patch: string;
+      status: "proposed" | "applied";
+      source: "assistant" | "opencode-session";
       at: number;
     }
   | {
