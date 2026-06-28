@@ -1,3 +1,4 @@
+import { computeTabLabels } from "../../../shared/documentTabs";
 import { TREE_LABEL_CLASS } from "../lib/treeTypography";
 import { IconTooltipButton } from "./IconTooltipButton";
 
@@ -14,11 +15,6 @@ interface DocumentTabListProps {
   className?: string;
 }
 
-function tabLabel(path: string): string {
-  const parts = path.split(/[/\\]/);
-  return parts[parts.length - 1] || path;
-}
-
 export function DocumentTabList({
   tabs,
   activePath,
@@ -26,6 +22,7 @@ export function DocumentTabList({
   onClose,
   className = "",
 }: DocumentTabListProps) {
+  const labels = computeTabLabels(tabs.map((tab) => tab.path));
   return (
     <div
       className={`flex h-full min-w-0 items-stretch gap-0 overflow-x-auto ${className}`.trim()}
@@ -33,10 +30,11 @@ export function DocumentTabList({
     >
       {tabs.map((tab) => {
         const active = tab.path === activePath;
+        const label = labels.get(tab.path) ?? { name: tab.path };
         return (
           <div
             key={tab.path}
-            className={`group flex max-w-[12rem] min-w-0 shrink-0 items-center gap-1 border-r border-border/40 px-1.5 ${
+            className={`group flex max-w-[18rem] min-w-[8rem] shrink-0 items-center gap-1 border-r border-border/40 px-3 ${
               active
                 ? "relative z-10 bg-surface text-text-primary"
                 : "border-b border-border/40 text-text-muted hover:bg-surface/60"
@@ -44,19 +42,25 @@ export function DocumentTabList({
           >
             <button
               type="button"
-              className={`flex min-w-0 flex-1 items-center gap-1.5 truncate text-left ${TREE_LABEL_CLASS}`}
+              className={`flex min-w-0 flex-1 items-baseline gap-1.5 truncate text-left ${TREE_LABEL_CLASS}`}
               onClick={() => onSelect(tab.path)}
               title={tab.path}
             >
               {tab.dirty ? (
-                <span className="h-1 w-1 shrink-0 rounded-full bg-amber-400" aria-hidden />
+                <span
+                  className="h-1 w-1 shrink-0 self-center rounded-full bg-amber-400"
+                  aria-hidden
+                />
               ) : null}
-              <span className="truncate">{tabLabel(tab.path)}</span>
+              <span className="truncate">{label.name}</span>
+              {label.hint ? (
+                <span className="truncate text-[11px] text-text-muted/70">{label.hint}</span>
+              ) : null}
             </button>
             <button
               type="button"
               className={`shrink-0 rounded p-0.5 ${TREE_LABEL_CLASS} text-text-muted opacity-0 transition-opacity hover:bg-border/40 hover:text-text-secondary group-hover:opacity-100`}
-              aria-label={`Close ${tabLabel(tab.path)}`}
+              aria-label={`Close ${label.name}`}
               onClick={(event) => {
                 event.stopPropagation();
                 onClose(tab.path);

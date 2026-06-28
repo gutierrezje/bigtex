@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   closeEditorTab,
+  computeTabLabels,
   focusOrOpenEditor,
   focusOrOpenPdf,
   getActiveEditor,
@@ -30,6 +31,31 @@ function pdfPayload(path: string): PdfPayload {
     loadedAt: 1,
   };
 }
+
+describe("computeTabLabels", () => {
+  it("shows only the file name when names are unique", () => {
+    const labels = computeTabLabels(["src/main.tex", "src/intro.tex"]);
+    expect(labels.get("src/main.tex")).toEqual({ name: "main.tex" });
+    expect(labels.get("src/intro.tex")).toEqual({ name: "intro.tex" });
+  });
+
+  it("adds the shortest distinguishing folder when names collide", () => {
+    const labels = computeTabLabels(["src/a/index.ts", "src/b/index.ts"]);
+    expect(labels.get("src/a/index.ts")).toEqual({ name: "index.ts", hint: "…/a" });
+    expect(labels.get("src/b/index.ts")).toEqual({ name: "index.ts", hint: "…/b" });
+  });
+
+  it("deepens the folder hint until it is unique and marks truncation", () => {
+    const labels = computeTabLabels(["src/x/shared/index.ts", "src/y/shared/index.ts"]);
+    expect(labels.get("src/x/shared/index.ts")).toEqual({ name: "index.ts", hint: "…/x/shared" });
+    expect(labels.get("src/y/shared/index.ts")).toEqual({ name: "index.ts", hint: "…/y/shared" });
+  });
+
+  it("does not add a truncation marker when the full folder path is shown", () => {
+    const labels = computeTabLabels(["a/main.tex", "b/main.tex"]);
+    expect(labels.get("a/main.tex")).toEqual({ name: "main.tex", hint: "a" });
+  });
+});
 
 describe("focusOrOpenEditor", () => {
   it("opens the first editor tab when none are open", () => {

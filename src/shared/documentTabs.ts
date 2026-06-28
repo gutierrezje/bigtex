@@ -139,3 +139,66 @@ export function replaceEditorFile(state: EditorTabsState, file: OpenFile): Edito
     files: state.files.map((entry) => (entry.path === file.path ? file : entry)),
   };
 }
+
+export interface TabLabelParts {
+  /** File name shown as the tab's primary label. */
+  name: string;
+  /**
+   * Disambiguating folder fragment shown dimmed after the name, VS Code style.
+   * Present only when another open tab shares the same file name.
+   */
+  hint?: string;
+}
+
+function splitPath(path: string): string[] {
+  return path.split(/[/\\]/).filter(Boolean);
+}
+
+/**
+ * Computes the display label for each open tab. When several tabs share the same
+ * file name, each is given the shortest trailing folder fragment that makes it
+ * unique within that group (mirroring VS Code's tab disambiguation).
+ */
+export function computeTabLabels(paths: string[]): Map<string, TabLabelParts> {
+  const result = new Map<string, TabLabelParts>();
+  const groups = new Map<string, string[]>();
+
+  for (const path of paths) {
+    const segments = splitPath(path);
+    const name = segments[segments.length - 1] || path;
+    const existing = groups.get(name);
+    if (existing) {
+      existing.push(path);
+    } else {
+      groups.set(name, [path]);
+    }
+  }
+
+  for (const [name, group] of groups) {
+    if (group.length < 2) {
+      for (const path of group) result.set(path, { name });
+      continue;
+    }
+
+    for (const path of group) {
+      const dirs = splitPath(path).slice(0, -1);
+      let hint: string | undefined;
+      for (let depth = 1; depth <= dirs.length; depth += 1) {
+        const suffix = dirs.slice(dirs.length - depth);
+        const candidate = suffix.join("/");
+        const unique = group.every((other) => {
+          if (other === path) return true;
+          const otherDirs = splitPath(other).slice(0, -1);
+          return otherDirs.slice(otherDirs.length - depth).join("/") !== candidate;
+        });
+        if (unique) {
+          hint = depth < dirs.length ? `…/${candidate}` : candidate;
+          break;
+        }
+      }
+      result.set(path, hint ? { name, hint } : { name });
+    }
+  }
+
+  return result;
+}
