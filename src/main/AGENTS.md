@@ -11,7 +11,7 @@ Electron main runtime: window creation, IPC, compile/agent/patch/file services.
 |------|----------|
 | Window creation + IPC handlers | index.ts |
 | Application menu (New Project, Open/Close Folder) | menu.ts |
-| Agent backend selector + runtimes | agents/backend.ts, agents/opencode-serve.ts, agents/opencode.ts |
+| Agent backend + runtime | agents/backend.ts, agents/opencode-serve.ts |
 | Patch application (git apply) | agents/patch.ts |
 | LaTeX compiler runner | compile/latex.ts |
 | Texlab LSP session + IPC proxy | lsp/texlab.ts |
@@ -23,7 +23,6 @@ Electron main runtime: window creation, IPC, compile/agent/patch/file services.
 - Validate paths with assertInsideRoot before any file/patch/agent FS access.
 - Wrap IPC handlers with measure() when you want metrics surfaced in UI.
 - Spawn child processes with shell:false and capture stdout/stderr for diagnostics.
-- Legacy ACP client methods are explicitly whitelisted (fs/read_text_file, fs/write_text_file).
 
 ## ANTI-PATTERNS
 

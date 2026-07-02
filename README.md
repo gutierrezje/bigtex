@@ -19,7 +19,7 @@ BigTeX shells out to local CLI tools — nothing is bundled. Install these and e
 |------|----------|
 | [`latexmk`](https://ctan.org/pkg/latexmk) | LaTeX compile and **Problems** compile diagnostics |
 | [`texlab`](https://github.com/latex-lsp/texlab) | Editor language features (completion, go-to-definition, static diagnostics) |
-| [`opencode`](https://opencode.ai/docs/) | Agent panel (ACP) |
+| [`opencode`](https://opencode.ai/docs/) | Agent panel (OpenCode serve) |
 
 After installing OpenCode, log in:
 
