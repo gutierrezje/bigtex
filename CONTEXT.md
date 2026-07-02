@@ -108,7 +108,7 @@ The assistant model family shown in the agent toolbar: Free, Go, or Copilot — 
 _Avoid_: Provider (ambiguous with LLM vendor or Copilot product name alone).
 
 **Agent permission**:
-A mid-run request from the assistant runtime to read or write project files (surfaced via OpenCode serve `permission.updated` or legacy ACP `session/request_permission`).
+A mid-run request from the assistant runtime to read or write project files (surfaced via OpenCode serve `permission.updated`).
 _Avoid_: Patch (file edits delivered as a unified diff are separate); Composer send (user still chooses when to run the agent).
 
 **Agent permission mode**:
@@ -145,7 +145,7 @@ _Avoid_: Model config (collides with live agent session catalog); provider (use 
 
 **Effective agent model preference**:
 The **Agent model preference** in force for the open project: workspace value when set, otherwise **User settings** default, otherwise app fallback.
-_Avoid_: Current model (collides with live ACP session state).
+_Avoid_: Current model (collides with live OpenCode session state).
 
 **Settings file**:
 The single on-disk store for **User settings** and per-root **Workspace settings** (app user data, not inside the LaTeX project).

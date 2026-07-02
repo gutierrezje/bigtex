@@ -5,11 +5,10 @@ import type {
   AgentRunSummary,
   AgentSessionConfig,
 } from "../../shared/domain";
-import { acpAgentBackend } from "./opencode";
 import { serveAgentBackend } from "./opencode-serve";
 
 export interface AgentBackend {
-  id: AgentBackendId;
+  id: "serve";
   check(commandLine?: string): Promise<AgentAvailability>;
   loadConfig(rootPath: string): Promise<AgentSessionConfig>;
   probeModelVariants(rootPath: string, modelId: string): Promise<string[]>;
@@ -18,12 +17,6 @@ export interface AgentBackend {
   clearSession(rootPath: string): void | Promise<void>;
 }
 
-export type AgentBackendId = "acp" | "serve";
-
-export function resolveAgentBackendId(value = process.env.BIGTEX_AGENT_BACKEND): AgentBackendId {
-  return value === "acp" ? "acp" : "serve";
-}
-
-export function getAgentBackend(value = process.env.BIGTEX_AGENT_BACKEND): AgentBackend {
-  return resolveAgentBackendId(value) === "serve" ? serveAgentBackend : acpAgentBackend;
+export function getAgentBackend(): AgentBackend {
+  return serveAgentBackend;
 }

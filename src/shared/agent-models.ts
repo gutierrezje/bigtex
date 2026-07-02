@@ -16,21 +16,6 @@ const REASONING_LEVEL_ORDER = [
 
 const HIDDEN_VARIANTS = new Set(["default"]);
 
-/** Candidate suffixes probed through legacy ACP when OpenCode omits variant metadata. */
-/** Fallback when OpenCode serve provider metadata is unavailable. */
-export const REASONING_VARIANT_PROBE_CANDIDATES = [
-  "max",
-  "xhigh",
-  "high",
-  "medium",
-  "med",
-  "low",
-  "min",
-  "none",
-  "thinking",
-  "reasoning",
-] as const;
-
 function variantRank(variant: string): number {
   const lower = variant.toLowerCase();
   const index = (REASONING_LEVEL_ORDER as readonly string[]).indexOf(lower);

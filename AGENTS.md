@@ -3,7 +3,7 @@
 **Generated:** 2026-05-19T22:20:47Z
 **Commit:** d4ec686
 
-Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with OpenCode serve/ACP agent backends and local LaTeX compilation.
+Early MVP agentic LaTeX desktop editor. Electron main + React/Vite renderer with OpenCode serve agent backend and local LaTeX compilation.
 
 ## Product direction
 
@@ -31,7 +31,7 @@ Read `PRODUCT.md` at the repo root when present (gitignored — local strategy d
 | Preload API surface | src/preload/index.ts |
 | Project tree + file IO | src/main/files/project.ts |
 | LaTeX compile runner | src/main/compile/latex.ts |
-| Agent backend selector + runtimes | src/main/agents/backend.ts, src/main/agents/opencode-serve.ts, src/main/agents/opencode.ts |
+| Agent backend + runtime | src/main/agents/backend.ts, src/main/agents/opencode-serve.ts |
 | Patch application | src/main/agents/patch.ts |
 | Renderer layout + flows | src/renderer/src/App.tsx |
 | Editor autosave + diagnostics | src/renderer/src/components/EditorPane.tsx |
@@ -43,7 +43,7 @@ Read `PRODUCT.md` at the repo root when present (gitignored — local strategy d
 
 - IPC contracts live in src/shared; main/preload/renderer import from there.
 - Renderer calls window.bigTex only; filesystem/compile/agent work stays in main.
-- Agent backend defaults to `opencode serve`; set `BIGTEX_AGENT_BACKEND=acp` to use the legacy ACP backend.
+- Agent backend uses `opencode serve` (long-lived OpenCode server subprocess).
 - Patches are unified diffs.
 - Compiler runs must flush the current draft before invocation.
 
@@ -94,7 +94,7 @@ Single-context: one root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`
 ## UNIQUE STYLES
 
 - Project tree hides `.tex-build/` (latexmk outdir) plus build/aux dirs and LaTeX artifact extensions.
-- OpenCode serve diffs and ACP fenced diff blocks emit Detected patch events via IPC.
+- OpenCode serve diffs and fenced diff blocks in assistant transcripts emit Detected patch events via IPC.
 - Compiler diagnostics merged from latexmk console output and `.tex-build/{main}.log`; capped at 100 entries.
 - Texlab language-server assist (completion, hover, go-to-definition, find references) for `.tex`, `.bib`, `.sty`, `.cls` via `file://` Monaco models; Problems lists compile + static rows with badges.
 - Performance marks recorded in main via measure()/recordMark; renderer shows latest.
